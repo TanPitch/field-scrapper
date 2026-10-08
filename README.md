@@ -90,9 +90,11 @@ RELEASE_NOTES.md              changelog
 - All UI text renders in Noto Sans Thai.
 - MapLibre popups are HTML strings, so their styles (`.pop-*`, popup chrome)
   stay as real CSS in `src/index.css`.
-- Tooltips are provided centrally by `src/components/ui/Tip.tsx`. Attach one with
-  `useTipProps('…')` (always shown) or `useClipTip('…')` (only when the text is
-  actually truncated). Both are hook-free, so they are safe inside `.map()`.
+- Tooltips are provided by [tippy.js](https://atomiks.github.io/tippyjs/) via one
+  delegated instance bound to `document.body` in `src/components/ui/Tip.tsx`.
+  Attach one with `useTipProps('…')` (always shown) or `useClipTip('…')` (only when
+  the text is actually truncated). Both are hook-free, so they are safe inside
+  `.map()`. Theme overrides for the `fs` tippy theme live in `src/index.css`.
 - `useOutsideClose(refs, onClose, enabled, toleratePortals)` — pass
   `toleratePortals` only when the surface legitimately hosts portalled popups of
   its own (the settings panel, the filter dialog). Enabling it elsewhere makes

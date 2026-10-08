@@ -188,6 +188,49 @@ body.reduce-motion .spin-keep {
   color: #fff;
   background: none;
 }
+
+/* ---- tooltips (tippy.js, theme "fs") ----
+   Overrides tippy's default light theme so the bubble matches the app panels.
+   The arrow inherits --fs-tip-bg so it stays in sync with the box. */
+.tippy-box[data-theme~='fs'] {
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  background: #141714;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.tippy-box[data-theme~='fs'] > .tippy-content {
+  padding: 4px 8px;
+}
+.tippy-box[data-theme~='fs'] > .tippy-arrow {
+  color: #141714;
+}
+.tippy-box[data-theme~='fs'] > .tippy-arrow::before {
+  border: 1px solid var(--border2);
+}
+.tippy-box[data-theme~='fs'][data-placement^='top'] > .tippy-arrow::before {
+  border-bottom: none;
+  border-right: none;
+}
+.tippy-box[data-theme~='fs'][data-placement^='bottom'] > .tippy-arrow::before {
+  border-top: none;
+  border-left: none;
+}
+.tippy-box[data-theme~='fs'][data-placement^='left'] > .tippy-arrow::before {
+  border-top: none;
+  border-right: none;
+}
+.tippy-box[data-theme~='fs'][data-placement^='right'] > .tippy-arrow::before {
+  border-bottom: none;
+  border-left: none;
+}
+/* never let the bubble sit under the sticky header or the table */
+.tippy-box {
+  z-index: 300;
+}
 /* Parcel popup markup is built as an HTML string (maplibre setHTML) */
 .maplibregl-popup-content {
   padding: 8px 10px;

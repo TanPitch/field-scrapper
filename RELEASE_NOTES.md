@@ -55,10 +55,10 @@ All notable changes to Field Scrapper. Dates are ISO.
 - Settings tab รูปวาด added; the land tab is labelled ที่ดิน.
 
 ### Tooltips
-- Replaced all native `title` attributes with a single delegated provider
-  (`src/components/ui/Tip.tsx`). The arrow tracks the anchor's exact centre and
-  flips when the bubble is near a screen edge; the bubble only ever moves, it
-  never fades.
+- All native `title` attributes replaced with [tippy.js](https://atomiks.github.io/tippyjs/):
+  a single delegated instance bound to `document.body` handles every trigger,
+  with themed dark styling, arrow tracking, placement flipping near viewport
+  edges, and a 260 ms show delay.
 - Table cells reveal their full text on hover, but only when the text is clipped.
 
 ### Thai geographic data
