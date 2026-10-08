@@ -1,0 +1,17 @@
+node_modules/
+dist/
+tsconfig.tsbuildinfo
+
+# local graphify output (regenerate with the graphify skill)
+graphify-out/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# logs
+*.log
+npm-debug.log*
