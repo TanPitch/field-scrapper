@@ -144,7 +144,7 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
         return (
           <div
             key={i} data-td
-            {...useClipTip(cellTip(c.key, p))}
+            {...(c.key === 'saleBy' ? useTipProps(cellTip(c.key, p)) : useClipTip(cellTip(c.key, p)))}
             className={`flex min-w-0 flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap px-2 ${num ? 'justify-end text-xs' : ''} ${cp ? `shadow-[inset_-1px_0_0_var(--border2),3px_0_8px_-3px_rgba(0,0,0,.4)] ${pinBg}` : ''} ${isSrcOf(c.key) ? 'invisible' : ''} ${dragging ? 'transition-transform duration-200 ease-out' : ''}`}
             style={{ width: c.w, transform: dx ? `translateX(${dx}px)` : undefined, ...(cp ? stickyStyle(c.left) : {}) }}
           >{content(c)}</div>

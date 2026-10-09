@@ -56,10 +56,11 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ### Tooltips
 - All native `title` attributes replaced with [tippy.js](https://atomiks.github.io/tippyjs/):
-  a single delegated instance bound to `document.body` handles every trigger,
-  with themed dark styling, arrow tracking, placement flipping near viewport
-  edges, and a 260 ms show delay.
+  a single delegated instance bound to `document.body` handles every trigger.
+  Rounded SVG arrow via tippy's `roundArrow` plugin, and a `shift-away` animation
+  so the bubble slides out of the trigger rather than fading.
 - Table cells reveal their full text on hover, but only when the text is clipped.
+  The ขายโดย column always shows the mortgage bank on hover.
 
 ### Thai geographic data
 - `src/data/thaiGeo.ts` normalises `provinces.json`, `districts.json` and

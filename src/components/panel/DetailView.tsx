@@ -143,8 +143,8 @@ export function DetailView() {
       <div className="mb-2.5 font-display text-[11px] text-dim">{fmt(p.perWah)} / ตร.วา · {p.province}</div>
       <DetRows
         rows={[
-          ['ที่ตั้ง (ตำบล / อำเภอ / จังหวัด)', `${p.tambon} / ${p.amp} / ${p.province}`],
-          ['ขนาดที่ดิน', `${p.wah.toLocaleString('th-TH')} ตร.วา (${fmtRai(p.wah)})`],
+          ['ที่ตั้ง', `${p.tambon} ${p.amp} ${p.province}`],
+          ['ขนาดที่ดิน', `${fmtRai(p.wah)}`],
           ['ประเภททรัพย์', p.propertyType],
           ['หมายเลขคดี', p.caseNo],
           ['เลขที่โฉนด', p.deedNo],

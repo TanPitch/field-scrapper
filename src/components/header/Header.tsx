@@ -70,7 +70,7 @@ export function Header({ small }: { small: boolean }) {
         <div className="size-[13px] flex-none rotate-45 rounded-[3px] bg-accent" />
         <div>
           <div className={`font-display font-bold leading-none ${small ? 'text-xs tracking-[.08em]' : 'text-sm tracking-[.12em]'}`}>FIELD<span className="text-accent">SCRAPPER</span></div>
-          {!small && <div className="mt-0.5 text-[9.5px] text-dim">ระบบขูดรวมข้อมูลที่ดิน ราคา และแผนที่</div>}
+          {!small && <div className="mt-0.5 text-[9.5px] text-dim">ข้อมูลที่ดิน และแผนที่</div>}
         </div>
       </div>
       <SearchBox />

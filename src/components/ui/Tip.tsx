@@ -1,6 +1,14 @@
 import { useEffect, type ReactNode } from 'react';
-import { delegate, type Instance } from 'tippy.js';
+import { delegate, roundArrow, type Instance, type Plugin } from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
+import 'tippy.js/dist/svg-arrow.css';
+import 'tippy.js/animations/shift-away.css';
+
+/**
+ * tippy's own typings declare `roundArrow` as a string, but it is a plugin factory.
+ * Cast once here rather than sprinkling `as` through the props.
+ */
+const ROUND_ARROW = roundArrow as unknown as Plugin;
 
 /**
  * Tooltips, backed by tippy.js.
@@ -31,7 +39,10 @@ export function TipProvider({ children }: { children: ReactNode }) {
       theme: 'fs',
       /* placement + boundaryPadding keep the bubble (and its arrow) on screen */
       placement: 'top',
-      /* follow the reference while the page scrolls, instead of re-placing on hover */
+      /* SVG round arrow (tippy's own plugin) instead of the CSS-border triangle */
+      plugins: [ROUND_ARROW],
+      /* slide the bubble away from the trigger instead of fading it */
+      animation: 'shift-away',
       moveTransition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
       delay: [SHOW_DELAY, 0],
       duration: [120, 80],

@@ -52,6 +52,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const statusVisible = useApp(s => s.statusVisible);
   const popupCfg = useApp(s => s.popupCfg);
   const reColor = useApp(s => s.reColor);
+  const chartTick = useApp(s => s.chartTick);
 
   return (
     <>
@@ -106,6 +107,16 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         />
       </div>
 
+      <div className={setSec}>กราฟราคา</div>
+      <div className={frow}>
+        <span className={fl}>เส้นขีดเวลา</span>
+        <Seg<ChartTick>
+          items={[['none', 'ไม่แสดง'], ['year', 'ทุกปี'], ['m6', '6 เดือน'], ['m4', '4 เดือน'], ['m3', '3 เดือน']]}
+          value={chartTick}
+          onChange={v => patchApp({ chartTick: v })}
+        />
+      </div>
+
       <div className={setSec}>เนื้อหาป๊อป — แยกตามชนิดหมุด</div>
       {POP_KINDS.map(([k, lab, ck]) => (
         <div key={k} className="border-b border-line py-[9px]">
@@ -125,6 +136,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       ))}
+      
     </>
   );
 }
@@ -178,7 +190,6 @@ export function LookPane() {
   const theme = useApp(s => s.theme);
   const bath = useApp(s => s.priceBath);
   const space = useApp(s => s.priceSpace);
-  const chartTick = useApp(s => s.chartTick);
   const reduce = useApp(s => s.reduceMotion);
   const glassLevel = useApp(s => s.glassLevel);
   const lbCfg = useApp(s => s.lbCfg);
@@ -199,16 +210,6 @@ export function LookPane() {
       <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
       <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
       <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
-      <div className={setSec}>กราฟราคา — ขีดเวลาบนแถบช่วงวันที่</div>
-      <div className={frow}>
-        <span className={fl}>แสดงขีดเวลาทุก</span>
-        <Seg<ChartTick>
-          items={[['none', 'ไม่แสดง'], ['year', 'ทุกปี'], ['m6', '6 เดือน'], ['m4', '4 เดือน'], ['m3', '3 เดือน']]}
-          value={chartTick}
-          onChange={v => patchApp({ chartTick: v })}
-        />
-      </div>
-      <Hint>ขีดเวลาจะอยู่บนแถบเลือกช่วงวันที่ใต้กราฟ ไม่ใช่บนแกนของกราฟ</Hint>
       <div className={setSec}>การเคลื่อนไหว</div>
       <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
       <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>

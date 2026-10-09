@@ -191,7 +191,8 @@ body.reduce-motion .spin-keep {
 
 /* ---- tooltips (tippy.js, theme "fs") ----
    Overrides tippy's default light theme so the bubble matches the app panels.
-   The arrow inherits --fs-tip-bg so it stays in sync with the box. */
+   The arrow is tippy's SVG round arrow (svg-arrow.css), so it needs a fill rather
+   than the border tricks used by the default CSS arrow. */
 .tippy-box[data-theme~='fs'] {
   font-family: 'Noto Sans Thai', sans-serif;
   font-size: 11.5px;
@@ -205,27 +206,14 @@ body.reduce-motion .spin-keep {
 .tippy-box[data-theme~='fs'] > .tippy-content {
   padding: 4px 8px;
 }
+/* round (SVG) arrow: paint it to match the box and nudge it so the ring lines up */
+.tippy-box[data-theme~='fs'] > .tippy-svg-arrow {
+  fill: #141714;
+  stroke: var(--border2);
+  stroke-width: 1;
+}
 .tippy-box[data-theme~='fs'] > .tippy-arrow {
   color: #141714;
-}
-.tippy-box[data-theme~='fs'] > .tippy-arrow::before {
-  border: 1px solid var(--border2);
-}
-.tippy-box[data-theme~='fs'][data-placement^='top'] > .tippy-arrow::before {
-  border-bottom: none;
-  border-right: none;
-}
-.tippy-box[data-theme~='fs'][data-placement^='bottom'] > .tippy-arrow::before {
-  border-top: none;
-  border-left: none;
-}
-.tippy-box[data-theme~='fs'][data-placement^='left'] > .tippy-arrow::before {
-  border-top: none;
-  border-right: none;
-}
-.tippy-box[data-theme~='fs'][data-placement^='right'] > .tippy-arrow::before {
-  border-bottom: none;
-  border-left: none;
 }
 /* never let the bubble sit under the sticky header or the table */
 .tippy-box {
