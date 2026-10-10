@@ -1,13 +1,20 @@
 export type LngLat = [number, number];
 export type BBox = [number, number, number, number]; /* west, south, east, north */
 
-export type Status = 'normal' | 'sale' | 'sold';
+/** Auction status of a parcel: currently on the block, or already sold. */
+export type Status = 'sale' | 'sold';
+/** Marker kind — resale parcels are "นำกลับมาขายใหม่" until they sell again. */
 export type PopupKind = Status | 're';
 
 export interface HistPoint { d: number; v: number }
 export interface PriceEvent { idx: number; label: string; color: string; ink: string }
 export interface SellRound { date: number | null; status: string }
 export interface Mortgage { amount: number; bank: string }
+
+/** Agency that published the auction. */
+export type DataSource = 'กรมบังคับคดี' | 'ธนาคาร' | 'กรมการคลัง' | 'กองทุนสินครและสงคราม';
+/** What sits on the parcel. */
+export type LandKind = 'empty' | 'building';
 
 export interface Parcel {
   id: number;
@@ -30,6 +37,10 @@ export interface Parcel {
   imgs: number;
   lastTs: number;
   saleByText: string;
+  /** Which agency published the auction. */
+  dataSource: DataSource;
+  /** What is on the land — drives the small badge icon. */
+  landKind: LandKind;
   ownerFile: string;
   propertyType: string;
   deedNo: string;
@@ -74,7 +85,16 @@ export interface FilterArea { id: number; no: number; coords: LngLat[]; enabled:
 export type PopupMode = 'active' | 'all';
 export type BasemapId = 'road' | 'sat';
 export type Cascade = 'google' | 'nominatim';
-export type Theme = 'graphite' | 'oled';
+export type Theme = 'graphite' | 'oled' | 'slate' | 'sand' | 'forest' | 'rose' | 'mono';
+export const THEMES: readonly (readonly [Theme, string])[] = [
+  ['graphite', 'กราไฟต์'],
+  ['oled', 'ดำ (OLED)'],
+  ['slate', 'สเลต'],
+  ['sand', 'ทราย'],
+  ['forest', 'ป่า'],
+  ['rose', 'กุหลาบ'],
+  ['mono', 'ขาวดำ'],
+];
 
 export type PopupField = 'size' | 'perWah' | 'announce' | 'soldTs' | 'resale' | 'deed';
 export type PopupConfig = Record<PopupKind, Record<PopupField, boolean>>;
@@ -133,7 +153,7 @@ export type RightView =
 /* ---------- table columns ---------- */
 export type ColKey =
   | 'no' | 'name' | 'status' | 'size' | 'price' | 'perWah'
-  | 'saleBy' | 'ownerFile' | 'propertyType' | 'deedNo' | 'tambon'
+  | 'saleBy' | 'seller' | 'ownerFile' | 'propertyType' | 'deedNo' | 'tambon'
   | 'court' | 'caseNo' | 'plaintiff' | 'defendant' | 'possessor'
   | 'enforcementOffice' | 'collateral' | 'spouseCollateral'
   | 'expertPrice' | 'enforcementOfficerPrice' | 'assessorPrice'
@@ -149,7 +169,18 @@ export interface ColDef {
 }
 
 /* ---------- pins ---------- */
-export type MarkerSize = 'normal' | 'large';
+export type MarkerSize = 'small' | 'normal' | 'large';
+
+/** Mockup account row for the จัดการผู้ใช้ pane. */
+export interface ManagedUser {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  active: boolean;
+  twoFa: boolean;
+  lastSeen: string;
+}
 export type LayoutMode = 'docked' | 'floating';
 export type GlassLevel = 'none' | 'transparent';
 export interface CctvPin { id: string; name: string; ll: LngLat }

@@ -1,9 +1,10 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import { ACCENT, AREA_COLOR, MAP_FONTS, WMS_BASE } from '../data/constants';
 import { getApp } from '../store/useApp';
-import type { Overlay } from '../types';
+import type { Overlay, Status } from '../types';
 import { fc, getMap, hasLayer, requireMap } from './mapRef';
 import { markerScale } from './pins';
+import { setParcelLabelVisibility } from './parcelLabels';
 
 void WMS_BASE;
 
@@ -19,10 +20,10 @@ const zoomFadeIcon = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8
 const zoomFadeText = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8, 1] as ExpressionSpecification;
 
 /** Resale parcels win over their status so "นำกลับมาขายใหม่" keeps its own colour. */
-const statusColor = (c: Record<'normal' | 'sale' | 'sold', string>, reColor: string): ExpressionSpecification =>
+const statusColor = (c: Record<Status, string>, reColor: string): ExpressionSpecification =>
   ['case',
     ['all', ['==', ['get', 'status'], 'sale'], ['==', ['get', 'resell'], true]], reColor,
-    ['match', ['get', 'status'], 'normal', c.normal, 'sale', c.sale, 'sold', c.sold, '#fff'],
+    ['match', ['get', 'status'], 'sale', c.sale, 'sold', c.sold, '#fff'],
   ] as ExpressionSpecification;
 
 /* ---------- 9-slice plate images + hairline tick ---------- */
@@ -65,6 +66,8 @@ export function addPlateImages(): void {
   addPlate('plate-n', plateImage('#0D0F0D', 238));
   addPlate('plate-s', plateImage(popColors.sale, 244));
   addPlate('plate-d', plateImage(popColors.sold, 244));
+  /* second block of the compact label — the percent row, light so it reads */
+  addPlate('plate-b', plateImage('#F1F3EA', 246));
   try { if (!map.hasImage('rbar')) map.addImage('rbar', tickImage(), { pixelRatio: 2 }); } catch { /* non-fatal */ }
 }
 export function refreshPlates(): void {
@@ -165,18 +168,9 @@ export function addCustomLayers(): void {
   }
   if (!map.getSource('labels')) {
     map.addSource('labels', { type: 'geojson', data: fc([]) });
-    safeAddLayer({
-      id: 'parcels-labels', type: 'symbol', source: 'labels',
-      layout: {
-        'icon-image': ['match', ['get', 'status'], 'normal', 'plate-n', 'sale', 'plate-s', 'plate-d'],
-        'icon-text-fit': 'both', 'icon-text-fit-padding': [5, 9, 5, 9],
-        'text-field': ['get', 'lp'], 'text-font': MAP_FONTS, 'text-size': 10.5,
-        'text-anchor': 'top', 'text-offset': [0, 0.85], 'text-line-height': 1.25, 'text-letter-spacing': 0.02,
-        'text-allow-overlap': s.labelOverlap, 'icon-allow-overlap': s.labelOverlap,
-        visibility: s.popupMode === 'all' && s.landOn ? 'visible' : 'none',
-      },
-      paint: { 'text-color': '#FFFFFF' },
-    });
+    /* The compact parcel label is a DOM overlay (src/map/parcelLabels.ts) so it can
+       use two coloured blocks plus an inline land-kind icon. The source stays as a
+       cheap placeholder so nothing else has to care. */
   }
   if (!map.getSource('draws')) addDrawLayers();
   if (s.selectedId != null && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], s.selectedId]);
@@ -253,11 +247,8 @@ export function applyPaint(): void {
   if (map.getLayer('parcels-halo')) map.setPaintProperty('parcels-halo', 'circle-radius', radiusExpr(5.5));
 }
 export function applyLabelLayout(): void {
-  const map = getMap(); if (!map || !hasLayer('parcels-labels')) return;
   const s = getApp();
-  map.setLayoutProperty('parcels-labels', 'visibility', s.popupMode === 'all' && s.landOn ? 'visible' : 'none');
-  map.setLayoutProperty('parcels-labels', 'text-allow-overlap', s.labelOverlap);
-  map.setLayoutProperty('parcels-labels', 'icon-allow-overlap', s.labelOverlap);
+  setParcelLabelVisibility(s.popupMode === 'all' && s.landOn);
 }
 export function applyDrawPrefs(): void {
   const map = getMap(); if (!map) return;

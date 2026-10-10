@@ -17,13 +17,19 @@ export function FloodProbe({ hit, dot, size }: { hit: ProbeHit | null; dot: { x:
     <>
       <div className="pointer-events-none absolute z-[18] size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#7FD4FF] shadow-[0_0_6px_rgba(0,0,0,.5)]" style={{ left: dot.x, top: dot.y }} />
       {hit && (
-        <div ref={box} className="pointer-events-none absolute z-[17] min-w-[150px] whitespace-nowrap rounded-[11px] border border-[#4C9AFF] bg-[rgba(11,13,11,.94)] px-3 py-2 text-[10.5px] leading-normal text-white" style={{ left, top }}>
+        <div
+          ref={box}
+          className={`pointer-events-none absolute z-[17] min-w-[150px] whitespace-nowrap rounded-[11px] border px-3 py-2 text-[10.5px] leading-normal ${
+            under ? 'border-[#2F6FB5] bg-[rgba(8,26,48,.94)]' : 'border-line2 bg-[rgba(11,13,11,.94)]'
+          } ${under ? 'text-[#EAF4FF]' : 'text-white'}`}
+          style={{ left, top }}
+        >
           <div className="font-display text-xl font-bold leading-[1.1]" style={{ color: under ? '#7FD4FF' : '#E9EDF3' }}>
             {Math.abs(diff).toFixed(2)} <span className="text-xs">ม.</span>
           </div>
-          <div className="mb-[5px] text-[10px] text-white/65">{under ? 'ความลึกใต้น้ำ' : 'สูงเหนือระดับน้ำ'}</div>
-          <div className="mt-[3px] flex justify-between gap-3.5 border-t border-white/[.14] pt-[3px]"><span>ระดับน้ำ (ตั้งค่า)</span><b className="font-display font-medium text-[#BFE8FF]">{sea} ม.</b></div>
-          <div className="mt-[3px] flex justify-between gap-3.5 border-t border-white/[.14] pt-[3px]"><span>ความสูงจริง</span><b className="font-display font-medium text-[#BFE8FF]">{hit.el.toFixed(2)} ม.</b></div>
+          <div className={`mb-[5px] text-[10px] ${under ? 'text-[#BFE8FF]/70' : 'text-white/65'}`}>{under ? 'ความลึกใต้น้ำ' : 'สูงเหนือระดับน้ำ'}</div>
+          <div className={`mt-[3px] flex justify-between gap-3.5 border-t pt-[3px] ${under ? 'border-[#7FD4FF]/20' : 'border-white/[.14]'}`}><span>ระดับน้ำ (ตั้งค่า)</span><b className="font-display font-medium text-[#BFE8FF]">{sea} ม.</b></div>
+          <div className={`mt-[3px] flex justify-between gap-3.5 border-t pt-[3px] ${under ? 'border-[#7FD4FF]/20' : 'border-white/[.14]'}`}><span>ความสูงจริง</span><b className="font-display font-medium text-[#BFE8FF]">{hit.el.toFixed(2)} ม.</b></div>
         </div>
       )}
     </>

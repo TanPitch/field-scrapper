@@ -13,7 +13,7 @@ type RangeOpts = { min?: number; max?: number };
 
 /** Marker interval in months; 'year' means every 12. */
 const TICK_MONTHS: Record<Exclude<ChartTick, 'none'>, number> = { year: 12, m6: 6, m4: 4, m3: 3 };
-const TH_MONTH_ABBR = ['à¸¡.à¸„.', 'à¸.à¸ž.', 'à¸¡à¸µ.à¸„.', 'à¹€à¸¡.à¸¢.', 'à¸ž.à¸„.', 'à¸¡à¸´.à¸¢.', 'à¸.à¸„.', 'à¸ª.à¸„.', 'à¸.à¸¢.', 'à¸•.à¸„.', 'à¸ž.à¸¢.', 'à¸˜.à¸„.'];
+const TH_MONTH_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'สิ.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 /**
  * Evenly spaced month markers anchored at January of the first year in view, so a

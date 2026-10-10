@@ -12,9 +12,13 @@ import 'tippy.js/animations/shift-away.css';
  * hook-free — which matters because they are called inside `.map()` callbacks
  * (table columns, rail buttons), where hooks are not allowed.
  *
- * Two opt-in attributes:
+ * Three opt-in attributes:
  *   data-tip               text to show
  *   data-tip-if-clipped    only show when the element actually clips its text
+ *   data-tip-side          force a side: 'left' | 'right' (arrow points at the trigger)
+ *
+ * tippy reads any `data-tippy-*` attribute as an option override, so
+ * `data-tippy-placement` also works on a per-element basis.
  */
 
 const TARGET = '[data-tip]';
@@ -63,6 +67,16 @@ export function TipProvider({ children }: { children: ReactNode }) {
 /** Props that attach a tooltip. Returns only a data attribute — hook free. */
 export function useTipProps(text: string | undefined | false | null): { 'data-tip': string } | Record<string, never> {
   return text ? { 'data-tip': text } : {};
+}
+
+/**
+ * Tooltip that opens to the *right* of the trigger, arrow pointing back left at it.
+ * Used by the left rail, which sits flush against the viewport edge. tippy's
+ * delegate merges `data-tippy-*` attributes from the reference element into the
+ * instance props, so `placement: 'right'` wins over the provider default.
+ */
+export function useSideTip(text: string | undefined | false | null): Record<string, string> {
+  return text ? { 'data-tip': text, 'data-tippy-placement': 'right' } : {};
 }
 
 /**

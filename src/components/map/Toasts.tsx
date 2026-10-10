@@ -1,9 +1,10 @@
 import { useApp } from '../../store/useApp';
 
+/** Fixed + mounted at App level so toasts also appear over the splash screen. */
 export function Toasts() {
   const toasts = useApp(s => s.toasts);
   return (
-    <div className="pointer-events-none absolute bottom-4 right-3 z-[25] flex flex-col items-end gap-[7px]">
+    <div className="pointer-events-none fixed bottom-4 right-3 z-[300] flex flex-col items-end gap-[7px]">
       {toasts.map(t => (
         <div
           key={t.id}

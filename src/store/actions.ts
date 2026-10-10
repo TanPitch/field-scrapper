@@ -28,6 +28,15 @@ export function deselect(): void {
   closeClickPopup();
 }
 
+/**
+ * Drops the green ring around a cctv / water / bus pin without touching the land
+ * selection — closing the right panel should not leave a ring stranded on the map.
+ */
+export function deselectPin(): void {
+  if (getApp().pinSel == null) return;
+  patchApp({ pinSel: null });
+}
+
 export function setBasemap(v: BasemapId): void {
   const map = getMap();
   if (!map || getApp().basemap === v) return;

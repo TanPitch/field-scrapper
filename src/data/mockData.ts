@@ -1,5 +1,5 @@
 ﻿import { mulberry32 } from '../lib/geo';
-import type { Parcel, PriceEvent, Region, SellRound, Status } from '../types';
+import type { DataSource, Parcel, PriceEvent, Region, SellRound, Status } from '../types';
 import { ACCENT } from './constants';
 import { districtNames, subDistrictNames } from './thaiGeo';
 
@@ -15,6 +15,7 @@ export const REGIONS: Region[] = [
 ];
 
 const TYPES = ['ที่ดินเปล่า', 'ที่ดินติดถนน', 'ที่ดินมุมถนน', 'ที่ดินนา', 'ที่ดินสวน', 'ที่ดินสร้างได้', 'ที่ดินริมคลอง'];
+const DATA_SOURCES: DataSource[] = ['กรมบังคับคดี', 'ธนาคาร', 'กรมการคลัง', 'กองทุนสินครและสงคราม'];
 const VILLAGES = ['ในเมือง', 'หนองใหญ่', 'โพนทะเล', 'บางพลู', 'ท่าข้าม', 'ห้วยทราย', 'นาเวียง', 'ดอยคำ', 'โคกสี่ต้น', 'วังทอง', 'ท่าพระสถูป', 'หนองปรือ'];
 const DEED_PREFIX = ['ฉ.', 'น.ส.3ก', 'น.ส.3'];
 const COURTS = ['ศาลธนกรรม', 'ศาลแพ่ง', 'ศาลอุทธรณ์', 'ศาลหัวเมือง', 'ศาลเยาวชนและครอบครัว'] as const;
@@ -46,9 +47,8 @@ function generateParcels(): Parcel[] {
       /* the very first Bangkok parcel is always a "นำกลับมาขายใหม่" sample so the style is testable */
       const forceRe = reg === REGIONS[0] && i === 0;
       const roll = rnd();
-      const status: Status = forceRe ? 'sale' : roll < 0.52 ? 'sale' : roll < 0.78 ? 'sold' : 'normal';
+      const status: Status = forceRe || roll < 0.62 ? 'sale' : 'sold';
       let perWah = rint(reg.pricePerWah[0], reg.pricePerWah[1]) * (0.75 + rnd() * 0.5);
-      if (status === 'normal') perWah *= 0.65;
       const wah = Math.round((Math.pow(rnd(), 1.5) * 2600 + 120) / 10) * 10;
       const price = Math.round((perWah * wah) / 1000) * 1000;
       const announce = now - rint(20, 900) * DAY;
@@ -66,7 +66,7 @@ function generateParcels(): Parcel[] {
       }
       const events: PriceEvent[] = [];
       let isRe = false;
-      if (status !== 'normal') events.push({ idx: 0, label: 'ประกาศขาย', color: ACCENT, ink: '#151B06' });
+      events.push({ idx: 0, label: 'ประกาศขาย', color: ACCENT, ink: '#151B06' });
       if (status === 'sold') events.push({ idx: n - 1, label: 'ขายออกแล้ว', color: '#9BA1A6', ink: '#101211' });
       else if (forceRe || (n >= 5 && rnd() < 0.18)) {
         const m = 2 + Math.floor(rnd() * (n - 3));
@@ -108,7 +108,9 @@ function generateParcels(): Parcel[] {
         announce, soldTs, hist, events, resell: isRe,
         imgs: 1 + Math.floor(rnd() * 4),
         lastTs: soldTs ?? announce,
-        saleByText: mortgage ? `${mortgage.amount.toLocaleString('en-US')} ติดจำนอง ${mortgage.bank}` : 'ปลอดการจำนอง',
+saleByText: mortgage ? `${mortgage.amount.toLocaleString('en-US')} ติดจำนอง ${mortgage.bank}` : 'ปลอดการจำนอง',
+        dataSource: pick(DATA_SOURCES),
+        landKind: rnd() < 0.32 ? 'building' : 'empty',
         ownerFile: personName(rnd),
         propertyType: pick(TYPES),
         deedNo: deedNo,

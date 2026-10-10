@@ -2,10 +2,10 @@ import { ChevronDown, Crosshair, Filter, Search, Table2 } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { HEADER_H, MIN_BH } from '../../data/constants';
 import { debounce } from '../../lib/format';
-import { showRight } from '../../store/actions';
 import { clampBottomH, patchApp, useApp } from '../../store/useApp';
 import { btn, btnAcc, iconBtn } from '../ui/styles';
 import { useTipProps } from '../ui/Tip';
+import { showRight } from '../../store/actions';
 import { ColumnPicker } from './ColumnPicker';
 import { DataTable } from './DataTable';
 import { FilterPopup } from './FilterPopup';
@@ -71,8 +71,8 @@ export function BottomPanel({ small }: { small: boolean }) {
         <button className={btn} {...useTipProps('ตัวกรองข้อมูล')} onClick={e => setFltAnchor(a => (a ? null : e.currentTarget))}>
           <Filter size={14} />ตัวกรอง{hasFilters && <span className="size-1.5 rounded-full bg-accent" />}
         </button>
-        <button className={btn} {...useTipProps('แสดง/ซ่อน/ปักหมุด/เรียง/ปรับความกว้าง')} onClick={e => setColAnchor(a => (a ? null : e.currentTarget))}><Table2 size={14} />คอลัมน์</button>
-        <button className={btnAcc} {...useTipProps('เปิดแผงค้นหาในพื้นที่นี้')} onClick={() => { patchApp({ searchPrefill: filters.text || '' }); showRight('search'); }}><Crosshair size={14} />ค้นหาที่ดิน</button>
+<button className={btn} {...useTipProps('แสดง/ซ่อน/ปักหมุด/เรียง/ปรับความกว้าง')} onClick={e => setColAnchor(a => (a ? null : e.currentTarget))}><Table2 size={14} />คอลัมน์</button>
+        <button className={btnAcc} {...useTipProps('เปิดแผงค้นหาพื้นที่ในแผงขวา')} onClick={() => { patchApp({ searchPrefill: filters.text || '' }); showRight('search'); }}><Crosshair size={14} />ค้นหาพื้นที่</button>
         <button className={iconBtn} {...useTipProps('ย่อ/ขยายตาราง')} onClick={snap}><ChevronDown size={17} className={`transition-transform duration-200 ${flipped ? '' : 'rotate-180'}`} /></button>
       </div>
       <DataTable />

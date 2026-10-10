@@ -1,7 +1,8 @@
 import { X } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
-import type { ReactNode } from 'react';
-import { setRight } from '../../store/actions';
+import { useEffect, type ReactNode } from 'react';
+import { deselectPin, setRight } from '../../store/actions';
+import { clearSearchSelection } from '../../map/pins';
 import { useApp } from '../../store/useApp';
 import type { RightView } from '../../types';
 import { iconBtn } from '../ui/styles';
@@ -13,7 +14,7 @@ import { CctvView, PinSettingsView, SearchView, SensorView, TransportSettingsVie
 import { ResultsView } from './ResultsView';
 
 const TITLES: Record<RightView, string> = {
-  results: 'ผลการค้นหา', overlay: 'ตั้งค่าเลย์เยอร์', draw: 'เครื่องมือวาด', area: 'พื้นที่กรองจุด', detail: 'รายละเอียดที่ดิน',
+  results: 'ผลการค้นหา', overlay: 'ตั้งค่าเลย์เยอร์', draw: 'เครื่องมือวาด', area: 'ตั้งค่าพื้นที่', detail: 'รายละเอียดที่ดิน',
   cctv: 'กล้อง CCTV', sensor: 'เซ็นเซอร์น้ำ', 'pins-settings': 'เซ็นเซอร์น้ำ/เขื่อน — ตั้งค่า', transport: 'รถประจำทาง', 'transport-settings': 'รถประจำทาง — ตั้งค่า', search: 'ค้นหาที่ดิน',
 };
 
@@ -26,6 +27,11 @@ export function RightPanel({ small }: { small: boolean }) {
   const cctv = useApp(s => s.cctvList.find(p => p.id === pinSel));
   const sens = useApp(s => s.sensList.find(p => p.id === pinSel));
   const transport = useApp(s => s.transportList.find(p => p.id === pinSel));
+
+/* Closing the panel drops every green ring: the search ring for internet hits,
+     and the cctv / water / bus ring. Whatever fired the close — the X button,
+     the header toggle or the small-screen swipe — the effect covers all of them. */
+useEffect(() => { if (!open) { deselectPin(); clearSearchSelection(); } }, [open]);
 
   let title = TITLES[view];
   if (view === 'overlay') title = 'เลย์เยอร์: ' + (overlays.find(o => o.id === overlaySel)?.name ?? '');
@@ -47,7 +53,7 @@ export function RightPanel({ small }: { small: boolean }) {
       }`}
     >
       <div className="flex h-full w-[400px] max-w-full flex-col">
-        <div className="flex flex-none items-center gap-2 border-b border-line px-3.5 py-[11px]">
+        <div className="flex flex-none items-center gap-2 border-b border-line px-3.5 py-1.5">
           <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-semibold">{title}</span>
           <button className={`${iconBtn} ml-auto`} {...useTipProps('ปิดแผง')} onClick={() => setRight(false)}><X size={17} /></button>
         </div>

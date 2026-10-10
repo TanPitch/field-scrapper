@@ -3,10 +3,11 @@ import {
   DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER, DEFAULT_FLOOD, DEFAULT_LB_CFG, DEFAULT_OVERLAYS, DEFAULT_POPUP_CFG,
   DEFAULT_POP_COLORS, MIN_BH,
 } from '../data/constants';
+import type { AvatarCfg } from '../components/ui/AvatarPicker';
 import type {
   BasemapId, BBox, Cascade, CctvPin, ColKey, DrawDistMode, DrawMode, DrawShape, DrawTool, Filters, FilterArea,
   ChartTick, FloodConfig, GlassLevel, LightboxField, LayoutMode, LngLat, MarkerSize, Overlay, OverlayId, PopupConfig, PopupMode, RightView, SensorPin, SortState,
-  Status, Theme, TransportPin,
+  ManagedUser, PopupKind, Status, Theme, TransportPin,
 } from '../types';
 
 export const EMPTY_FILTERS: Filters = {
@@ -15,13 +16,15 @@ export const EMPTY_FILTERS: Filters = {
 };
 
 export interface Toast { id: number; msg: string; warn: boolean; out: boolean }
-export type SetTab = 'map' | 'popup' | 'search' | 'look' | 'about' | 'draw';
+export type SetTab = 'map' | 'popup' | 'search' | 'look' | 'about' | 'draw' | 'server' | 'user' | 'users';
 
 export interface AppState {
   /* ----- settings ----- */
   popupMode: PopupMode;
   labelOverlap: boolean;
   labelSold: boolean;
+  /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
+  showLandKindIcon: boolean;
   priceBath: boolean;
   priceSpace: boolean;
   showCircleMeta: boolean;
@@ -29,13 +32,16 @@ export interface AppState {
   drawDistMode: DrawDistMode;
   reduceMotion: boolean;
   theme: Theme;
+  /** User-chosen primary colour (hex). Empty = use the theme's own accent. */
+  accentColor: string;
   cascade: Cascade;
   gkey: string;
   restrict: boolean;
   override: boolean;
-  statusVisible: Record<Status, boolean>;
+statusVisible: Record<Status, boolean>;
+  /** Kept for backwards-compat with saved state; `re` now lives in popColors. */
   reColor: string;
-  popColors: Record<Status, string>;
+  popColors: Record<PopupKind, string>;
   popupCfg: PopupConfig;
   lbCfg: Record<LightboxField, boolean>;
 
@@ -99,6 +105,22 @@ export interface AppState {
   layoutMode: LayoutMode;
   sensOpacity: number;
   markerSize: MarkerSize;
+  /** Max hits shown for a search, per source group. */
+  searchLimit: number;
+  /** Reveals the ค้นหา & API settings tab (needs the unlock code from แผนที่). */
+  showApiSettings: boolean;
+  /** Mockup account fields (ผูใช้ pane) — no backend. */
+  /** dmin sees hidden settings tabs without the unlock code. */
+  role: 'user' | 'admin';
+  signedIn: boolean;
+  userName: string;
+  displayName: string;
+  twoFa: boolean;
+  avatarColor: string;
+  /** Icon/colour (or uploaded image) for the profile picture. */
+  avatarCfg: AvatarCfg;
+  /** Mockup account list for จัดการผู้ใช้. */
+  managedUsers: ManagedUser[];
   cctvList: CctvPin[];
   sensList: SensorPin[];
   transportList: TransportPin[];
@@ -115,6 +137,7 @@ export const useApp = create<AppState>(set => ({
   popupMode: 'active',
   labelOverlap: false,
   labelSold: true,
+  showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,
   showCircleMeta: true,
@@ -122,12 +145,13 @@ export const useApp = create<AppState>(set => ({
   drawDistMode: 'both',
   reduceMotion: false,
   theme: 'graphite',
+  accentColor: '',
   cascade: 'google',
   gkey: '',
   restrict: false,
   override: false,
-  statusVisible: { normal: true, sale: true, sold: true },
-  reColor: '#B8F13F',
+statusVisible: { sale: true, sold: true },
+  reColor: DEFAULT_POP_COLORS.re,
   popColors: { ...DEFAULT_POP_COLORS },
   popupCfg: structuredClone(DEFAULT_POPUP_CFG),
   lbCfg: { ...DEFAULT_LB_CFG },
@@ -185,6 +209,16 @@ export const useApp = create<AppState>(set => ({
   layoutMode: 'floating',
   sensOpacity: 0.9,
   markerSize: 'normal',
+  searchLimit: 8,
+  showApiSettings: false,
+  role: 'admin',
+  signedIn: false,
+  userName: 'fieldscrapper',
+  displayName: 'ผู้ใช้ Field Scrapper',
+  twoFa: false,
+  avatarColor: '',
+  avatarCfg: { icon: 'user', from: '#4C9AFF', to: '', image: '' },
+  managedUsers: [],
   cctvList: [],
   sensList: [],
   transportList: [],

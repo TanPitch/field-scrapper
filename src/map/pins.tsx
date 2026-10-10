@@ -3,12 +3,13 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { icons, type LucideIcon } from 'lucide-react';
+import type { ExpressionSpecification } from 'maplibre-gl';
 import { CctvPopup } from '../components/pins/CctvPopup';
 import { MIN_ZOOM } from '../data/constants';
 import { PARCEL_BY_ID, ALL_PARCELS } from '../data/mockData';
 import { select, showRight } from '../store/actions';
 import { getApp, patchApp } from '../store/useApp';
-import type { BBox, CctvPin, LngLat, SearchHit, SensorPin, TransportPin } from '../types';
+import type { BBox, CctvPin, LngLat, MarkerSize, SearchHit, SensorPin, TransportPin } from '../types';
 import { fc, getMap, hasLayer, ptF, setSourceData, setVisibility } from './mapRef';
 
 /* ---------- bbox helpers ---------- */
@@ -23,7 +24,11 @@ export function currentBbox(): BBox | null {
 
 const markerImageHalf = 5; // 36px canvas / pixelRatio 2 / 2
 const smallLandRadius = 7.5; // current small land dot radius
-export const markerScale = (): number => (getApp().markerSize === 'large' ? (smallLandRadius * 2) / (markerImageHalf * 2) : 1);
+/** เล็ก / ปกติ / ใหญ่ → a multiplier for every marker image and selection ring. */
+const MARKER_SCALE: Record<MarkerSize, number> = {
+  small: 0.72, normal: 1, large: (smallLandRadius * 2) / (markerImageHalf * 2),
+};
+export const markerScale = (): number => MARKER_SCALE[getApp().markerSize] ?? 1;
 export function applyPinMarkerSize(): void {
   const map = getMap(); if (!map) return;
   const s = markerScale();
@@ -31,8 +36,10 @@ export function applyPinMarkerSize(): void {
     if (hasLayer('fs-cctv-pin')) map.setLayoutProperty('fs-cctv-pin', 'icon-size', s);
     if (hasLayer('fs-flood-pin')) map.setLayoutProperty('fs-flood-pin', 'icon-size', s);
     if (hasLayer('fs-transport-pin')) map.setLayoutProperty('fs-transport-pin', 'icon-size', s);
-    if (hasLayer('fs-search-ic')) map.setLayoutProperty('fs-search-ic', 'icon-size', s);
+    if (hasLayer('fs-search-ic')) map.setLayoutProperty('fs-search-ic', 'icon-size', searchIconSize());
     if (hasLayer('fs-pin-sel-ring')) map.setPaintProperty('fs-pin-sel-ring', 'circle-radius', 12 * s);
+    if (hasLayer('fs-sel-ring')) map.setPaintProperty('fs-sel-ring', 'circle-radius', 17 * s);
+    if (hasLayer('fs-search-sel-ring')) map.setPaintProperty('fs-search-sel-ring', 'circle-radius', 17 * s);
   } catch { /* style not ready */ }
 }
 
@@ -107,7 +114,6 @@ const trainGlyph: Glyph = lucideNodes(TRAIN_NODES);
 const carGlyph: Glyph = lucideNodes(CAR_NODES);
 const camGlyph: Glyph = lucidePaths(CCTV_PATHS);
 const dropGlyph: Glyph = lucidePaths(DROPLET_PATHS);
-const placeGlyph: Glyph = g => { g.beginPath(); g.arc(18, 15, 4.4, 0, 7); g.fill(); g.beginPath(); g.moveTo(18, 19); g.lineTo(18, 26); g.stroke(); };
 const circleIcon = (bg: string, ring: string, glyph: Glyph): HTMLCanvasElement => mkIcon(g => {
   g.beginPath(); g.arc(18, 18, 15, 0, 7); g.fillStyle = bg; g.fill();
   g.lineWidth = 2.4; g.strokeStyle = ring; g.stroke();
@@ -123,7 +129,53 @@ export function lucideInner(Icon: LucideIcon): string {
 export function lucideSvgByName(name: string): string {
   const pascal = name.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
   const Icon = (icons as Record<string, LucideIcon>)[pascal] ?? icons.MapPin;
-  return renderToStaticMarkup(createElement(Icon));
+  return renderToStaticMarkup(createElement(Icon, {size: 13}));
+}
+
+/* ---------- POI markers: black disc + the glyph for the place type ---------- */
+const poiImageIds = new Set<string>();
+const poiPending = new Set<string>();
+
+/**
+ * Rasterises a lucide SVG onto a black disc. `currentColor` is rewritten first —
+ * lucide renders with `stroke="currentColor"`, which resolves to *black* inside
+ * an <img> data URL and would be invisible on the black disc.
+ */
+function poiCanvas(iconName: string): Promise<HTMLCanvasElement> {
+  const c = document.createElement('canvas');
+  c.width = c.height = 36;
+  const g = c.getContext('2d') as CanvasRenderingContext2D;
+  g.beginPath(); g.arc(18, 18, 15, 0, 7); g.fillStyle = '#0C0E0C'; g.fill();
+  g.lineWidth = 2.4; g.strokeStyle = 'rgba(241,243,238,.5)'; g.stroke();
+
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { g.drawImage(img, 9, 9, 18, 18); resolve(c); };
+    img.onerror = () => resolve(c);
+    const svg = lucideSvgByName(iconName).replace(/currentColor/g, '#F1F3EE');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+
+/** Registers `fs-poi-<iconName>` once; the symbol layer resolves it by id. */
+function ensurePoiImage(iconName: string): void {
+  const map = getMap(); if (!map) return;
+  const id = 'fs-poi-' + iconName;
+  if (poiImageIds.has(id) || poiPending.has(id)) return;
+  poiPending.add(id);
+  void poiCanvas(iconName)
+    .then(c => {
+      poiPending.delete(id);
+      if (poiImageIds.has(id)) return;
+      try {
+        const data = (c.getContext('2d') as CanvasRenderingContext2D).getImageData(0, 0, c.width, c.height);
+        map.addImage(id, { width: c.width, height: c.height, data: new Uint8Array(data.data) }, { pixelRatio: 2 });
+        poiImageIds.add(id);
+        /* symbols already drawn without the image re-resolve on the next frame */
+        map.triggerRepaint();
+      } catch { /* style not ready */ }
+    })
+    .catch(() => poiPending.delete(id));
 }
 
 /* ---------- mock pin data (TODO: replace with real API clients) ---------- */
@@ -162,7 +214,44 @@ export function seedPins(): void {
   patchApp({ cctvList, sensList, transportList });
 }
 
+/* Water caption sits below its droplet. Raise this to move the caption lower. */
+export const WATER_LABEL_OFFSET = 12;
+
 /* ---------- layers ---------- */
+/** Cached caption images: key → map image id. Cleared whenever layers are rebuilt. */
+const floodLabelImages = new Map<string, string>();
+let floodImgSeq = 0;
+
+/** Render a caption as a rounded, bordered chip (same look as the old DOM label). */
+function floodLabelChip(text: string, isDam: boolean): HTMLCanvasElement {
+  const scale = 2;
+  const font = "700 10px 'Noto Sans Thai', sans-serif";
+  const padX = 7, padY = 3, r = 5;
+  const probe = document.createElement('canvas').getContext('2d');
+  probe!.font = font;
+  const w = Math.ceil(probe!.measureText(text).width) + padX * 2;
+  const h = Math.ceil(10 + padY * 2);
+  const c = document.createElement('canvas');
+  c.width = w * scale; c.height = h * scale;
+  const ctx = c.getContext('2d')!;
+  ctx.scale(scale, scale);
+  ctx.font = font;
+  ctx.textBaseline = 'middle';
+  /* chip */
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(0.5, 0.5, w - 1, h - 1, r);
+  else ctx.rect(0.5, 0.5, w - 1, h - 1);
+  ctx.fillStyle = isDam ? '#21162F' : '#071B2D';
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = isDam ? '#9B8CFF' : '#4C9AFF';
+  ctx.stroke();
+  /* text */
+  ctx.fillStyle = isDam ? '#E2DCFF' : '#D7E9FF';
+  ctx.fillText(text, padX, h / 2 + 0.5);
+  return c;
+}
+
 export function initPinLayers(): void {
   const map = getMap(); if (!map) return;
   const addSrc = (id: string) => { if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: fc([]) }); };
@@ -173,13 +262,36 @@ export function initPinLayers(): void {
   };
   const iconLayout = { 'icon-size': markerScale(), 'icon-allow-overlap': true, 'icon-ignore-placement': true };
 
-  /* CCTV + sensors */
-  addSrc('fs-cctv-src'); addSrc('fs-flood-src');
+  /* Layer creation order is the render order, bottom → top:
+   search → cctv → bus → water → land parcel (added later, in layers.ts).
+   Search markers sit at the bottom so a hit never covers a pin that is already
+   on the map. Do not reorder these blocks without re-checking the whole stack. */
+
+  /* search markers — internet hits only, glyph chosen from the place type */
+  addSrc('fs-search-src');
+  if (!map.getLayer('fs-search-ic')) {
+    map.addLayer({
+      id: 'fs-search-ic', type: 'symbol', source: 'fs-search-src',
+      layout: {
+        'icon-image': ['concat', 'fs-poi-', ['coalesce', ['get', 'ic'], 'map-pin']],
+        'icon-size': searchIconSize(), 'icon-allow-overlap': true, 'icon-ignore-placement': true,
+      },
+    });
+  }
+  addSrc('fs-search-sel-src');
+  if (!map.getLayer('fs-search-sel-ring')) {
+    map.addLayer({
+      id: 'fs-search-sel-ring', type: 'circle', source: 'fs-search-sel-src',
+      paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 },
+    });
+  }
+
+  /* cctv */
+  floodLabelImages.clear();
+  floodImgSeq = 0;
+  addSrc('fs-cctv-src');
   addImg('fs-ic-cctv', circleIcon('#0C0E0C', '#FFC94D', camGlyph));
-  addImg('fs-ic-drop', circleIcon('#0C0E0C', '#4C9AFF', dropGlyph));
-  addImg('fs-ic-drop-dam', circleIcon('#0C0E0C', '#9B8CFF', dropGlyph));
   if (!map.getLayer('fs-cctv-pin')) map.addLayer({ id: 'fs-cctv-pin', type: 'symbol', source: 'fs-cctv-src', layout: { ...iconLayout, 'icon-image': 'fs-ic-cctv' } });
-  if (!map.getLayer('fs-flood-pin')) map.addLayer({ id: 'fs-flood-pin', type: 'symbol', source: 'fs-flood-src', layout: { ...iconLayout, 'icon-image': ['match', ['get', 'type'], 'dam', 'fs-ic-drop-dam', 'fs-ic-drop'] } });
 
   /* transport */
   addSrc('fs-transport-src');
@@ -194,18 +306,27 @@ export function initPinLayers(): void {
     });
   }
 
-  /* search result icons + selection ring */
-  addSrc('fs-search-src');
-  addImg('fs-ic-s-land', circleIcon('#F5F6F4', '#8B9096', () => {}));
-  addImg('fs-ic-s-cctv', circleIcon('#0C0E0C', '#FFC94D', camGlyph));
-  addImg('fs-ic-s-sensor', circleIcon('#0C0E0C', '#4C9AFF', dropGlyph));
-  addImg('fs-ic-s-place', circleIcon('rgba(76,154,255,.16)', '#4C9AFF', placeGlyph));
-  addImg('fs-ic-s-transport', circleIcon('#0C0E0C', '#FF9F43', busGlyph));
-  if (!map.getLayer('fs-search-ic')) {
-    map.addLayer({ id: 'fs-search-ic', type: 'symbol', source: 'fs-search-src', layout: { 'icon-image': ['match', ['get', 'kind'], 'land', 'fs-ic-s-land', 'cctv', 'fs-ic-s-cctv', 'sensor', 'fs-ic-s-sensor', 'transport', 'fs-ic-s-transport', 'fs-ic-s-place'], 'icon-size': markerScale(), 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
+  /* water — droplet and its caption, caption on top of the droplet */
+  addSrc('fs-flood-src');
+  addImg('fs-ic-drop', circleIcon('#0C0E0C', '#4C9AFF', dropGlyph));
+  addImg('fs-ic-drop-dam', circleIcon('#0C0E0C', '#9B8CFF', dropGlyph));
+  if (!map.getLayer('fs-flood-pin')) map.addLayer({ id: 'fs-flood-pin', type: 'symbol', source: 'fs-flood-src', layout: { ...iconLayout, 'icon-image': ['match', ['get', 'type'], 'dam', 'fs-ic-drop-dam', 'fs-ic-drop'] } });
+  if (!map.getLayer('fs-flood-lbl')) {
+    map.addLayer({
+      id: 'fs-flood-lbl', type: 'symbol', source: 'fs-flood-src',
+      layout: {
+        'icon-image': ['get', 'img'], 'icon-size': 1,
+        'icon-anchor': 'top', 'icon-offset': [0, WATER_LABEL_OFFSET],
+        'icon-allow-overlap': true, 'icon-ignore-placement': true,
+      },
+    });
   }
+
+  /* cctv */
+  floodLabelImages.clear();
+  /* transient flash ring (gotoItem) and the persistent cctv/bus/water selection */
   addSrc('fs-sel-src');
-  if (!map.getLayer('fs-sel-ring')) map.addLayer({ id: 'fs-sel-ring', type: 'circle', source: 'fs-sel-src', paint: { 'circle-radius': 15, 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 } });
+  if (!map.getLayer('fs-sel-ring')) map.addLayer({ id: 'fs-sel-ring', type: 'circle', source: 'fs-sel-src', paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 } });
   addSrc('fs-pin-sel-src');
   if (!map.getLayer('fs-pin-sel-ring')) {
     map.addLayer({
@@ -226,76 +347,39 @@ export function initPinLayers(): void {
     map.on('mouseenter', ly, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', ly, () => { map.getCanvas().style.cursor = ''; });
   });
-  ensureLabelLayer();
-  map.on('move', refreshFloodLabelPositions);
-  map.on('zoom', refreshFloodLabelPositions);
-  map.on('resize', refreshFloodLabelPositions);
 }
 
 /* ---------- data sync ---------- */
-let floodLabelDivs = new Map<string, HTMLDivElement>();
-let floodLabelPins: SensorPin[] = [];
-let labelLayer: HTMLDivElement | null = null;
-
-function ensureLabelLayer(): HTMLDivElement | null {
-  const map = getMap(); if (!map) return null;
-  if (labelLayer && labelLayer.parentElement === map.getContainer()) return labelLayer;
-  labelLayer = document.createElement('div');
-  labelLayer.className = 'fs-label-layer';
-  map.getContainer().appendChild(labelLayer);
-  return labelLayer;
-}
-
-function syncFloodLabels(pins: SensorPin[]): void {
-  const map = getMap(); if (!map) return;
-  const layer = ensureLabelLayer(); if (!layer) return;
-  floodLabelPins = pins;
-  const live = new Set(pins.map(p => p.id));
-  for (const [id, el] of floodLabelDivs) {
-    if (!live.has(id)) { el.remove(); floodLabelDivs.delete(id); }
-  }
-  pins.forEach(p => {
-    const isDam = p.type === 'dam';
-    const label = `${p.lv.toFixed(2)} ม.`;
-    const div = floodLabelDivs.get(p.id) ?? document.createElement('div');
-    div.className = 'fs-pin-label';
-    div.style.background = isDam ? '#21162F' : '#071B2D';
-    div.style.border = `1px solid ${isDam ? '#9B8CFF' : '#4C9AFF'}`;
-    div.style.color = isDam ? '#E2DCFF' : '#D7E9FF';
-    div.style.opacity = String(getApp().sensOpacity);
-    div.textContent = label;
-    if (!floodLabelDivs.has(p.id)) { layer.appendChild(div); floodLabelDivs.set(p.id, div); }
-    const point = map.project(p.ll);
-    div.style.left = `${point.x}px`;
-    div.style.top = `${point.y + 14}px`;
-  });
-}
-
-function refreshFloodLabelPositions(): void {
+/** Map image id for a caption, rendering and caching it on first use. */
+function floodLabelImageId(text: string, isDam: boolean): string {
+  const key = (isDam ? 'dam' : 'fld') + '|' + text;
+  const hit = floodLabelImages.get(key);
+  if (hit) return hit;
   const map = getMap();
-  if (!map || !labelLayer) return;
-  floodLabelPins.forEach(p => {
-    const div = floodLabelDivs.get(p.id);
-    if (!div) return;
-    const point = map.project(p.ll);
-    div.style.left = `${point.x}px`;
-    div.style.top = `${point.y + 14}px`;
-  });
+  const id = `fs-lbl-${isDam ? 'dam' : 'fld'}-${++floodImgSeq}`;
+  if (!map) return id;
+  const chip = floodLabelChip(text, isDam);
+  const data = chip.getContext('2d')!.getImageData(0, 0, chip.width, chip.height);
+  map.addImage(id, { width: data.width, height: data.height, data: new Uint8Array(data.data) }, { pixelRatio: 2 });
+  floodLabelImages.set(key, id);
+  return id;
 }
 
 export function syncPinData(): void {
   const s = getApp(), bb = currentBbox();
   const zoomOk = getApp().zoom >= MIN_ZOOM;
   setSourceData('fs-cctv-src', fc(s.cctvOn && zoomOk ? s.cctvList.filter(p => inBbox(p.ll, bb)).map(p => ptF(p.ll, { id: p.id })) : []));
-  setSourceData('fs-flood-src', fc(s.sensOn && zoomOk ? s.sensList.filter(p => inBbox(p.ll, bb)).map(p => ptF(p.ll, { id: p.id, type: p.type })) : []));
+  setSourceData('fs-flood-src', fc(s.sensOn && zoomOk ? s.sensList.filter(p => inBbox(p.ll, bb)).map(p => {
+    const text = `${p.lv.toFixed(2)} ม.`;
+    return ptF(p.ll, { id: p.id, type: p.type, lb: text, img: floodLabelImageId(text, p.type === 'dam') });
+  }) : []));
   setSourceData('fs-transport-src', fc(s.transportOn && zoomOk ? s.transportList.filter(p => inBbox(p.ll, bb)).map(p => ptF(p.ll, { id: p.id, mode: p.mode, name: p.name })) : []));
   try { getMap()?.setPaintProperty('fs-transport-pin', 'icon-opacity', s.transportOpacity); } catch { /* layer missing */ }
   ['fs-transport-pin'].forEach(ly => setVisibility(ly, s.transportOn && zoomOk));
   try { getMap()?.setPaintProperty('fs-flood-pin', 'icon-opacity', s.sensOpacity); } catch { /* property n/a */ }
-  floodLabelDivs.forEach(div => { div.style.opacity = String(s.sensOpacity); });
+  try { getMap()?.setPaintProperty('fs-flood-lbl', 'icon-opacity', s.sensOpacity); } catch { /* property n/a */ }
   ['fs-cctv-pin'].forEach(ly => setVisibility(ly, s.cctvOn && zoomOk));
-  ['fs-flood-pin'].forEach(ly => setVisibility(ly, s.sensOn && zoomOk));
-  syncFloodLabels(s.sensOn && zoomOk ? s.sensList.filter(p => inBbox(p.ll, bb)) : []);
+  ['fs-flood-pin', 'fs-flood-lbl'].forEach(ly => setVisibility(ly, s.sensOn && zoomOk));
 }
 
 /* ---------- CCTV popup + selection ---------- */
@@ -336,9 +420,49 @@ export function openTransport(id: string): void {
 /* ---------- search integration ---------- */
 let onSearchPick: ((rid: string) => void) | null = null;
 export const setSearchPickHandler = (fn: ((rid: string) => void) | null): void => { onSearchPick = fn; };
+export const getSearchPickHandler = (): ((rid: string) => void) | null => onSearchPick;
 
-export function plotSearch(items: { id: string; kind: string; ll: LngLat }[]): void {
-  setSourceData('fs-search-src', fc(items.map(it => ptF(it.ll, { kind: it.kind, id: it.id }))));
+/** The chosen search marker is drawn ~30% larger, so selection reads at a glance. */
+function searchIconSize(): ExpressionSpecification {
+  const s = markerScale();
+  return ['case', ['boolean', ['get', 'sel'], false], s * 1.3, s] as ExpressionSpecification;
+}
+
+/** last plotted positions, so a selection ring can be placed without a re-plot */
+const searchPts = new Map<string, { ll: LngLat; ic: string }>();
+let searchSelId: string | null = null;
+
+/** Internet hits only — local results keep their own markers. */
+export function plotSearch(items: { id: string; kind: string; ll: LngLat; ic?: string }[]): void {
+  searchPts.clear();
+  items.forEach(it => {
+    searchPts.set(it.id, { ll: it.ll, ic: it.ic ?? '' });
+    ensurePoiImage(it.ic || 'map-pin');
+  });
+  if (searchSelId && !searchPts.has(searchSelId)) searchSelId = null;
+  setSourceData('fs-search-src', fc(items.map(it => ptF(it.ll, { id: it.id, ic: it.ic ?? '', sel: it.id === searchSelId }))));
+  syncSearchSelectionRing();
+}
+
+/** Rings the chosen internet hit. Pass null (or `clearSearchSelection`) to clear. */
+export function setSearchSelection(rid: string | null): void {
+  searchSelId = rid;
+  const map = getMap();
+  try { if (map && hasLayer('fs-search-ic')) map.setLayoutProperty('fs-search-ic', 'icon-size', searchIconSize()); } catch { /* style not ready */ }
+  /* re-plot so the `sel` flag lands on the right feature */
+  setSourceData('fs-search-src', fc([...searchPts].map(([id, v]) => ptF(v.ll, { id, ic: v.ic, sel: id === searchSelId }))));
+  syncSearchSelectionRing();
+}
+
+/** Drops the green ring around a selected internet marker. */
+export function clearSearchSelection(): void {
+  if (searchSelId == null) return;
+  setSearchSelection(null);
+}
+
+function syncSearchSelectionRing(): void {
+  const hit = searchSelId ? searchPts.get(searchSelId) : null;
+  setSourceData('fs-search-sel-src', hit ? fc([ptF(hit.ll)]) : fc([]));
 }
 
 let ringRaf = 0;
@@ -349,12 +473,20 @@ export function ringAt(at: LngLat | null): void {
   cancelAnimationFrame(ringRaf);
   setSourceData('fs-sel-src', fc([ptF(at)]));
   const t0 = performance.now();
+  /* leave the layer exactly as the marker-size toggle expects to find it */
+  const settle = () => {
+    setSourceData('fs-sel-src', fc([]));
+    try {
+      map.setPaintProperty('fs-sel-ring', 'circle-stroke-opacity', 1);
+      map.setPaintProperty('fs-sel-ring', 'circle-radius', 17 * markerScale());
+    } catch { /* style not ready */ }
+  };
   const step = (now: number) => {
     const t = Math.min(1, (now - t0) / 1000);
-    if (t >= 1) { setSourceData('fs-sel-src', fc([])); return; }
+    if (t >= 1) { settle(); return; }
     try {
       map.setPaintProperty('fs-sel-ring', 'circle-stroke-opacity', 1 - t);
-      map.setPaintProperty('fs-sel-ring', 'circle-radius', 14 + t * 16);
+      map.setPaintProperty('fs-sel-ring', 'circle-radius', 17 * markerScale() + t * 16);
     } catch { return; }
     ringRaf = requestAnimationFrame(step);
   };
@@ -384,8 +516,25 @@ export function matchAll(query: string, bb: BBox | null = currentBbox()): Search
 }
 
 let placeMarker: maplibregl.Marker | null = null;
-/** Fly to / open a search result of any kind. */
-export function gotoItem(it: SearchHit): void {
+
+/** Below this zoom a result is too small to be useful, so the view zooms in. */
+const SEARCH_MIN_ZOOM = 12;
+const SEARCH_FOCUS_ZOOM = 15;
+
+/** Pan to a result — and only zoom when the map is currently too far out. */
+export function flyToResult(ll: LngLat): void {
+  const map = getMap(); if (!map) return;
+  const z = map.getZoom();
+  if (z < SEARCH_MIN_ZOOM) map.flyTo({ center: ll, zoom: SEARCH_FOCUS_ZOOM, essential: true });
+  else map.easeTo({ center: ll, duration: 600, essential: true });
+}
+
+/**
+ * Fly to / open a search result of any kind.
+ * `ring` is only needed when the caller has no persistent selection ring of its
+ * own — passing it alongside `setSearchSelection` draws two rings on one point.
+ */
+export function gotoItem(it: SearchHit, ring = true): void {
   const map = getMap(); if (!map) return;
   if (it.kind === 'land') select(Number(it.id), { fly: false });
   else if (it.kind === 'cctv') openCctv(it.id, it.ll);
@@ -399,11 +548,11 @@ export function gotoItem(it: SearchHit): void {
     const sub = document.createElement('div'); sub.textContent = it.sub; sub.style.cssText = "font:400 10.5px 'Noto Sans Thai';opacity:.75;margin-top:2px";
     body.append(b, sub);
     pop.setDOMContent(body);
-    placeMarker = new maplibregl.Marker({ color: '#4C9AFF' }).setLngLat(it.ll).setPopup(pop).addTo(map);
+    placeMarker = new maplibregl.Marker({ color: '#0C0E0C' }).setLngLat(it.ll).setPopup(pop).addTo(map);
     setTimeout(() => placeMarker?.togglePopup(), 700);
   }
-  ringAt(it.ll);
-  map.flyTo({ center: it.ll, zoom: Math.max(map.getZoom() || 13, 16), essential: true });
+  if (ring) ringAt(it.ll);
+  flyToResult(it.ll);
 }
 
 export const parcelById = (id: number) => PARCEL_BY_ID.get(id);

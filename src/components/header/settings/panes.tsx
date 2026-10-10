@@ -1,12 +1,13 @@
-﻿import { RotateCcw, ScanLine } from 'lucide-react';
-import { useState } from 'react';
+import { Eye, EyeOff, RotateCcw, ScanLine } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import RELEASE_NOTES from '../../../../RELEASE_NOTES.md?raw';
 import {
-  LB_FIELDS, POP_FIELDS, POP_KINDS, STATUS, STATUS_KEYS,
+  LB_FIELDS, POP_FIELDS, POP_KINDS, SETTINGS_SECRET, STATUS, STATUS_KEYS,
 } from '../../../data/constants';
-import { ALL_PARCELS, PROVINCES } from '../../../data/mockData';
 import { resetAll } from '../../../store/actions';
 import { showRight } from '../../../store/actions';
 import { patchApp, toast, useApp } from '../../../store/useApp';
+import { changelogVersion, parseChangelog, parseInline } from '../../../lib/changelog';
 import { formatMoney } from '../../../lib/format';
 import { nominatimTest, tileTest, wmsTileUrl } from '../../../map/protocols';
 import { ColorButton } from '../../ui/ColorButton';
@@ -14,9 +15,10 @@ import { Seg } from '../../ui/Seg';
 import {
   btn, fl, frow, hint, inp, pillCls, setSec, stDot,
 } from '../../ui/styles';
+import { Stepper } from '../../ui/Stepper';
 import { Switch } from '../../ui/Switch';
 import { useTipProps } from '../../ui/Tip';
-import type { Cascade, ChartTick, DrawDistMode, GlassLevel, LayoutMode, MarkerSize, PopupMode, Theme } from '../../../types';
+import { THEMES, type Cascade, type ChartTick, type DrawDistMode, type GlassLevel, type LayoutMode, type MarkerSize, type PopupMode, type Theme } from '../../../types';
 
 const Hint = ({ children }: { children: React.ReactNode }) => <div className={hint}>{children}</div>;
 // const B = ({ children }: { children: React.ReactNode }) => <b className="text-ink">{children}</b>;
@@ -24,19 +26,116 @@ const Hint = ({ children }: { children: React.ReactNode }) => <div className={hi
 /* ======================= แผนที่ ======================= */
 export function MapPane() {
   const markerSize = useApp(s => s.markerSize);
+  const searchLimit = useApp(s => s.searchLimit);
+  const showApiSettings = useApp(s => s.showApiSettings);
+  const [secret, setSecret] = useState('');
+
+  const submitSecret = () => {
+    if (secret.trim().toLowerCase() === SETTINGS_SECRET) {
+      patchApp({ showApiSettings: true });
+      setSecret('');
+      toast('ปลดล็อกเมนู ค้นหา & API แล้ว');
+    } else {
+      toast('รหัสไม่ถูกต้อง');
+      setSecret('');
+    }
+  };
 
   return (
     <>
       <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
       <div className={frow}>
         <span className={fl}>ขนาดหมุด</span>
-        <Seg<MarkerSize> items={[['normal', 'ปกติ'], ['large', 'ใหญ่']]} value={markerSize} onChange={v => patchApp({ markerSize: v })} />
+        <Seg<MarkerSize> items={[['small', 'เล็ก'], ['normal', 'ปกติ'], ['large', 'ใหญ่']]} value={markerSize} onChange={v => patchApp({ markerSize: v })} />
       </div>
+
+      <div className={setSec}>การค้นหา</div>
+      <div className={frow}>
+        <span className={fl}>จำนวนผลลัพธ์</span>
+        <Stepper compact value={searchLimit} step={1} onChange={(v: number | null) => patchApp({ searchLimit: Math.max(1, Math.min(50, v ?? 1)) })} />
+      </div>
+
+      {/* the API tab stays hidden until the local unlock code is entered */}
+      <div className={setSec}>ปลดล็อกเมนูขั้นสูง</div>
+      <div className={frow}>
+        <span className={fl}>รหัสปลดล็อก</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <input
+            className={`${inp} flex-1`}
+            type="password"
+            placeholder="กรอกรหัสปลดล็อก"
+            value={secret}
+            onChange={e => setSecret(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitSecret(); }}
+          />
+          <button className={`${btn} flex-none`} onClick={submitSecret}>ปลดล็อก</button>
+        </div>
+      </div>
+      {showApiSettings && (
+        <div className="flex items-center gap-2 text-[11.5px] text-dim pt-2">
+          <b className="text-accent">ปลดล็อกแล้ว</b>
+          <button className={`${btn} ml-auto`} onClick={() => patchApp({ showApiSettings: false })}>ซ่อน</button>
+        </div>
+      )}
     </>
   );
 }
 
-/* ======================= ป๊อปอัพ ======================= */
+/* ======================= รูปลักษณ์ ======================= */
+export function LookPane() {
+  const theme = useApp(s => s.theme);
+  const accentColor = useApp(s => s.accentColor);
+  const bath = useApp(s => s.priceBath);
+  const space = useApp(s => s.priceSpace);
+  const reduce = useApp(s => s.reduceMotion);
+  const glassLevel = useApp(s => s.glassLevel);
+  const lbCfg = useApp(s => s.lbCfg);
+  const layoutMode = useApp(s => s.layoutMode);
+  return (
+    <>
+      <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
+      <div className={frow}>
+        <span className={fl}>ธีมสี</span>
+        <Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} />
+      </div>
+      <div className={frow}>
+        <span className={fl}>สีหลัก (Primary)</span>
+        <div className="flex items-center gap-2">
+          <ColorButton
+            title="เลือกสีหลัก"
+            value={accentColor || getThemeAccent(theme)}
+            onChange={hex => patchApp({ accentColor: hex })}
+            className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
+            style={{ background: accentColor || getThemeAccent(theme) }}
+          />
+          {accentColor && (
+            <button type="button" className={`${btn} flex-none`} onClick={() => patchApp({ accentColor: '' })}>รีเซ็ต</button>
+          )}
+        </div>
+      </div>
+      <div className={frow}>
+        <span className={fl}>เมนูด้านซ้ายมือ</span>
+        <Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} />
+      </div>
+      <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
+      <div className={setSec}>การแสดงราคา</div>
+      <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
+      <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
+      <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
+      <div className={setSec}>การเคลื่อนไหว</div>
+      <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
+      <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
+      <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
+        {LB_FIELDS.map(([f, l]) => (
+          <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
+        ))}
+      </div>
+      <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
+    </>
+  );
+}
+
+/* ======================= ที่ดิน ======================= */
 export function PopupPane({ onClose }: { onClose: () => void }) {
   const restrict = useApp(s => s.restrict);
   const override = useApp(s => s.override);
@@ -46,6 +145,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
     if (on && !areas.length) toast('ยังไม่มีพื้นที่กรอง — กด "วาดพื้นที่กรอง" ในแผงพื้นที่กรองจุด', 'warn');
   };
   const popupMode = useApp(s => s.popupMode);
+  const allPops = popupMode === 'all';
   const labelOverlap = useApp(s => s.labelOverlap);
   const labelSold = useApp(s => s.labelSold);
   const popColors = useApp(s => s.popColors);
@@ -53,6 +153,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const popupCfg = useApp(s => s.popupCfg);
   const reColor = useApp(s => s.reColor);
   const chartTick = useApp(s => s.chartTick);
+  const showLandKindIcon = useApp(s => s.showLandKindIcon);
 
   return (
     <>
@@ -72,8 +173,16 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <span className={fl}>ป็อปอัพหมุดที่ดิน</span>
         <Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} />
       </div>
-      <div className={frow}><span className={fl}>ป๊อปอัพ แสดงซ้อนกันได้</span><Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} /></div>
-      <div className={frow}><span className={fl}>ป๊อปอัพ แสดงวันที่ขาย</span><Switch checked={labelSold} onChange={v => patchApp({ labelSold: v })} /></div>
+      {/* these two only apply when pop-ups are forced on for every parcel */}
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
+        <span className={fl}>ซ้อนกันได้</span>
+        <Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} />
+      </div>
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
+        <span className={fl}>วันที่ขาย</span>
+        <Switch checked={labelSold} onChange={v => patchApp({ labelSold: v })} />
+      </div>
+      <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
 
       <div className={setSec}>สถานะและสี</div>
       {STATUS_KEYS.map(k => (
@@ -92,10 +201,10 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       <div className={frow}>
         <ColorButton
           {...useTipProps('เลือกสี')}
-          value={reColor}
-          onChange={hex => patchApp({ reColor: hex })}
+          value={popColors.re}
+          onChange={hex => patchApp({ popColors: { ...useApp.getState().popColors, re: hex }, reColor: hex })}
           className="h-[22px] w-[30px] shrink-0 cursor-pointer rounded-md border border-line2 p-0 hover:border-accent"
-          style={{ background: reColor }}
+          style={{ background: popColors.re }}
         />
         <span className={fl}>นำกลับมาขายใหม่</span>
         <Switch
@@ -109,7 +218,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
 
       <div className={setSec}>กราฟราคา</div>
       <div className={frow}>
-        <span className={fl}>เส้นขีดเวลา</span>
+        <span className={fl}>เส้นเวลา</span>
         <Seg<ChartTick>
           items={[['none', 'ไม่แสดง'], ['year', 'ทุกปี'], ['m6', '6 เดือน'], ['m4', '4 เดือน'], ['m3', '3 เดือน']]}
           value={chartTick}
@@ -141,88 +250,6 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ======================= ค้นหา & API ======================= */
-type TestState = { status: 'idle' | 'busy' | 'ok' | 'fail'; msg: string };
-function ApiTestRow({ label, run }: { label: string; run: () => Promise<string> }) {
-  const [t, setT] = useState<TestState>({ status: 'idle', msg: '' });
-  const go = () => {
-    setT({ status: 'busy', msg: 'กำลังทดสอบ…' });
-    const t0 = performance.now();
-    run()
-      .then(m => setT({ status: 'ok', msg: `✓ ${m} · ${Math.round(performance.now() - t0)}ms` }))
-      .catch((e: Error) => setT({ status: 'fail', msg: '✕ ' + (e.message || 'ล้มเหลว') }));
-  };
-  const resCls = { idle: '', busy: 'border border-dashed border-line2 text-dim', ok: 'bg-accent-dim text-accent', fail: 'bg-[#E5484D] text-white' }[t.status];
-  return (
-    <div className="flex items-center gap-2 border-b border-line py-[9px]">
-      <span className={fl}>{label}</span>
-      <button className={btn} onClick={go}>ทดสอบ</button>
-      {t.status !== 'idle' && <span className={`whitespace-nowrap rounded-full px-[9px] py-[3px] text-[10.5px] font-medium ${resCls}`}>{t.msg}</span>}
-    </div>
-  );
-}
-export function SearchApiPane() {
-  const cascade = useApp(s => s.cascade);
-  const gkey = useApp(s => s.gkey);
-  return (
-    <>
-      <div className={`${setSec} !mt-0.5`}>ลำดับการค้นหาสถานที่ออนไลน์ (Search Cascade)</div>
-      <div className={frow}>
-        <Seg<Cascade> items={[['google', 'Google → Nominatim'], ['nominatim', 'Nominatim เท่านั้น']]} value={cascade} onChange={v => { patchApp({ cascade: v }); toast('ลำดับการค้นหา: ' + (v === 'google' ? 'Google → Nominatim' : 'Nominatim เท่านั้น')); }} />
-      </div>
-      <div className={setSec}>คีย์และการทดสอบ API</div>
-      <div className="border-b border-line py-[9px]">
-        <input className={inp} placeholder="Google Search API Key (จำลอง — ไม่บังคับ)" value={gkey} onChange={e => patchApp({ gkey: e.target.value.trim() })} />
-      </div>
-      <ApiTestRow label="Google Search Key (จำลอง)" run={() => (gkey ? new Promise(res => setTimeout(() => res('200 OK (จำลอง)'), 650)) : Promise.reject(new Error('ไม่พบ API Key — ใส่คีย์ก่อน')))} />
-      <ApiTestRow label="Nominatim Geocoding (OSM)" run={nominatimTest} />
-      <ApiTestRow label="Google Road Tiles (lyrs=m)" run={() => tileTest('https://mt0.google.com/vt/lyrs=m&x=6&y=3&z=3')} />
-      <ApiTestRow label="Google Satellite Tiles (lyrs=y)" run={() => tileTest('https://mt0.google.com/vt/lyrs=y&x=6&y=3&z=3')} />
-      <ApiTestRow label="WMS กรมที่ดิน (dol_hd)" run={() => tileTest(wmsTileUrl(6, 49, 29))} />
-      <ApiTestRow label="Terrarium DEM (elevation)" run={() => tileTest('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/64/33.png')} />
-      <Hint>คีย์ใช้เพื่อสาธิตลำดับการค้นหาเท่านั้น — หากไม่มีคีย์ ระบบจะสำรองด้วย Nominatim อัตโนมัติ · กล่องค้นหาด้านบนค้นหา "เฉพาะกรอบมองเห็นปัจจุบัน" ทั้งแปลงในระบบและออนไลน์ (Nominatim ใช้ viewbox+bounded) — เลื่อนแผนที่แล้วกดปุ่มลอย "ค้นหาในพื้นที่นี้" เพื่อค้นหาใหม่ · หาก Google tiles โหลดไม่ได้ ระบบจะแสดงแผนที่สำรอง (CARTO) อัตโนมัติ</Hint>
-    </>
-  );
-}
-
-/* ======================= รูปลักษณ์ ======================= */
-export function LookPane() {
-  const theme = useApp(s => s.theme);
-  const bath = useApp(s => s.priceBath);
-  const space = useApp(s => s.priceSpace);
-  const reduce = useApp(s => s.reduceMotion);
-  const glassLevel = useApp(s => s.glassLevel);
-  const lbCfg = useApp(s => s.lbCfg);
-  const layoutMode = useApp(s => s.layoutMode);
-  return (
-    <>
-      <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
-      <div className={frow}>
-        <span className={fl}>ธีมสี</span>
-        <Seg<Theme> items={[['graphite', 'เทาเข้ม'], ['oled', 'ดำสนิท (OLED)']]} value={theme} onChange={v => patchApp({ theme: v })} />
-      </div>
-      <div className={frow}>
-        <span className={fl}>เมนูด้านซ้ายมือ</span>
-        <Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} />
-      </div>
-      <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
-      <div className={setSec}>การแสดงราคา</div>
-      <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
-      <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
-      <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
-      <div className={setSec}>การเคลื่อนไหว</div>
-      <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
-      <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
-      <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
-        {LB_FIELDS.map(([f, l]) => (
-          <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
-        ))}
-      </div>
-      <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
-    </>
-  );
-}
-
 /* ======================= รูปวาด ======================= */
 export function DrawSettingsPane() {
   const ddist = useApp(s => s.drawDistMode);
@@ -230,34 +257,193 @@ export function DrawSettingsPane() {
 
   return (
     <>
-      <div className={setSec}>เครื่องมือวาด — การวัดบนแผนที่</div>
+      <div className={setSec}>เส้น และพื้นที่</div>
       <div className={frow}>
-        <span className={fl}>เส้น/พื้นที่ ป้ายบอกระยะ</span>
+        <span className={fl}>ป้ายบอกระยะ</span>
         <Seg<DrawDistMode> items={[['both', 'ทั้งหมด'], ['seg', 'ช่วง'], ['round', 'ตัวเลขหลัก'], ['off', 'ซ่อน']]} value={ddist} onChange={v => patchApp({ drawDistMode: v })} />
       </div>
+      <div className={setSec}>วงกลม</div>
       <div className={frow}>
-        <span className={fl}>วงกลม แสดงจุดศูนย์กลางและป้ายรัศมี</span>
+        <span className={fl}>จุดศูนย์กลาง และป้ายรัศมี</span>
         <Switch checked={circleMeta} onChange={v => patchApp({ showCircleMeta: v })} />
       </div>
     </>
   );
 }
 
+/* ======================= ค้นหา & API ======================= */
+type TestState = { status: 'idle' | 'busy' | 'ok' | 'fail'; msg: string };
+/** The short result, rendered as thin opaque text inside the button. */
+function testResult(t: TestState): string {
+  if (t.status === 'ok') return t.msg ? `ผ่าน ${t.msg}` : 'ผ่าน';
+  if (t.status === 'fail') return 'ไม่ผ่าน';
+  return '';
+}
+/** The actionable half of the label: plain "ทดสอบ" until a result exists. */
+function testAction(t: TestState): string {
+  if (t.status === 'busy') return 'ทดสอบ…';
+  if (t.status === 'idle') return 'ทดสอบ';
+  return 'ทดสอบใหม่';
+}
+/* blue = not run yet, muted blue = running, green = pass, red = fail.
+   All four carry their colour at rest — hover only deepens it. */
+const TEST_CLS = {
+  idle: 'border-[#3A6EA5] bg-[#3A6EA5]/15 text-[#7FB3F0] hover:border-[#4C82BC] hover:bg-[#3A6EA5]/25',
+  busy: 'cursor-progress border-[#3A6EA5] bg-[#3A6EA5]/10 text-[#6C9FD8]',
+  ok: 'border-[#2E7D32] bg-[#2E7D32]/20 text-[#6BD07C] hover:border-[#3E9143] hover:bg-[#2E7D32]/32',
+  fail: 'border-[#E5484D] bg-[#E5484D]/20 text-[#FF8B7D] hover:border-[#FF7A6B] hover:bg-[#E5484D]/32',
+} as const;
+
+function ApiTestRow({ label, run }: { label: string; run: () => Promise<string> }) {
+  const [t, setT] = useState<TestState>({ status: 'idle', msg: '' });
+  const go = () => {
+    setT({ status: 'busy', msg: '' });
+    const t0 = performance.now();
+    run()
+      .then(() => setT({ status: 'ok', msg: `${Math.round(performance.now() - t0)}ms` }))
+      .catch(() => setT({ status: 'fail', msg: '' }));
+  };
+  const res = testResult(t);
+  return (
+    <div className="flex items-center gap-2 border-b border-line py-[9px]">
+      <span className={fl}>{label}</span>
+      <button
+        className={`${btn} ml-auto gap-1.5 whitespace-nowrap ${TEST_CLS[t.status]}`}
+        onClick={go}
+        disabled={t.status === 'busy'}
+      >
+        {res && <span className="font-display text-[10px] font-light leading-none opacity-70">{res}</span>}
+        {testAction(t)}
+      </button>
+    </div>
+  );
+}
+/** Default accent per theme, used when the user has not picked a primary colour. */
+const THEME_ACCENT: Record<Theme, string> = {
+  graphite: '#B8F13F', oled: '#B8F13F', slate: '#58A6FF',
+  sand: '#FFB454', forest: '#3DDC97', rose: '#FF7AA2', mono: '#FFFFFF',
+};
+const getThemeAccent = (t: Theme): string => THEME_ACCENT[t] ?? '#B8F13F';
+
+/** Masks an API key for display: keeps the head and the last few characters. */
+function maskKey(k: string): string {
+  if (k.length <= 10) return k ? '•'.repeat(Math.max(k.length, 4)) : '';
+  return `${k.slice(0, 5)}•••${k.slice(-4)}`;
+}
+
+export function SearchApiPane() {
+  const cascade = useApp(s => s.cascade);
+  const gkey = useApp(s => s.gkey);
+  const [showKey, setShowKey] = useState(false);
+  const [keyTest, setKeyTest] = useState<TestState>({ status: 'idle', msg: '' });
+  const testKey = () => {
+    setKeyTest({ status: 'busy', msg: '' });
+    const t0 = performance.now();
+    (gkey ? new Promise<string>(res => setTimeout(() => res('200 OK (จำลอง)'), 650)) : Promise.reject(new Error('ไม่พบ API Key — ใส่คีย์ก่อน')))
+      .then(() => setKeyTest({ status: 'ok', msg: `${Math.round(performance.now() - t0)}ms` }))
+      .catch(() => setKeyTest({ status: 'fail', msg: '' }));
+  };
+  const keyRes = testResult(keyTest);
+  return (
+    <>
+      <div className={`${setSec} !mt-0.5`}>การค้นหา</div>
+      <div className={frow}>
+        <span className={fl}>ลำดับการค้นหา</span>
+        <Seg<Cascade> items={[['google', 'Google → Nominatim'], ['nominatim', 'Nominatim เท่านั้น']]} value={cascade} onChange={v => { patchApp({ cascade: v }); toast('ลำดับการค้นหา: ' + (v === 'google' ? 'Google → Nominatim' : 'Nominatim เท่านั้น')); }} />
+      </div>
+      {/* single line: label · input (+ eye) · test button */}
+      <div className="flex items-center gap-2 border-b border-line py-[9px]">
+        <span className={`${fl} flex-none`}>API คีย์</span>
+        <div className="relative min-w-0 flex-1">
+          <input
+            className={`${inp} pr-7 font-display`}
+            placeholder="Google Search API Key"
+            value={showKey ? gkey : maskKey(gkey)}
+            onChange={e => patchApp({ gkey: e.target.value.trim() })}
+            onFocus={() => { if (!showKey) setShowKey(true); }}
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            title={showKey ? 'ซ่อนคีย์' : 'แสดงคีย์เต็ม'}
+            onClick={() => setShowKey(v => !v)}
+            className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 cursor-pointer place-items-center rounded text-dim2 hover:bg-panel2 hover:text-ink"
+          >
+            {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+        </div>
+        <button
+          className={`${btn} ml-auto flex-none gap-1.5 whitespace-nowrap ${TEST_CLS[keyTest.status]}`}
+          onClick={testKey}
+          disabled={keyTest.status === 'busy'}
+        >
+          {keyRes && <span className="font-display text-[10px] font-light leading-none opacity-70">{keyRes}</span>}
+          {testAction(keyTest)}
+        </button>
+      </div>
+      <div className={`${setSec}`}>API อื่นๆ</div>
+      <ApiTestRow label="Nominatim (OSM)" run={nominatimTest} />
+      <ApiTestRow
+        label="แผนที่ฐาน (Map Tiles)"
+        run={async () => {
+          const one = (u: string) => tileTest(u).then(() => undefined);
+          await one('https://mt0.google.com/vt/lyrs=m&x=6&y=3&z=3');
+          await one('https://mt0.google.com/vt/lyrs=y&x=6&y=3&z=3');
+          return 'ผ่าน';
+        }}
+      />
+      <ApiTestRow label="ขอบเขตที่ดิน กรมที่ดิน" run={() => tileTest(wmsTileUrl(6, 49, 29))} />
+      <ApiTestRow label="ความสูง แผนที่น้ำท่วม" run={() => tileTest('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/64/33.png')} />
+    </>
+  );
+}
+
 /* ======================= เกี่ยวกับ ======================= */
+/** RELEASE_NOTES.md inline markup: **bold** and `code`. */
+function Md({ text }: { text: string }): React.ReactNode {
+  return <>{parseInline(text).map((c, i) =>
+    c.t === 'b' ? <b key={i} className="font-semibold text-ink">{c.v}</b>
+      : c.t === 'c' ? <code key={i} className="rounded bg-panel2 px-[3px] py-px font-display text-[10.5px] text-accent">{c.v}</code>
+        : <span key={i}>{c.v}</span>,
+  )}</>;
+}
+
+/** RELEASE_NOTES.md, inlined at build time and rendered as a scrollable list. */
+function Changelog() {
+  const groups = useMemo(() => parseChangelog(RELEASE_NOTES), []);
+  return (
+    <div className="my-2 max-h-[260px] overflow-y-auto overscroll-contain rounded-[10px] border border-line px-3 pb-2 text-[11.5px] leading-[1.65] text-dim">
+      {groups.map(g => (
+        <div key={g.version} className="mb-2.5 last:mb-0">
+          <div className="sticky top-0 z-[1] mb-1.5 bg-panel px-3 pt-4 pb-2 font-display text-[11px] font-semibold text-ink">
+            {changelogVersion(g.version) === g.version ? g.version : `${changelogVersion(g.version)} — ${g.version.slice(changelogVersion(g.version).length + 2).trim()}`}
+          </div>
+          {g.sections.map((s, i) => (
+            <div key={i} className="mb-1.5 last:mb-0">
+              {s.heading && <div className="mb-0.5 pl-1 text-[10.5px] font-semibold text-dim2">{s.heading}</div>}
+              <ul className="m-0 list-none space-y-[3px] pl-3.5">
+                {s.items.map((it, j) => (
+                  <li key={j} className="relative before:absolute before:-left-2.5 before:top-[.55em] before:size-[3px] before:rounded-full before:bg-dim2 before:content-['']">
+                    <Md text={it} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AboutPane() {
   return (
     <>
       <div className={`${setSec} !mt-0.5`}>บันทึกการเปลี่ยนแปลง</div>
-      <div className="my-2 rounded-[10px] border border-line px-[13px] py-2.5 text-[11.5px] leading-[1.9] text-dim">
-        <b className="text-[11px] font-semibold text-ink">v2.1.0</b> — ข้อมูลประมูลครบ (ศาล/คดี/หลักประกัน/ราคา/นัด 1-8) · ตาราง: นัดล่าสุด ลำดับที่ 12-716 · ลากคอลัมน์แบบ ghost · ตัวกรอง ขนาด ≥/≤ + ชิป จังหวัด/ตำบล/อำเภอ/ประเภททรัพย์ · แถบเลือกช่วงวันที่ใต้กราฟ · ข้อมูลจังหวัด-อำเภอ-ตำบลแบบลิงก์กัน<br />
-        <b className="text-[11px] font-semibold text-ink">v2.0.1</b> — ย้ายไป Vite + React + TypeScript + Tailwind · state รวมศูนย์ด้วย zustand · เลเยอร์แผนที่แยกเป็นโมดูล<br />
-        <b className="text-[11px] font-semibold text-ink">v1.1.8</b> — แก้แผนที่ฐานหาย (RCA): ensureAreaLayers() · harden load · แผนที่สำรอง CARTO<br />
-        <b className="text-[11px] font-semibold text-ink">v1.1.7</b> — ค้นหา bbox (RCA) · หมุดตัวเลขกลมทึบ + ป้ายหมุนตามมุม · ลบชั้นแล้วเลขเรียงใหม่
-      </div>
-      <Hint>รายการเปลี่ยนแปลงแบบเต็มอยู่ใน <b className="text-ink">RELEASE_NOTES.md</b></Hint>
-      <div className={setSec}>ข้อมูลจำลอง</div>
+      <Changelog />
+      {/* <div className={setSec}>ข้อมูลจำลอง</div>
       <div className={frow}><span className={fl}>แปลงที่ดินทั้งหมด</span><b className="text-xs font-semibold">{ALL_PARCELS.length.toLocaleString('th-TH')} แปลง</b></div>
-      <div className={frow}><span className={fl}>จังหวัด</span><b className="text-xs font-semibold">{PROVINCES.length} จังหวัด</b></div>
+      <div className={frow}><span className={fl}>จังหวัด</span><b className="text-xs font-semibold">{PROVINCES.length} จังหวัด</b></div> */}
       <button className={`${btn} mt-3`} onClick={resetAll}><RotateCcw size={14} />รีเซ็ตตัวกรอง คอลัมน์ และการปักหมุด</button>
     </>
   );

@@ -226,12 +226,18 @@ export function clearDraws(): void {
 export function updateDraw(id: number, patch: Partial<Pick<DrawShape, 'name' | 'color' | 'visible'>>): void {
   patchApp({ draws: getApp().draws.map(d => (d.id === id ? ({ ...d, ...patch } as DrawShape) : d)) });
 }
+/** Area tags are always 1..n — no gaps left behind by a delete. */
+function renumberAreas(areas: FilterArea[]): FilterArea[] {
+  return areas.map((a, i) => (a.no === i + 1 ? a : { ...a, no: i + 1 }));
+}
+const setAreas = (areas: FilterArea[]): void => patchApp({ areas: renumberAreas(areas), areaSeq: areas.length + 1 });
+
 export function deleteArea(id: number): void {
-  patchApp({ areas: getApp().areas.filter(a => a.id !== id) });
+  setAreas(getApp().areas.filter(a => a.id !== id));
   toast('ลบพื้นที่กรองที่เลือกแล้ว');
 }
 export function clearAreas(): void {
-  patchApp({ areas: [] });
+  patchApp({ areas: [], areaSeq: 1 });
   toast('ล้างพื้นที่กรองทั้งหมดแล้ว');
 }
 export function toggleArea(id: number, enabled: boolean): void {

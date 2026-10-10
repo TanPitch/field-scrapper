@@ -3,12 +3,26 @@ import type {
 } from '../types';
 
 export const MIN_ZOOM = 12;
+
+/* Fixed map stack, bottom → top. The order MapLibre layers are created in *is*
+   the render order, so this list is enforced by call order rather than by
+   moveLayer():
+     overlay → cctv → bus → water → land parcel → parcel label overlay → UI
+   Overlays are created in useMapEvents before the pins; the parcel layers are
+   created after them (see addCustomLayers). */
+export const RENDER_ORDER = ['overlay', 'cctv', 'bus', 'water', 'land parcel', 'panel UI'] as const;
+/**
+ * Unlock code for the hidden "ค้นหา & API" settings tab. Not the Google API key —
+ * this is just a local gate so the tab is not a one-click away. Change it here.
+ */
+export const SETTINGS_SECRET = 'field-admin';
+
 export const ROW_H = 36;
 export const HEADER_H = 56;
 export const LEFT_W = 76;
 export const RIGHT_W = 400;
 export const RES_CAP = 100;
-export const MIN_BH = 244;
+export const MIN_BH = 170;
 export const PIN_W = 34;
 export const RAIL_GAP = 12;
 export const ACCENT = '#B8F13F';
@@ -18,12 +32,11 @@ export const AREA_COLOR = '#FF7A6B';
 export const MAP_FONTS = ['Noto Sans Regular'];
 
 export const STATUS: Record<PopupKind, { th: string }> = {
-  normal: { th: 'ทั่วไป' },
   sale: { th: 'กำลังขาย' },
   sold: { th: 'ขายแล้ว' },
   re: { th: 'นำกลับมาขายใหม่' },
 };
-export const STATUS_KEYS: Status[] = ['normal', 'sale', 'sold'];
+export const STATUS_KEYS: Status[] = ['sale', 'sold'];
 
 export const POP_FIELDS: [PopupField, string][] = [
   ['size', 'ขนาดที่ดิน'], ['perWah', 'ราคา/ตร.วา'], ['announce', 'วันประกาศขาย'],
@@ -31,13 +44,12 @@ export const POP_FIELDS: [PopupField, string][] = [
 ];
 /** [popup kind, label, colour source status] */
 export const POP_KINDS: [PopupKind, string, Status][] = [
-  ['normal', 'ทั่วไป', 'normal'], ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'], ['re', 'นำกลับมาขายใหม่', 'sale'],
+  ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'], ['re', 'นำกลับมาขายใหม่', 'sale'],
 ];
 export const LB_FIELDS: [LightboxField, string][] = [
   ['name', 'ชื่อแปลง'], ['status', 'สถานะ'], ['price', 'ราคา'], ['size', 'ขนาด'], ['deed', 'เลขโฉนด'], ['soldTs', 'วันขายออก'],
 ];
 export const DEFAULT_POPUP_CFG: PopupConfig = {
-  normal: { size: true, perWah: true, announce: false, soldTs: false, resale: false, deed: true },
   sale: { size: true, perWah: true, announce: true, soldTs: false, resale: false, deed: true },
   re: { size: true, perWah: true, announce: true, soldTs: false, resale: true, deed: true },
   sold: { size: true, perWah: true, announce: true, soldTs: true, resale: false, deed: true },
@@ -45,7 +57,9 @@ export const DEFAULT_POPUP_CFG: PopupConfig = {
 export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
   name: true, status: true, price: true, size: true, deed: false, soldTs: false,
 };
-export const DEFAULT_POP_COLORS: Record<Status, string> = { normal: '#F5F6F4', sale: '#E5484D', sold: '#8B9096' };
+/** Default colour per popup kind. `re` covers นำกลับมาขายใหม่ — a parcel that is
+ *  still on sale but was already sold once, so it gets its own kind colour. */
+export const DEFAULT_POP_COLORS: Record<PopupKind, string> = { sale: '#E5484D', sold: '#8B9096', re: '#242424' };
 
 export const PRESET_COLORS = [
   '#B8F13F', '#F5F6F4', '#E5484D', '#FF7A6B', '#FF9F43', '#F5A623', '#FFD93D', '#9BE564', '#3DDAD7',
@@ -99,7 +113,8 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
   size: { label: 'ขนาดที่ดิน', w: 168, subs: ['ไร่', 'งาน', 'ตร.วา'], sortable: true, sortKey: 'wah' },
   price: { label: 'ราคา (บาท)', w: 120, sortable: true, num: true },
   perWah: { label: 'ราคา/ตร.วา', w: 108, sortable: true, num: true },
-  saleBy: { label: 'ขายโดย', w: 190 },
+  saleBy: { label: 'จำนอง', w: 190 },
+  seller: { label: 'ผู้ขาย', w: 180 },
   ownerFile: { label: 'เจ้าของสำนวน', w: 130 },
   propertyType: { label: 'ประเภททรัพย์', w: 150 },
   deedNo: { label: 'เลขที่โฉนด', w: 120 },
@@ -123,7 +138,7 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
   province: { label: 'จังหวัด', w: 110, sortable: true },
   roundLast: { label: 'นัดล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'] },
 };
-export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'name', 'status', 'size', 'price', 'perWah', 'saleBy', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast'];
+export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'name', 'status', 'size', 'price', 'perWah', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast'];
 export const DEFAULT_COL_HIDDEN: ColKey[] = ['amp', 'announce'];
 
 export const SORT_LABELS: Record<string, string> = {

@@ -6,6 +6,8 @@ import { RightPanel } from './components/panel/RightPanel';
 import { Rail, useSmall } from './components/rail/Rail';
 import { BottomPanel } from './components/table/BottomPanel';
 import { TipProvider } from './components/ui/Tip';
+import { Splash } from './components/auth/Splash';
+import { Toasts } from './components/map/Toasts';
 import { HEADER_H, LEFT_W, RIGHT_W } from './data/constants';
 import { ParcelsProvider } from './hooks/useParcels';
 import { patchApp, useApp } from './store/useApp';
@@ -19,10 +21,21 @@ export default function App() {
   const landOn = useApp(s => s.landOn);
   const bottomH = useApp(s => s.bottomH);
   const theme = useApp(s => s.theme);
+  const accentColor = useApp(s => s.accentColor);
   const reduce = useApp(s => s.reduceMotion);
 
-  /* theme + reduce-motion live on <body> so CSS variables / selectors apply to portals too */
+/* theme + reduce-motion live on <body> so CSS variables / selectors apply to portals too */
   useEffect(() => { document.body.dataset.theme = theme; }, [theme]);
+  /* custom primary colour overrides the theme accent (index.css reads [data-accent]) */
+  useEffect(() => {
+    if (accentColor) {
+      document.body.dataset.accent = 'custom';
+      document.body.style.setProperty('--accent-user', accentColor);
+    } else {
+      delete document.body.dataset.accent;
+      document.body.style.removeProperty('--accent-user');
+    }
+  }, [accentColor]);
   useEffect(() => { document.body.classList.toggle('reduce-motion', reduce); }, [reduce]);
 
   /* small screens start with both panels closed (they overlay the map) */
@@ -41,6 +54,7 @@ export default function App() {
     return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
   }, [small]);
 
+  /* the header is one grid row holding two bars: the main bar + search strip */
   const style = small
     ? { gridTemplateColumns: '0 minmax(0,1fr)', gridTemplateRows: `${HEADER_H}px minmax(0,1fr)`, gridTemplateAreas: '"hd hd" "mp mp"' }
     : layoutMode === 'floating'
@@ -55,6 +69,10 @@ export default function App() {
           gridTemplateAreas: '"hd hd hd" "rail mp rp" "rail bp bp"',
         };
 
+  const signedIn = useApp(s => s.signedIn);
+
+  if (!signedIn) return <><Splash /><Toasts /></>;
+
   return (
     <TipProvider>
       <ParcelsProvider>
@@ -66,6 +84,7 @@ export default function App() {
           <BottomPanel small={small} />
         </div>
         <Lightbox />
+        <Toasts />
       </ParcelsProvider>
     </TipProvider>
   );

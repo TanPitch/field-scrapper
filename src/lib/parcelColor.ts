@@ -7,12 +7,13 @@ export const isResell = (p: Parcel): boolean => p.resell && p.status === 'sale';
 /** Dot / marker colour (table, search results, map circle). */
 export function parcelDot(p: Parcel): string {
   const s = getApp();
-  return isResell(p) ? s.reColor : s.popColors[p.status];
+  return isResell(p) ? s.popColors.re : s.popColors[p.status];
 }
 
-/** Popup background colour. */
+/**
+ * Popup background colour — same source as the dot, so changing a status colour
+ * in settings repaints the dot and both popup layouts at once.
+ */
 export function parcelPopupBg(p: Parcel): string {
-  const s = getApp();
-  if (p.status === 'normal') return '#0D0F0D';
-  return isResell(p) ? s.reColor : s.popColors[p.status];
+  return parcelDot(p);
 }

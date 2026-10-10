@@ -32,6 +32,73 @@ body[data-theme='oled'] {
   --border: #1c211b;
   --border2: #2a302a;
 }
+/* ---- extra themes (appended after the two originals) ---- */
+body[data-theme='slate'] {
+  --bg: #0d1117;
+  --panel: #131a23;
+  --panel2: #1b232e;
+  --border: #26303d;
+  --border2: #36424f;
+  --text: #e6edf3;
+  --dim: #8b98a5;
+  --dim2: #6b7784;
+  --accent: #58a6ff;
+  --accent-dim: rgba(88, 166, 255, 0.14);
+}
+body[data-theme='sand'] {
+  --bg: #14120e;
+  --panel: #1c1913;
+  --panel2: #26221a;
+  --border: #332e24;
+  --border2: #453f31;
+  --text: #f2ece0;
+  --dim: #a1957f;
+  --dim2: #7d7261;
+  --accent: #ffb454;
+  --accent-dim: rgba(255, 180, 84, 0.14);
+}
+body[data-theme='forest'] {
+  --bg: #0a1210;
+  --panel: #0f1a17;
+  --panel2: #15241f;
+  --border: #1e332c;
+  --border2: #2b4a3f;
+  --text: #e8f2ec;
+  --dim: #8aa79a;
+  --dim2: #658074;
+  --accent: #3ddc97;
+  --accent-dim: rgba(61, 220, 151, 0.14);
+}
+body[data-theme='rose'] {
+  --bg: #130d10;
+  --panel: #1b1216;
+  --panel2: #241a1e;
+  --border: #33242a;
+  --border2: #473038;
+  --text: #f5ebee;
+  --dim: #ab949d;
+  --dim2: #866f78;
+  --accent: #ff7aa2;
+  --accent-dim: rgba(255, 122, 162, 0.14);
+}
+body[data-theme='mono'] {
+  --bg: #0c0c0c;
+  --panel: #131313;
+  --panel2: #1b1b1b;
+  --border: #262626;
+  --border2: #363636;
+  --text: #ededed;
+  --dim: #9a9a9a;
+  --dim2: #6f6f6f;
+  --accent: #ffffff;
+  --accent-dim: rgba(255, 255, 255, 0.13);
+}
+/* User-chosen primary colour wins over every theme's accent.
+   Set on <body> by App from the `accentColor` store value. */
+body[data-accent] {
+  --accent: var(--accent-user, var(--accent));
+  --accent-dim: color-mix(in srgb, var(--accent) 14%, transparent);
+}
 
 @layer base {
   html,
@@ -51,6 +118,10 @@ body[data-theme='oled'] {
   textarea {
     -webkit-user-select: text;
     user-select: text;
+  }
+  /* inputs carry UA line-height + padding that push text off-centre in flex rows */
+  input {
+    line-height: 1;
   }
   img {
     -webkit-user-drag: none;
@@ -127,6 +198,7 @@ body.reduce-motion .spin-keep {
 
 /* ---------- MapLibre popups (content is HTML we inject, so class-based) ---------- */
 .maplibregl-popup {
+  /* above every marker and their labels, still below the UI panels */
   z-index: 22;
 }
 .maplibregl-popup-tip {
@@ -219,10 +291,24 @@ body.reduce-motion .spin-keep {
 .tippy-box {
   z-index: 300;
 }
-/* Parcel popup markup is built as an HTML string (maplibre setHTML) */
+/* ---- Parcel popup ----
+   Markup is built as an HTML string in src/map/popups.ts. It wraps the content in
+   `.pop-box`, plus `.pop-box--compact` when only a couple of rows are enabled
+   (see countRows). Two layouts:
+     .pop-box          full / "show all at once" — roomier, readable at a glance
+     .pop-box--compact 2 rows or fewer — tight padding, heavier price
+   Only spacing and weight differ; the type scale is shared. */
 .maplibregl-popup-content {
-  padding: 8px 10px;
-  border-radius: 9px;
+  padding: 0;
+  border-radius: 10px;
+}
+.pop-box {
+  padding: 10px 12px;
+}
+/* compact: two lines only — bold price, then the delta chip. Minimal breathing room. */
+.pop-box--compact {
+  padding: 3px 4px;
+  border-radius: 8px;
 }
 .pop-tag {
   display: inline-block;
@@ -230,24 +316,86 @@ body.reduce-motion .spin-keep {
   padding: 2px 9px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.17);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .pop-price {
-  font: 800 19px/1.15 'Noto Sans Thai', sans-serif;
+  font: 700 21px/1.2 'Noto Sans Thai', sans-serif;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pop-box--compact .pop-price {
+  font: 800 18px/1.05 'Noto Sans Thai', sans-serif;
+  letter-spacing: -0.015em;
+  padding: 0 3px;
+}
+/* price change since the last opening, signed and rounded to a whole percent */
+.pop-delta {
+  font: 600 10.5px 'Noto Sans Thai', sans-serif;
+  padding: 1px 6px;
+  border-radius: 99px;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  color: #16210f;
+  white-space: nowrap;
+}
+.pop-delta.is-down {
+  color: #8C1B1F;
+}
+/* compact: the delta gets its own line under the price */
+.pop-box--compact .pop-delta-row {
+  display: flex;
+  margin: 2px 0 1px;
+  padding: 0 2px;
+}
+/* land-kind icon inside the compact popup price line */
+.pop-kind-ic {
+  display: inline-flex;
+  flex: none;
+  opacity: 0.92;
+}
+.pop-kind-ic svg {
+  width: 11px;
+  height: 11px;
 }
 .pop-name {
   font: 400 11.5px 'Noto Sans Thai';
   opacity: 0.85;
-  margin: 2px 0 6px;
+  margin: 3px 0 8px;
   padding-right: 12px;
+}
+/* data source + land-kind badges on the full popup */
+.pop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 5px;
+}
+.pop-src,
+.pop-kind {
+  font: 500 9.5px 'Noto Sans Thai', sans-serif;
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
+.pop-kind[data-kind='building'] {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.22);
+  color: #1A1E14;
 }
 .pop-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   font: 400 11px 'Noto Sans Thai';
-  padding: 2px 0;
+  padding: 3px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.pop-box--compact .pop-row {
+  padding: 1.5px 0;
 }
 .pop-row span {
   opacity: 0.72;
@@ -255,6 +403,9 @@ body.reduce-motion .spin-keep {
 .pop-row b {
   font: 500 11px 'Noto Sans Thai';
   text-align: right;
+}
+.pop-box--compact .pop-row b {
+  font: 600 11px 'Noto Sans Thai', sans-serif;
 }
 
 /* Search result pin (maplibre Marker element; lucide svg injected as string) */
@@ -276,13 +427,6 @@ body.reduce-motion .spin-keep {
   pointer-events: auto;
 }
 
-.fs-label-layer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 12;
-}
 .fs-pin-popup .maplibregl-popup-content {
   background: transparent;
   border: none;
@@ -297,17 +441,6 @@ body.reduce-motion .spin-keep {
 }
 .fs-pin-popup .maplibregl-popup-close-button {
   display: none;
-}
-.fs-pin-label {
-  position: absolute;
-  transform: translateX(-50%);
-  font: 700 10px 'Noto Sans Thai', 'Noto Sans', sans-serif;
-  display: inline-block;
-  white-space: nowrap;
-  border-radius: 5px;
-  padding: 1px 6px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
 }
 body.fs-land-off .sp-pin {
   display: none !important;

@@ -1,5 +1,5 @@
 import { Layers, List, Map as MapIcon, MapPin, PenTool, Pentagon, Circle, Settings2, Spline, type LucideIcon } from 'lucide-react';
-import { useTipProps } from '../ui/Tip';
+import { useSideTip, useTipProps } from '../ui/Tip';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { BASEMAPS, HEADER_H, RAIL_GAP } from '../../data/constants';
@@ -191,7 +191,7 @@ export function Rail({ small, floating = false }: { small: boolean; floating?: b
         {BUTTONS.map(({ id, title, Icon }) => (
           <button
             key={id}
-            {...useTipProps(title)}
+            {...useSideTip(title)}
             onClick={e => click(id, e.currentTarget)}
             className={`mx-auto grid size-10 flex-none cursor-pointer place-items-center rounded-[10px] border transition ${
               isOn(id) ? 'border-[rgba(184,241,63,.28)] bg-accent-dim text-accent' : 'border-transparent text-dim hover:bg-panel2 hover:text-ink'}`}
@@ -200,7 +200,7 @@ export function Rail({ small, floating = false }: { small: boolean; floating?: b
           </button>
         ))}
         <div className="flex-1" />
-        <div className="flex flex-col items-center gap-[5px] pb-1.5" {...useTipProps('เซิร์ฟเวอร์: ปกติ')}>
+        <div className="flex flex-col items-center gap-[5px] pb-1.5" {...useSideTip('เซิร์ฟเวอร์: ปกติ')}>
           <span className="relative size-[7px] rounded-full bg-accent after:absolute after:-inset-1 after:animate-pulse2 after:rounded-full after:border after:border-accent after:content-['']" />
           <span ref={ping} className="font-display text-[9px] font-medium" style={{ color: ms != null && ms > 58 ? '#E5484D' : 'var(--dim2)' }}>{ms != null ? ms + 'ms' : '--'}</span>
         </div>

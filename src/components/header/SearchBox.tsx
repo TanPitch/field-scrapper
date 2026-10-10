@@ -1,17 +1,15 @@
-import maplibregl from 'maplibre-gl';
-import { Bus, Database, Globe, MapPin, Search, Video, Waves } from 'lucide-react';
+import { Bus, Database, Globe, MapPin, Search, Video, Waves, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ACCENT } from '../../data/constants';
 import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/mockData';
 import { useMoney } from '../../hooks/useMoney';
 import { esc, debounce } from '../../lib/format';
 import { parcelDot } from '../../lib/parcelColor';
 import { onlineSearch, poiIcon } from '../../lib/onlineSearch';
 import { getMap } from '../../map/mapRef';
-import { currentBbox, gotoItem, inBbox, lucideSvgByName, matchPins, plotSearch, ringAt, setSearchPickHandler } from '../../map/pins';
-import { select } from '../../store/actions';
+import { currentBbox, flyToResult, gotoItem, inBbox, matchPins, plotSearch, setSearchPickHandler, setSearchSelection } from '../../map/pins';
+import { select, showRight } from '../../store/actions';
 import { getApp, toast, useApp } from '../../store/useApp';
-import { centerInside, useSearch, type OnlinePlace } from '../../store/useSearch';
+import { centerInside, useSearch, type OnlinePlace, type SearchRow } from '../../store/useSearch';
 import type { BBox, LngLat, SearchHit } from '../../types';
 
 interface Row {
@@ -26,18 +24,11 @@ interface Row {
   parcelId?: number;
 }
 
-/* single result marker on the map (kept outside React: it is a maplibre object) */
-let searchMarker: maplibregl.Marker | null = null;
-function showSearchPin(ll: LngLat, icon: string, label: string, color: string): void {
-  const map = getMap(); if (!map) return;
-  searchMarker?.remove();
-  const el = document.createElement('div');
-  el.className = 'sp-pin';
-  el.style.setProperty('--spc', color);
-  el.title = label;
-  el.innerHTML = lucideSvgByName(icon);
-  searchMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(ll).addTo(map);
-}
+/** Panel-facing projection of a dropdown row. */
+const toStoreRow = (r: Row): SearchRow => ({
+  id: r.rid, kind: r.kind, name: r.name, sub: r.sub, lng: r.ll[0], lat: r.ll[1],
+  dot: r.dot, parcelId: r.parcelId, place: r.place,
+});
 
 const rowCls = (kb: boolean) => `flex cursor-pointer items-center gap-[9px] px-[13px] py-2 text-[12.5px] hover:bg-panel2 ${kb ? 'bg-panel2' : ''}`;
 const groupCls = 'flex items-center gap-[7px] px-[13px] pb-1 pt-[9px] text-[10px] font-semibold uppercase tracking-[.08em] text-dim2';
@@ -61,11 +52,16 @@ export function SearchBox() {
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
+  /* searching also opens ผลการค้นหา in the right panel */
+  const openResults = useCallback(() => showRight('results'), []);
+
   /* ---------- run a search ---------- */
-  const runSearch = useCallback((q: string, fresh: boolean) => {
-    if (!q.trim()) { patch({ dropOpen: false, query: '' }); plotSearch([]); return; }
-    patch({ query: q, dropOpen: true });
+  /* `drop` controls the title-bar dropdown only; results always go to the panel. */
+  const runSearch = useCallback((q: string, fresh: boolean, drop = true) => {
+    if (!q.trim()) { patch({ dropOpen: false, query: '', rows: [] }); setSearchSelection(null); plotSearch([]); return; }
+    patch({ query: q, dropOpen: drop });
     if (!fresh) return;
+    openResults();
     const map = getMap(); if (!map) return;
     const b = map.getBounds();
     const box: BBox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
@@ -80,67 +76,93 @@ export function SearchBox() {
         if (my !== seq.current || (err instanceof DOMException && err.name === 'AbortError')) return;
         patch({ online: { status: 'error', list: [] } });
       });
-  }, [patch]);
+  }, [patch, openResults]);
   const debounced = useMemo(() => debounce((q: string) => runSearch(q, true), 220), [runSearch]);
 
-  const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch({ dropOpen: false }); }, [patch]);
+  /* the map overlay button re-runs whatever is currently typed, results going to
+     ผลการค้นหา only — the title-bar dropdown stays closed */
+  useEffect(() => {
+    patch({ rerun: () => { if (value.trim()) runSearch(value, true, false); } });
+  }, [value, runSearch, patch]);
+
+const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch({ dropOpen: false }); }, [patch]);
 
   /* ---------- local results follow the current bbox ---------- */
+  /* Results are a snapshot of the bbox at search time: panning the map must NOT
+     re-filter them, or the list would empty out as soon as you move. `bounds`
+     is intentionally absent from the deps. */
+  const frozenBBox = useRef<BBox | null>(null);
+  useEffect(() => { if (!frozenBBox.current) frozenBBox.current = bounds as BBox | null; }, [bounds]);
+  useEffect(() => {
+    if (bounds && useSearch.getState().lastFullBBox) frozenBBox.current = bounds as BBox;
+  }, [bounds, query]);
+
   const { rows, parcelRows, pinRows, onlineRows } = useMemo(() => {
     const t = query.trim().toLowerCase();
-    const bb = bounds as BBox | null;
+    const bb = frozenBBox.current as BBox | null;
+    const limit = getApp().searchLimit;
     const parcels: Row[] = [];
     if (t && bb) {
       for (const p of ALL_PARCELS) {
-        if (parcels.length >= 8) break;
+        if (parcels.length >= limit) break;
         if ((p.name.toLowerCase().includes(t) || p.deed.toLowerCase().includes(t) || p.province.includes(t)) && inBbox([p.lng, p.lat], bb)) {
           parcels.push({ rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name, sub: fmt(p.price), dot: parcelDot(p), parcelId: p.id });
         }
       }
     }
-    const pins: Row[] = t && bb ? matchPins(t, bb).map(h => ({ rid: 'c' + h.id, kind: h.kind as Row['kind'], ll: h.ll, name: h.name, sub: h.sub, hit: h })) : [];
-    const onl: Row[] = !onlineStale && online.status === 'done'
-      ? online.list.filter(x => bb && inBbox([x.lng, x.lat], bb)).map((x, i) => ({ rid: 'o' + i, kind: 'place' as const, ll: [x.lng, x.lat] as LngLat, name: x.name, sub: x.src, place: x }))
+    const pins: Row[] = t && bb ? matchPins(t, bb).slice(0, limit).map(h => ({ rid: 'c' + h.id, kind: h.kind as Row['kind'], ll: h.ll, name: h.name, sub: h.sub, hit: h })) : [];
+    const onl: Row[] = online.status === 'done'
+      ? online.list.filter(x => bb && inBbox([x.lng, x.lat], bb)).slice(0, limit).map((x, i) => ({ rid: 'o' + i, kind: 'place' as const, ll: [x.lng, x.lat] as LngLat, name: x.name, sub: x.src, place: x }))
       : [];
     return { rows: [...parcels, ...pins, ...onl], parcelRows: parcels, pinRows: pins, onlineRows: onl };
     // cctvList / sensList are inputs of matchPins
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, bounds, online, onlineStale, fmt, popColors, cctvList, sensList]);
+  }, [query, online, fmt, popColors, cctvList, sensList]);
 
-  /* result icons on the map */
-  useEffect(() => {
-    plotSearch(dropOpen ? rows.map(r => ({ id: r.rid, kind: r.kind, ll: r.ll })) : []);
-  }, [rows, dropOpen]);
+/* Only internet hits get a marker. Land parcels, cctv, water and bus already have
+     their own markers on the map — plotting them again would stack a duplicate
+     on top of each one. */
+useEffect(() => {
+  plotSearch(rows.filter(r => r.kind === 'place').map(r => ({ id: r.rid, kind: r.kind, ll: r.ll, ic: poiIcon(r.place?.cat) })));
+  patch({ rows: rows.map(toStoreRow) });
+}, [rows, patch]);
 
-  /* once the view leaves the searched area, online results become an "area changed" note */
+  /* a cleared query must clear the panel list too */
+  useEffect(() => { if (!query.trim() && useSearch.getState().rows.length) patch({ rows: [] }); }, [query, patch]);
+
+  /* once the view leaves the searched area, prompt for a re-search — but the result
+     list itself stays as-is until the user asks for a new search */
   useEffect(() => {
     if (!dropOpen || !query || !bounds) return;
     const stale = !centerInside(lastFullBBox, [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2]);
     if (stale !== onlineStale) patch({ onlineStale: stale });
   }, [bounds, dropOpen, query, lastFullBBox, onlineStale, patch]);
 
-  /* ---------- pick ---------- */
+/* ---------- pick ---------- */
   const pick = useCallback((r: Row) => {
-    if (r.kind === 'place' && r.place) {
-      showSearchPin(r.ll, poiIcon(r.place.cat), r.name, '#7FD4FF');
-      getMap()?.flyTo({ center: r.ll, zoom: 14, duration: 900 });
-      ringAt(r.ll);
-      toast(`นำทางไปยัง ${r.name} · ${r.place.src}`);
-    } else if (r.kind === 'land' && r.parcelId != null) {
-      const p = PARCEL_BY_ID.get(r.parcelId); if (!p) return;
-      showSearchPin([p.lng, p.lat], 'map-pin', p.name, ACCENT);
-      select(p.id);
-      ringAt([p.lng, p.lat]);
-      setValue('');
-    } else if (r.hit) gotoItem(r.hit);
+    if (r.kind === 'place') {
+      /* Internet hit: ring the marker that is already on the map. No extra marker,
+         no separate right panel — the search list stays where it is. */
+      setSearchSelection(r.rid);
+      flyToResult(r.ll);
+      toast(`นำทางไปยัง ${r.name} · ${r.place?.src ?? ''}`);
+    } else {
+      /* Local hit: ring is handled by that marker's own panel + selection, and
+         the results list is replaced by the marker's panel. */
+      setSearchSelection(null);
+      if (r.kind === 'land' && r.parcelId != null) {
+        const p = PARCEL_BY_ID.get(r.parcelId); if (!p) return;
+        select(p.id);
+      } else if (r.hit) gotoItem(r.hit, false);
+    }
     closeDrop();
-    plotSearch([]);
   }, [closeDrop]);
 
   useEffect(() => {
     setSearchPickHandler(rid => { const r = rows.find(x => x.rid === rid); if (r) pick(r); });
+    patch({ onPick: rid => { const r = rows.find(x => x.rid === rid); if (r) pick(r); } });
     return () => setSearchPickHandler(null);
-  }, [rows, pick]);
+  }, [rows, pick, patch]);
 
   /* outside click + "/" shortcut */
   useEffect(() => {
@@ -166,7 +188,7 @@ export function SearchBox() {
   };
 
   const source = cascade === 'google' && gkey ? 'Google' : 'Nominatim';
-  const rowKb = (r: Row) => rows.indexOf(r) === kb;
+const rowKb = (r: Row) => rows.indexOf(r) === kb;
   const pinIcon = (k: Row['kind']) => (k === 'cctv' ? <Video size={14} className="shrink-0 text-dim2" /> : k === 'transport' ? <Bus size={14} className="shrink-0 text-dim2" /> : <Waves size={14} className="shrink-0 text-dim2" />);
 
   return (
@@ -179,10 +201,20 @@ export function SearchBox() {
           onChange={e => { setValue(e.target.value); setKb(-1); debounced(e.target.value); }}
           onFocus={() => { if (value.trim()) runSearch(value, true); }}
           onKeyDown={onKey}
-          placeholder="ค้นหาเฉพาะในพื้นที่มองเห็น (bbox ปัจจุบัน)…"
+          placeholder="ค้นหา"
           autoComplete="off"
-          className="min-w-0 flex-1 border-none bg-transparent text-[12.5px] text-ink outline-none placeholder:text-dim2"
+          className="min-w-0 flex-1 self-center border-none bg-transparent text-[12.5px] leading-none text-ink outline-none placeholder:text-dim2"
         />
+        {value && (
+          <button
+            type="button"
+            aria-label="ล้างคำค้น"
+            onClick={() => { setValue(''); setKb(-1); runSearch('', true); closeDrop(); input.current?.focus(); }}
+            className="grid size-[18px] shrink-0 cursor-pointer place-items-center rounded-full text-dim2 transition hover:bg-panel2 hover:text-ink"
+          >
+            <X size={12} />
+          </button>
+        )}
         <kbd className="shrink-0 rounded-[5px] border border-b-2 border-line2 px-1.5 py-px font-display text-[10px] font-medium text-dim max-[700px]:hidden">/</kbd>
       </div>
 
@@ -191,18 +223,18 @@ export function SearchBox() {
           className="fs-panel absolute left-0 right-0 top-[calc(100%+6px)] z-[80] max-h-[380px] overflow-y-auto rounded-[11px] border border-line2 bg-panel shadow-[0_16px_40px_rgba(0,0,0,.55)]"
           onPointerDown={e => e.preventDefault()} /* keep focus in the input while clicking a result */
         >
-          <div className={groupCls}><Database size={12} />ในระบบ · เฉพาะกรอบมองเห็น</div>
+          <div className={`${groupCls} sticky top-0 bg-panel`}><Database size={12} />ในระบบ</div>
           {parcelRows.length ? parcelRows.map(r => (
             <div key={r.rid} className={rowCls(rowKb(r))} onClick={() => pick(r)}>
               <span className="inline-block size-[7px] shrink-0 rounded-full" style={{ background: r.dot }} />
               <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
               <span className="max-w-[130px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2">{r.sub}</span>
             </div>
-          )) : <div className={noteCls}>ไม่พบแปลงในกรอบมองเห็นนี้</div>}
+          )) : <div className={noteCls}>ไม่พบสถานที่</div>}
 
           {pinRows.length > 0 && (
             <>
-              <div className={groupCls}><MapPin size={12} />หมุดบนแผนที่ · CCTV / เซ็นเซอร์</div>
+              <div className={`${groupCls} sticky top-0 bg-panel`}><MapPin size={12} />หมุดบนแผนที่ · CCTV / เซ็นเซอร์</div>
               {pinRows.map(r => (
                 <div key={r.rid} className={rowCls(rowKb(r))} onClick={() => pick(r)}>
                   {pinIcon(r.kind)}
@@ -213,7 +245,7 @@ export function SearchBox() {
             </>
           )}
 
-          <div className={groupCls}><Globe size={12} />ออนไลน์ · เฉพาะกรอบมองเห็น · {source}</div>
+          <div className={`${groupCls} sticky top-0 bg-panel`}><Globe size={12} />ออนไลน์ · {source}</div>
           {onlineStale ? <div className={noteCls}>พื้นที่มองเห็นเปลี่ยน — กดปุ่ม "ค้นหา" บนแผนที่เพื่อค้นหาในพื้นที่ใหม่</div>
             : online.status === 'loading' ? (
               <div className={rowCls(false)}><span className="spin-keep inline-block size-3 flex-none animate-spin2 rounded-full border-2 border-line2 border-t-accent" /><span className="text-dim">กำลังค้นหาออนไลน์…</span></div>
@@ -224,11 +256,16 @@ export function SearchBox() {
                   <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap" data-tip={esc(r.name)}>{r.name}</span>
                   <span className="max-w-[130px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2">{r.sub}</span>
                 </div>
-              )) : <div className={noteCls}>ไม่พบสถานที่ออนไลน์ในกรอบมองเห็นนี้</div>}
+              )) : <div className={noteCls}>ไม่พบสถานที่</div>}
         </div>
       )}
-    </div>
+</div>
   );
 }
 
 export { currentBbox };
+
+/** Re-runs the current title-bar text against the current bbox. */
+export function rerunSearch(): void {
+  useSearch.getState().rerun?.();
+}

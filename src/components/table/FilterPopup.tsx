@@ -1,4 +1,4 @@
-import { Check as CheckIcon, RotateCcw, X } from 'lucide-react';
+﻿import { Check as CheckIcon, RotateCcw, X } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ALL_PARCELS } from '../../data/mockData';
@@ -194,7 +194,6 @@ options must not read as "outside the dialog" and close it. */
 
   const statusItems: SelectItem[] = [
     { v: '', l: 'ทุกสถานะ' },
-    { v: 'normal', l: 'ทั่วไป', dot: popColors.normal },
     { v: 'sale', l: 'กำลังขาย', dot: popColors.sale },
     { v: 'sold', l: 'ขายแล้ว', dot: popColors.sold },
   ];

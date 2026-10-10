@@ -5,6 +5,7 @@ import { STATUS } from '../../data/constants';
 import { PARCEL_BY_ID } from '../../data/mockData';
 import { useMoney } from '../../hooks/useMoney';
 import { fdate, fmtRai, numDate } from '../../lib/format';
+import { deltaText, lastDelta } from '../../lib/price';
 import { popupKind } from '../../map/popups';
 import { patchApp, useApp } from '../../store/useApp';
 import { useLightbox } from '../../store/useLightbox';
@@ -12,8 +13,9 @@ import type { Parcel } from '../../types';
 import { PriceChart } from '../charts/PriceChart';
 import { RangeSlider } from '../charts/RangeSlider';
 import { DateButton } from '../ui/DateButton';
+import { LAND_KIND_LABEL, LandKindIcon } from '../ui/LandKindIcon';
 import { pickBtn, pillCls } from '../ui/styles';
-import { DetName, DetRows, DetSub, DetTop, ResCap, VPad } from './shared';
+import { DetName, DetRows, DetSub, DetTop, VPad } from './shared';
 
 /* Round status → optional no-buyer flag. A round where nobody placed a bid is marked
    "ไม่มีผู้ซื้อ" so the schedule reads like a real auction log. */
@@ -109,6 +111,8 @@ export function DetailView() {
   const popColors = useApp(s => s.popColors);
   const reColor = useApp(s => s.reColor);
   const fmt = useMoney();
+  /* every hook must run before the early return below */
+  const showKindIcon = useApp(s => s.showLandKindIcon);
   const p = id != null ? PARCEL_BY_ID.get(id) : undefined;
 
   if (!p) {
@@ -124,23 +128,65 @@ export function DetailView() {
      are still "not yet scheduled" and are used only as a fallback. */
   const upcoming = p.rounds.filter(r => r.date != null && r.date >= now).sort((a, b) => (a.date as number) - (b.date as number))[0];
   const pending = p.rounds.find(r => r.date == null);
-  const nextRound = upcoming ?? pending;
+  void pending;
   const daysLeft = upcoming != null ? Math.ceil(((upcoming.date as number) - now) / 864e5) : null;
   const hasUpcoming = daysLeft != null && daysLeft <= 10;
   const kind = popupKind(p);
+  const delta = lastDelta(p);
   const chipBg = p.status === 'sale' ? popColors.sale : p.status === 'sold' ? popColors.sold : '#2A2F2A';
-  const chipInk = p.status === 'normal' ? '#D9DECF' : '#fff';
+  const chipInk = '#fff';
 
   return (
     <VPad>
       <Carousel key={p.id} p={p} />
-      <DetTop>
+<DetTop>
         <span className="rounded-full px-[9px] py-0.5 text-[10px] font-semibold" style={{ background: chipBg, color: chipInk }}>{STATUS[kind].th}</span>
-        <span className="font-display text-[10.5px] text-dim2">{p.deed}</span>
+        {/* data source + land kind badges */}
+        <span
+          {...useTipProps(`แหล่งข้อมูล: ${p.dataSource}`)}
+          className="rounded-full border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
+        >
+          {p.dataSource}
+        </span>
+        {showKindIcon && (
+          <span
+            {...useTipProps(LAND_KIND_LABEL[p.landKind])}
+            className="inline-flex items-center gap-1 rounded-full border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim"
+          >
+            <LandKindIcon kind={p.landKind} />
+            {LAND_KIND_LABEL[p.landKind]}
+          </span>
+        )}
+        <span className="ml-auto text-[10.5px] text-dim2">{p.deed}</span>
       </DetTop>
       <DetName>{p.name}</DetName>
-      <div className="mt-0.5 font-display text-2xl font-bold text-accent">{fmt(p.price)}</div>
-      <div className="mb-2.5 font-display text-[11px] text-dim">{fmt(p.perWah)} / ตร.วา · {p.province}</div>
+      <div className="mt-0.5 flex items-center gap-2">
+        <div className="text-2xl font-bold text-accent">{fmt(p.price)}</div>
+        {delta && (
+          <span
+            {...useTipProps(`เปลี่ยนแปลงจากราคาเปิดรอบก่อน ${deltaText(delta)}`)}
+            className={`rounded-full border px-2 py-[2px] text-[11px] font-semibold ${delta.up ? 'border-[#3F6B2A] bg-[#1B2A12] text-[#B8F13F]' : 'border-[#7A2B2B] bg-[#2A1414] text-[#FF8A8E]'}`}
+          >
+            {deltaText(delta)}
+          </span>
+        )}
+      </div>
+      <div className="mb-2.5 font-display text-[11px] text-dim">{fmt(p.perWah)} / ตร.วา · {p.amp} {p.province}</div>
+
+      <ul>
+        {p.events.length ? p.events.map(e => {
+          const h = p.hist[e.idx];
+          return (
+            <li key={e.idx} className="flex items-center gap-2 pt-[5px] pb-[16px] text-[11.5px]">
+              <span className="size-[7px] flex-none rounded-sm" style={{ background: e.label.includes('นำกลับมาขายใหม่') ? reColor : e.color }} />
+              <span className="flex-1">{e.label}เมื่อ</span>
+              <span className="font-display text-[10.5px] text-dim">{fdate(h.d)}</span>
+              <span className="font-display text-[11px] font-semibold">{fmt(h.v)}</span>
+            </li>
+          );
+        }) : <li className="flex justify-center py-[5px] text-[11.5px] text-dim2">ไม่มีเหตุการณ์สถานะพิเศษ</li>}
+      </ul>
+
       <DetRows
         rows={[
           ['ที่ตั้ง', `${p.tambon} ${p.amp} ${p.province}`],
@@ -148,19 +194,19 @@ export function DetailView() {
           ['ประเภททรัพย์', p.propertyType],
           ['หมายเลขคดี', p.caseNo],
           ['เลขที่โฉนด', p.deedNo],
-          ['สำนักงานบังคับคดี/กอง', p.enforcementOffice],
           ['หลักประกัน', fmt(p.collateral)],
           ...(p.spouseCollateral != null ? [['คู่สมรส หลักประกัน', fmt(p.spouseCollateral)] as [string,string]] : []),
-          ...(p.expertPrice != null ? [['ราคา ผู้เชี่ยวชาญ', fmt(p.expertPrice)] as [string,string]] : []),
+          // ...(p.expertPrice != null ? [['ราคา ผู้เชี่ยวชาญ', fmt(p.expertPrice)] as [string,string]] : []),
           ...(p.enforcementOfficerPrice != null ? [['ราคา เจ้าพนักงานบังคับคดี', fmt(p.enforcementOfficerPrice)] as [string,string]] : []),
-          ...(p.assessorPrice != null ? [['ราคา เจ้าพนักงานประเมินราคา', fmt(p.assessorPrice)] as [string,string]] : []),
-          ...(p.committeePrice != null ? [['ราคา คณะกรรมการ', fmt(p.committeePrice)] as [string,string]] : []),
-          ['วันที่ประกาศ', fdate(p.announce)],
+          // ...(p.assessorPrice != null ? [['ราคา เจ้าพนักงานประเมินราคา', fmt(p.assessorPrice)] as [string,string]] : []),
+          // ...(p.committeePrice != null ? [['ราคา คณะกรรมการ', fmt(p.committeePrice)] as [string,string]] : []),
+          // ['การขายรอบถัดไป', nextRound?.date != null ? `${fdate(nextRound.date)} · ${nextRound.status}` : (nextRound?.status ?? '-')],
+          // ['วันที่ประกาศ', fdate(p.announce)],
           ...(p.soldTs ? [['วันที่ขายออก', fdate(p.soldTs)] as [string, string]] : []),
           ...(p.mortgage ? [['ติดจำนอง', `${fmt(p.mortgage.amount)} — ${p.mortgage.bank}`] as [string,string]] : []),
-          ['การขายรอบถัดไป', nextRound?.date != null ? `${fdate(nextRound.date)} · ${nextRound.status}` : (nextRound?.status ?? '-')],
         ]}
       />
+
       {hasUpcoming && upcoming?.date != null && (
         <div className="my-2 flex items-center gap-2 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-[11.5px] font-semibold text-accent">
           <span className="flex-none rounded-full bg-accent px-2 py-[2px] font-display text-[10px] text-accent-ink">
@@ -169,12 +215,6 @@ export function DetailView() {
           จะมีการขายทรัพย์ภายใน 10 วัน — นัดวันที่ {numDate(upcoming.date)}
         </div>
       )}
-      <DetSub>กราฟราคาประวัติย้อนหลัง</DetSub>
-      <RangeRow />
-      <div className="rounded-[10px] border border-line bg-bg p-2">
-        <div className="h-[170px]"><PriceChart parcel={p} /></div>
-        <RangeSlider parcel={p} />
-      </div>
       <div className="mb-2 mt-4 overflow-hidden rounded-[10px] border border-line bg-bg">
         <div className="grid grid-cols-[48px_1fr_1fr] bg-panel2 text-[11px] font-semibold">
           <div className="px-2 py-1.5">นัดที่</div>
@@ -189,20 +229,13 @@ export function DetailView() {
           </div>
         ))}
       </div>
-      <ResCap className="!pt-1.5">สกอลล์/ลากด้วยเมาส์ · แตะจุดบนกราฟเพื่อดูราคา (มือถือ) · ช่วงวันที่ใช้ร่วมกันทุกแปลงจนกว่าจะกด "ทั้งหมด"</ResCap>
-      <ul>
-        {p.events.length ? p.events.map(e => {
-          const h = p.hist[e.idx];
-          return (
-            <li key={e.idx} className="flex items-center gap-2 border-t border-line py-[5px] text-[11.5px]">
-              <span className="size-[7px] flex-none rounded-sm" style={{ background: e.label.includes('นำกลับมาขายใหม่') ? reColor : e.color }} />
-              <span className="flex-1">{e.label}เมื่อ</span>
-              <span className="font-display text-[10.5px] text-dim">{fdate(h.d)}</span>
-              <span className="font-display text-[11px] font-semibold">{fmt(h.v)}</span>
-            </li>
-          );
-        }) : <li className="flex justify-center py-[5px] text-[11.5px] text-dim2">ไม่มีเหตุการณ์สถานะพิเศษ</li>}
-      </ul>
+      <DetSub>กราฟราคาประวัติย้อนหลัง</DetSub>
+      <RangeRow />
+      <div className="rounded-[10px] border border-line bg-bg p-2">
+        <div className="h-[170px]"><PriceChart parcel={p} /></div>
+        <RangeSlider parcel={p} />
+      </div>
+      
     </VPad>
   );
 }

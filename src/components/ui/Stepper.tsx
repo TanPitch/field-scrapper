@@ -9,12 +9,14 @@ interface StepperProps {
   sep?: boolean;
   title?: string;
   placeholder?: string;
+  /** Fixed narrow width instead of filling the row. */
+  compact?: boolean;
 }
 
 const stepBtn = 'grid w-7 flex-none cursor-pointer place-items-center bg-transparent font-display text-sm font-semibold text-dim hover:bg-panel2 hover:text-accent';
 
 /** − [number] × + stepper; empty = null ("all"). */
-export function Stepper({ value, onChange, step, sep = false, title, placeholder = 'ทั้งหมด' }: StepperProps) {
+export function Stepper({ value, onChange, step, sep = false, title, placeholder = 'ทั้งหมด', compact }: StepperProps) {
   const fmt = (v: number | null) => (v == null ? '' : sep ? v.toLocaleString('th-TH') : String(v));
   const [text, setText] = useState(fmt(value));
   useEffect(() => setText(fmt(value)), [value, sep]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -31,7 +33,7 @@ export function Stepper({ value, onChange, step, sep = false, title, placeholder
   };
 
   return (
-    <div className="flex h-7 min-w-0 flex-1 items-stretch overflow-hidden rounded-lg border border-line2 bg-bg">
+    <div className={`flex h-7 min-w-0 items-stretch overflow-hidden rounded-lg border border-line2 bg-bg ${compact ? 'w-[104px] flex-none' : 'flex-1'}`}>
       <button type="button" {...useTipProps('ลด')} className={stepBtn} onMouseDown={e => e.preventDefault()} onClick={() => bump(-1)}>−</button>
       <input
         inputMode="numeric"

@@ -30,6 +30,7 @@ const stickyStyle = (left: number): CSSProperties => ({ position: 'sticky', left
 function cellTip(key: ColKey, p: Parcel): string | undefined {
   switch (key) {
     case 'saleBy': return p.mortgage ? `ติดจำนอง ${p.mortgage.bank}` : undefined;
+    case 'seller': return p.dataSource;
     case 'name': return p.name;
     case 'ownerFile': return p.ownerFile;
     case 'plaintiff': return p.plaintiff;
@@ -100,7 +101,8 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
         if (p.mortgage) return p.mortgage.amount.toLocaleString('en-US');
         return 'ปลอดการจำนอง';
       }
-      case 'ownerFile': return p.ownerFile;
+case 'ownerFile': return p.ownerFile;
+      case 'seller': return p.dataSource;
       case 'propertyType': return p.propertyType;
       case 'deedNo': return p.deedNo;
       case 'tambon': return p.tambon;

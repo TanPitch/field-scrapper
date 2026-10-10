@@ -1,6 +1,6 @@
 import type maplibregl from 'maplibre-gl';
 import { useEffect } from 'react';
-import { addCustomLayers } from '../map/layers';
+import { addCustomLayers, addOverlayLayers } from '../map/layers';
 import { requireMap } from '../map/mapRef';
 import {
   areaClick, drawClick, drawPointerMove, dragVertex, editClick, endVertexDrag, finishDraw, isVertexDragging, vertexDown,
@@ -38,8 +38,13 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
     const syncBounds = () => patchApp({ bounds: readBounds(map), zoom: map.getZoom() });
 
     const onLoad = () => {
-      try { addCustomLayers(); } catch (err) { console.error('[load] addCustomLayers:', err); }
+      /* Fixed stack, bottom → top:
+           overlay → cctv → bus → water → land parcel → (DOM overlay) → panel UI
+         Overlays must exist before the pins, and the parcel layers last, so the
+         parcel dots sit on top of every point marker. */
+      try { addOverlayLayers(); } catch (err) { console.error('[load] overlays:', err); }
       try { seedPins(); initPinLayers(); } catch (err) { console.error('[load] pins:', err); }
+      try { addCustomLayers(); } catch (err) { console.error('[load] addCustomLayers:', err); }
       patchApp({ mapReady: true });
       syncBounds();
       onHideLoader();

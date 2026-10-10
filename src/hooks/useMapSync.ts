@@ -5,13 +5,12 @@ import {
   applyDrawPrefs, applyLabelLayout, applyOverlayOpacity, applyOverlayVisibility, applyPaint, applyParcelLayerVisibility,
   rebuildFlood, refreshPlates,
 } from '../map/layers';
+import { position as positionParcelLabels, registerParcels, syncParcelLabels } from '../map/parcelLabels';
 import { fc, getMap, ptF, setSourceData } from '../map/mapRef';
 import { syncDraws } from '../map/drawEngine';
 import { applyPinMarkerSize, syncPinData, syncPinSelectionRing } from '../map/pins';
 import { closeAllPopups, refreshOpenPopups } from '../map/popups';
 import { useApp } from '../store/useApp';
-import { fmtShortMoneyNow } from './useMoney';
-import { numDate } from '../lib/format';
 import { useParcels } from './useParcels';
 
 const rebuildFloodSoft = debounce(rebuildFlood, 280);
@@ -30,6 +29,7 @@ export function useMapSync(): void {
   const popupMode = useApp(s => s.popupMode);
   const labelOverlap = useApp(s => s.labelOverlap);
   const labelSold = useApp(s => s.labelSold);
+  const showLandKindIcon = useApp(s => s.showLandKindIcon);
   const priceBath = useApp(s => s.priceBath);
   const priceSpace = useApp(s => s.priceSpace);
   const landOn = useApp(s => s.landOn);
@@ -49,14 +49,12 @@ export function useMapSync(): void {
   const pinSel = useApp(s => s.pinSel);
   const markerSize = useApp(s => s.markerSize);
 
-  /* parcel dots + compact labels */
+  /* parcel dots + compact labels (DOM overlay: two blocks, price/date over percent) */
   useEffect(() => {
     if (!mapReady) return;
     setSourceData('parcels', fc(vis.map(p => ptF([p.lng, p.lat], { id: p.id, status: p.status, resell: isResell(p) }))));
-    setSourceData('labels', fc(vis.map(p => ptF([p.lng, p.lat], {
-      status: p.status,
-      lp: fmtShortMoneyNow(p.price) + (labelSold && p.soldTs ? '\n' + numDate(p.soldTs) : ''),
-    }))));
+    registerParcels(vis);
+    syncParcelLabels(vis, labelSold);
   }, [mapReady, vis, labelSold, priceBath]);
 
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */
@@ -66,9 +64,31 @@ export function useMapSync(): void {
   useEffect(() => { if (mapReady) { applyLabelLayout(); applyParcelLayerVisibility(); } }, [mapReady, popupMode, labelOverlap, landOn]);
   useEffect(() => { document.body.classList.toggle('fs-land-off', !landOn); }, [landOn]);
 
+  /* "ป็อปอัพซ้อนกันได้" culls DOM labels, so re-run the cull right away */
+  useEffect(() => { if (mapReady) positionParcelLabels(); }, [mapReady, labelOverlap]);
+
+  /* the land-kind icon is baked into the label markup, so rebuild on toggle */
+  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelSold); }, [mapReady, showLandKindIcon]);
+
+  /* the DOM labels are positioned in screen space, so they follow the camera */
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = getMap();
+    if (!map) return;
+    const on = () => positionParcelLabels();
+    map.on('move', on);
+    map.on('zoom', on);
+    map.on('resize', on);
+    return () => {
+      map.off('move', on);
+      map.off('zoom', on);
+      map.off('resize', on);
+    };
+  }, [mapReady]);
+
   /* popups follow settings */
   useEffect(() => { if (popupMode === 'all') closeAllPopups(); }, [popupMode]);
-  useEffect(() => { if (mapReady) refreshOpenPopups(); }, [mapReady, popupCfg, popColors, reColor, priceBath, priceSpace]);
+  useEffect(() => { if (mapReady) refreshOpenPopups(); }, [mapReady, popupCfg, popColors, reColor, showLandKindIcon, priceBath, priceSpace]);
 
   /* drawings: redraw whenever any draw-related state changes (incl. cursor preview) */
   useEffect(() => {
