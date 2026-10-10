@@ -138,3 +138,7 @@ RELEASE_NOTES.md              changelog (rendered in-app under เกี่ย�
 - The splash, the user-management pane and the server pane are **mockups**:
   credentials are hard-coded in `src/components/auth/Splash.tsx` and account data
   lives in local state. Nothing is sent anywhere.
+- `public/` holds static assets served at the base path. `splash-hero.jpg` is a
+  photograph from [Unsplash](https://unsplash.com/photos/eyeglasses-on-map-qoAIlAmLJBU)
+  by [oxana v](https://unsplash.com/@arttravelling); their licence requires the
+  credit line shown on the splash, so keep it if the image is replaced.

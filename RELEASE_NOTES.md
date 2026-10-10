@@ -4,6 +4,13 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### Changes
+- The splash hero image is now a real photograph shipped with the app instead of
+  a random placeholder from `picsum.photos`: `public/splash-hero.jpg` (1600×2003,
+  ~810 KB), referenced through `import.meta.env.BASE_URL` so it resolves under a
+  sub-path deploy. Attribution is rendered at the bottom of the panel as Unsplash
+  requires — "Photo by oxana v on Unsplash".
+
 ## 2.2.0 - 2026-10-10
 
 Splash/login, a real Google search backend, the search-result panel, and a

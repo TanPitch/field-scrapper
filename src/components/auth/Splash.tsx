@@ -92,8 +92,8 @@ export function Splash() {
       {/* left: brand panel — hidden on small screens */}
       <section className="relative hidden overflow-hidden lg:block">
         <img
-          src="https://picsum.photos/seed/fieldscrapper-hero/1200/900.jpg"
-          alt=""
+          src={`${import.meta.env.BASE_URL}splash-hero.jpg`}
+          alt="แผนที่และแว่นตาบนโต๊ะทำงาน"
           className="absolute inset-0 size-full object-cover opacity-[0.35] blur-sm"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-bg/85 via-bg/55 to-bg/95" />
@@ -114,7 +114,30 @@ export function Splash() {
               ))}
             </div>
           </div>
-          <div className="font-display text-[11px] text-dim2">v2.2.0 · เวอร์ชันภายใน</div>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-dim2">
+            <span className="font-display">v2.2.0 · เวอร์ชันภายใน</span>
+            {/* Unsplash attribution is required by their licence — keep it visible. */}
+            <span>
+              Photo by{' '}
+              <a
+                href="https://unsplash.com/@arttravelling?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-dim underline decoration-line2 underline-offset-2 transition hover:text-ink"
+              >
+                oxana v
+              </a>
+              {' on '}
+              <a
+                href="https://unsplash.com/photos/eyeglasses-on-map-qoAIlAmLJBU?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-dim underline decoration-line2 underline-offset-2 transition hover:text-ink"
+              >
+                Unsplash
+              </a>
+            </span>
+          </div>
         </div>
       </section>
 
