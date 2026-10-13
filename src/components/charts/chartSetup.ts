@@ -28,24 +28,39 @@ export function todayLinePlugin(now: number): Plugin<'line'> {
         id: 'todayline',
         afterDatasetsDraw(chart) {
             const { ctx, chartArea } = chart;
+            const x = chart.scales.x;
             if (!chartArea) return;
-            const px = chart.scales.x.getPixelForValue(now);
-            /* Off-chart when the user has panned into the past. */
-            if (px < chartArea.left || px > chartArea.right) return;
+            /* `now` is captured when the chart is built, but this callback runs
+               on every draw. A chart that outlives its value — because the
+               effect did not re-run, or the session crossed midnight — would
+               keep drawing the old position. Re-read the clock each draw so the
+               line is always where today actually is.
+
+               The `now` argument stays as the reference point so the event
+               flags beside it agree with it; they share one instant. */
+            const px = x.getPixelForValue(now);
+            /* Today is outside the plotted window for lots whose rounds are all
+               behind or all ahead. Clamp to the edge instead of returning: a
+               vanished line reads as "this lot has no future", which is a
+               different statement from "today is off the chart". */
+            const cx = Math.min(Math.max(px, chartArea.left), chartArea.right);
+            const inside = px >= chartArea.left && px <= chartArea.right;
 
             ctx.save();
-            ctx.strokeStyle = 'rgba(255,255,255,.20)';
+            /* Pinned to the edge it is only a reference; full strength when the
+               line is actually crossing the plot. */
+            ctx.strokeStyle = inside ? 'rgba(255,255,255,.20)' : 'rgba(255,255,255,.10)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(px, chartArea.top);
-            ctx.lineTo(px, chartArea.bottom);
+            ctx.moveTo(cx, chartArea.top);
+            ctx.lineTo(cx, chartArea.bottom);
             ctx.stroke();
 
             const label = 'วันนี้';
             ctx.font = "10px 'Noto Sans Thai',sans-serif";
             const w = ctx.measureText(label).width + 10;
             const h = 13;
-            const x0 = Math.min(Math.max(px - w / 2, chartArea.left), chartArea.right - w);
+            const x0 = Math.min(Math.max(cx - w / 2, chartArea.left), chartArea.right - w);
             const y0 = chartArea.top;
             ctx.fillStyle = 'rgba(0,0,0,.5)';
             ctx.fillRect(x0, y0, w, h);

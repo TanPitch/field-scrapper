@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, PanelRight, PenTool, Search, Settings2, X, type LucideIcon } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useRef } from 'react';
@@ -32,11 +32,38 @@ const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
  *  actually enforced somewhere else. */
 const ADMIN_ONLY: SetTab[] = ['users'];
 
+/* Search index for the settings. Filtering the tab list alone would not be much
+   use: nine tabs hold a couple of hundred controls, so the jump worth having is
+   from a setting's own name to the tab that holds it. Terms are deliberately
+   broad — one per control family, not per control — so a near miss still lands
+   somewhere useful instead of returning nothing. */
+const SETTING_INDEX: { terms: string[]; tab: SetTab }[] = [
+  { tab: 'look', terms: ['รูปลักษณ์', 'ธีม', 'theme', 'สีหลัก', 'accent', 'หน้าจอ', 'layout', 'ทึบ', 'โปร่งใส', 'ราคา', 'bath', 'comma', 'ลดการเคลื่อนไหว', 'reduce', 'lightbox', 'แถวในแผงรายละเอียด'] },
+  { tab: 'map', terms: ['แผนที่', 'map', 'basemap', 'หมุด', 'cctv', 'ประตูน้ำ', 'รถเมล์', 'รถไฟ', 'ปลดล็อก', 'รหัสผ่าน'] },
+  { tab: 'popup', terms: ['ป็อปอัพ', 'popup', 'ป้าย', 'label', 'ไอคอน', 'หรี่', 'dim', 'กราฟ', 'วันนี้', 'ประมาณ', 'รอบถัดไป', 'ชนิดที่ดิน'] },
+  { tab: 'draw', terms: ['รูปวาด', 'วาด', 'draw', 'เส้น', 'วงกลม', 'พื้นที่', 'สีเส้น', 'ความหนา', 'ป้ายกำกับ'] },
+  { tab: 'search', terms: ['ค้นหา', 'search', 'google', 'api', 'เอกสาร', 'doc'] },
+  { tab: 'server', terms: ['เซิร์ฟเวอร์', 'server', 'ฐานข้อมูล', 'database', 'cron', 'pipeline', 'สถานะ', 'log'] },
+  { tab: 'user', terms: ['ผู้ใช้', 'user', 'บัญชี', 'รหัสผ่าน', '2fa', 'otp', 'avatar', 'สลับผู้ใช้'] },
+  { tab: 'users', terms: ['จัดการผู้ใช้', 'เพิ่มผู้ใช้', 'สิทธิ์', 'role', 'admin'] },
+  { tab: 'about', terms: ['เกี่ยวกับ', 'about', 'เวอร์ชัน', 'version', 'อัปเดต', 'changelog'] },
+];
+
 function SettingsPanel({ onClose }: { onClose: () => void }) {
   const tab = useApp(s => s.setTab);
   const glassLevel = useApp(s => s.glassLevel);
   const role = useApp(s => s.role);
   const isAdmin = role === 'admin';
+  const [q, setQ] = useState('');
+  /* Empty query shows everything. Otherwise a tab survives if its own label
+     matches, or if any indexed term matches. */
+  const needle = q.trim().toLowerCase();
+  const hits = needle
+    ? TABS.filter(t =>
+        (!ADMIN_ONLY.includes(t.id) || isAdmin) &&
+        (t.label.toLowerCase().includes(needle) ||
+          SETTING_INDEX.some(g => g.tab === t.id && g.terms.some(k => k.toLowerCase().includes(needle)))))
+    : [];
   const tabs = TABS.filter(t => !ADMIN_ONLY.includes(t.id) || isAdmin);
 
   /* If the signed-in user is not an admin, the pane must not stay parked on a
@@ -59,16 +86,40 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
       <div className="flex h-[calc(100%-45px)] min-h-0 overflow-hidden">
         {/* min-h-0 lets the tab list scroll rather than expand; shrink-0 keeps the footer put. */}
         <div className="flex h-full w-[148px] flex-none flex-col border-r border-line">
-          <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-2">
-          {tabs.map(({ id, label, Icon }) => (
+          {/* Search sits above the tab list, not inside it, so it survives the
+              list being filtered away to nothing. */}
+          <div className="shrink-0 px-1.5 pb-1 pt-2">
+            <div className="relative">
+              <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-dim2" />
+              <input
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="ค้นหาการตั้งค่า"
+                className="w-full rounded-lg border border-line2 bg-bg py-[6px] pl-[22px] pr-2 text-[11.5px] outline-none placeholder:text-dim2 focus:border-accent"
+              />
+              {q && (
+                <button
+                  type="button"
+                  aria-label="ล้างคำค้น"
+                  onClick={() => setQ('')}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-dim2 hover:text-ink"
+                ><X size={12} /></button>
+              )}
+            </div>
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-1">
+          {(needle ? hits : tabs).map(({ id, label, Icon }) => (
             <button
               key={id}
-              onClick={() => patchApp({ setTab: id })}
+              onClick={() => { patchApp({ setTab: id }); setQ(''); }}
               className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-[9px] text-left text-xs font-medium ${tab === id ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'}`}
             >
               <Icon size={15} className="flex-none" /><span>{label}</span>
             </button>
           ))}
+          {needle && hits.length === 0 && (
+            <div className="px-2.5 py-3 text-[11px] leading-snug text-dim2">ไม่พบการตั้งค่าที่ตรงกับ “{q.trim()}”</div>
+          )}
           </div>
           {/* mockup — no session is actually ended. Pinned in its own flex slot so
               it never moves with the tab list. */}
