@@ -117,11 +117,19 @@ body[data-accent] {
   /* Text the user may want to copy: table cells, popups, and the detail panel.
      Deed numbers, case numbers and prices are exactly what someone copies into
      a spreadsheet, so blocking selection there was purely in the way.
-     Inputs opt back in below. */
+
+     The descendant selector is the load-bearing part. `user-select: none` above
+     matches every element, and re-enabling only the wrapper left every span,
+     div and b inside it still set to none — so nothing inside a "selectable"
+     container was actually selectable, and the drag selected nothing at all.
+     `user-select` is not inherited-and-overridable in the way `color` is: a
+     descendant that says `none` wins over an ancestor that says `text`. */
   input,
   textarea,
   .selectable,
-  [data-selectable] {
+  [data-selectable],
+  .selectable *,
+  [data-selectable] * {
     -webkit-user-select: text;
     user-select: text;
   }
