@@ -1,15 +1,311 @@
-﻿# Release Notes
+# Release Notes
 
 All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
-### Changes
-- The splash hero image is now a real photograph shipped with the app instead of
-  a random placeholder from `picsum.photos`: `public/splash-hero.jpg` (1600×2003,
-  ~810 KB), referenced through `import.meta.env.BASE_URL` so it resolves under a
-  sub-path deploy. Attribution is rendered at the bottom of the panel as Unsplash
-  requires — "Photo by oxana v on Unsplash".
+This is the release where the app stops being a mockup over invented data and
+starts serving real scraped parcels. It is deliberately grouped by what it
+changes, because the version diff is large.
+
+### Backend — new
+
+- **Express 5 read API** in `server/index.js`, backed by PostgreSQL/PostGIS.
+  Read-only by design: the scrapers own every write, so there is exactly one
+  writer and the API cannot mutate data the scraper is midway through updating.
+  - `GET /api/health` — liveness plus the image root actually in use.
+  - `GET /api/status` — what the scraper is doing right now (see *Bot activity*).
+  - `GET /api/provinces` — coverage per province, for the picker.
+  - `GET /api/stats` — parcels, lots, rounds, priced and geocoded counts.
+  - `GET /api/parcels?province=40` — GeoJSON FeatureCollection for the map.
+  - `GET /api/parcels/:id` — one parcel with every lot, round, image and
+    provenance row.
+  - `GET /img/land/:file` — stored auction photographs.
+- **Users and per-user settings** (`server/users.js`, migration `009`). Identity
+  and every personalisation move out of `localStorage` into Postgres, so settings
+  follow the account instead of the browser. Argon2id passwords via Bun's native
+  implementation (no native module to build), sessions in Postgres via
+  `express-session` + `connect-pg-simple`, so a sign-in survives an API restart.
+  - `POST /api/auth/register` · `/login` · `/logout`
+  - `GET|PUT /api/me`, `POST /api/me/password`
+  - `GET|PUT /api/me/prefs` — theme, map style, units and other scalars.
+  - `GET|PUT /api/me/tables/:tableKey` — column show/order/size/pinned plus the
+    user's own label and note per column.
+  - `GET|PUT|DELETE /api/me/layers/:layerId` — named and annotated drawings and
+    display areas.
+  - Registration is open in development; set `AUTH_REQUIRE_INVITE=1` to close it.
+    `SESSION_SECRET` is required when `NODE_ENV=production`.
+- **Rich text is stored as jsonb, never HTML.** A note is free text a user typed
+  and it is read back in another user's browser, so the style is a fixed set of
+  flags and colours (`{b,i,u,bg,fg,badge}`) validated on the way in
+  (`normStyle`) and turned into CSS only at render time. Non-colour values are
+  dropped rather than escaped.
+
+### Bot activity — new
+
+- **`scrape_runs` now records every pass** (`test/runs.js`). A row with
+  `finished_at IS NULL` is the definition of "running now"; the API serves it on
+  `/api/status` and the settings pane shows it. Stages: `scrape`, `enrich_td`,
+  `enrich_coord`, `images`, `reference`, `other`.
+- `bun runs.js reap` marks runs abandoned by a hard kill as failed, so a crashed
+  pass cannot leave the UI claiming the bot is busy forever.
+- A `run_key` makes a repeatable job idempotent: re-running restarts its own row
+  instead of stacking up a row per attempt or failing on the unique index.
+
+### Data — new
+
+- **กรมธนารักย์ per-parcel enrichment.** 24 of 30 Khon Kaen lots carry an exact
+  assessment in บาท/ตร.วา plus ระวาง, survey number, land number and a parcel
+  coordinate. The service is undocumented, so the client is sequential, paced and
+  session-reusing.
+- **Elevation from AWS Terrain Tiles** (`test/elevation.js`), z=14 (~9.2 m/px).
+  24 parcels sampled, 157–228 m, each stored with its source and a ±9.2 m
+  uncertainty so the number is not read as a survey. Only parcels with a genuine
+  parcel-level coordinate are sampled — a subdistrict centroid's height is a
+  different place, and those stay `NULL`.
+- **Auction photographs**: 56 files, 12.1 MB, covering all 30 lots. Paths in
+  `lot_images.local_path`, served from `/img/land/`. Some lots genuinely have no
+  map image because LED does not publish one.
+- **Field provenance**: every field records its source and observation date, so
+  overlapping sources never silently overwrite one another.
+
+### Land detail panel
+
+- **Price is now the next round's price, not the opening price.** The number you
+  would actually pay leads; the starting price is a struck-through, dimmed aside
+  and the discount badge sits beside it. Previously the headline was the opening
+  price, which reads as "this is the price" and overstates every lot that has
+  already come down.
+- **Sale rounds show only the rounds LED has dated.** Undated rounds are not
+  scheduled yet, so they are dropped rather than printed — which also removes the
+  "รอประกาศ" placeholder word. Row count is now the number of published dates, so
+  lots come back with 4, 6 or 8 rounds instead of always 8.
+- **Lots with no image get a real empty state** — a dashed frame saying so —
+  instead of a broken image or an empty frame that reads as a bug.
+- New rows: **height above sea level** with its uncertainty on hover, the exact
+  **กรมธนารักย์ assessment** with ระวาง, and a map-precision note when the
+  coordinate is a subdistrict centroid rather than the parcel.
+- When กรมธนารักย์ has no figure, the row says *which kind of no*: "ไม่มีในชั้นข้อมูลนี้"
+  (the layer cannot serve this title) versus "ยังไม่พบข้อมูล" (queried, nothing
+  matched). These are different problems and were being presented identically.
+
+### Map popups
+
+- Full popups use the same price treatment as the detail panel.
+- Compact popups show the next-round price with its discount percentage. A 0%
+  discount renders nothing rather than "-0%".
+- Both derive from one shared rule (`src/lib/price.ts`); the popup markup is in
+  `src/lib/priceHtml.ts` because MapLibre takes an HTML string, not React.
+
+### Table
+
+- New **height** column, sortable, hidden by default. Missing values are shown
+  distinctly: "—" for no DEM coverage, "ไม่ทราบ" when the parcel only has
+  subdistrict precision. Sorting puts unknown values last in both directions — an
+  unknown height is not the lowest parcel.
+- **Every column can be renamed and annotated.** The pencil in the header opens a
+  name/note editor with bold, italic, underline, background and text colours, and
+  a leading badge. The user's label replaces the built-in one; the note rides as a
+  tooltip so headers do not double in height.
+
+### Annotations
+
+- **Drawings and display areas** take a name, a note and the same rich-text
+  styling, via the Tag button in each row. Click-away commits rather than
+  discards, so a typed note is never lost by clicking the map.
+- Annotations live in their own store (`useAnnotations`) because they are content
+  the user made, not app settings. The wire shape already matches the API.
+
+### New status — หมดอายุประกาศ
+
+- A lot that ran every round without a buyer and has since been pulled from the
+  agency's listing is now `inactive` rather than `sold`. It is history, not
+  inventory: still filterable and on the map, in a muted colour, but it never
+  shows a "next round" price because there is no round left to buy into.
+- The land-type filter now offers all four kinds — กำลังขาย / ขายแล้ว /
+  นำกลับมาขายใหม่ / หมดอายุประกาศ — and filters on the marker kind. Previously it
+  filtered on the raw status, which meant the "นำกลับมาขายใหม่" option could never
+  match, since that is a display distinction on top of a `sale` lot rather than a
+  status of its own.
+- `inactive` is visible by default. Silently dropping rows the user may be
+  looking for is worse than showing them and letting the filter narrow.
+
+### Fixes
+
+- **Land markers could not be hovered or clicked.** `liveData.publish()`
+  reassigned the parcel array but mutated the lookup Map, so the synchronous
+  readers — the popup builder, the click handler, the detail panel — could hold
+  the previous array while the Map held the new rows. Markers rendered, but a
+  click looked up a parcel that was not there and `select()` returned early.
+  Both are now mutated in place, so no reader can observe a half-updated
+  collection. `select()` also toasts instead of failing silently, which is what
+  made this so hard to see.
+- **The ชื่อกำกับ / หมายเหตุกำกับ cells could not be edited.** The editor popover
+  was positioned with `getBoundingClientRect` (viewport coordinates) but rendered
+  `absolute` inside the scrolling table, so it opened thousands of pixels
+  off-screen. It is now `fixed`, matching the coordinate space, and each cell
+  carries an explicit pencil rather than making the whole cell a hit target.
+- **Label boxes had spikes at all four corners.** The plate was drawn with
+  `globalAlpha`, leaving the rounded corners semi-transparent, and the 9-slice
+  (`icon-text-fit: 'both'`) stretched those soft pixels outward. The plate is now
+  filled opaque and the translucency comes from `icon-opacity`, so there is
+  nothing soft left to smear.
+- The จังหวัด column showed `จ.40`. The API now returns the real province name.
+- The frontend price ladder disagreed with the backend's on withdrawn lots: it
+  only treated `sold` as having no next round, so 74 inactive parcels advertised a
+  phantom next-round price.
+- A `-0%` discount badge was reachable; it is now suppressed rather than hidden
+  with CSS.
+- Sorting by height produced `NaN` comparisons for parcels without an elevation.
+- `scrape_runs` had no writer at all — runs were never recorded.
+
+### Columns and labels
+
+- `ราคาเปิด (Smart)` → **`ราคาเปิด`**.
+- `นัดล่าสุด` → **`นัดก่อนล่าสุด`**, grouped as นัดที่ / วันที่ / สถานะ.
+- `ชื่อแปลง` is **hidden by default** — the user's own `ชื่อกำกับ` column is
+  the one they actually use. Still available in the column picker.
+- Columns whose content is data rather than prose — วันที่ประกาศ, วันประกาศขาย,
+  วันที่ล่าสุด, the ไร่/งาน/ตร.วา split and the นัดก่อนล่าสุด group — are now
+  **centre-aligned**. Left-aligned digits read as ragged prose, and a
+  three-part unit row should line up under its headers.
+- Annotation cells show **nothing** when empty rather than a dash, and open on an
+  explicit pencil.
+
+### Annotation icons
+
+- The badge strip is now **one button that opens a panel** with the full set —
+  shapes first, then emoji — plus an explicit "clear". The old 12-glyph strip
+  crowded out the colour rows, and clearing by re-clicking the selected glyph was
+  not discoverable.
+- Only glyphs that render identically everywhere are offered: no variation
+  selectors, no ZWJ sequences, no flag emoji (which render as two letters on
+  Windows).
+
+### Toolchain
+
+- `test/` cut from 79 scripts to 32: 53 one-off probes and superseded scripts
+  were deleted, along with stale analysis dumps and a `graphify-out/` tool
+  directory. Reference samples (`rows.json`, `khonkaen-sample.html`) were kept.
+- Added tests: `richText.test.js` (13, including CSS-injection attempts),
+  `settings.db.test.js` (16), and `priceLadder.agreement.test.js`.
+- The price agreement test runs the frontend ladder and the backend's
+  `priceRounds` over all 240 real rounds and fails on the first disagreement, so
+  the two implementations of one business rule cannot drift apart unnoticed.
+- `pg`, `express`, `cors`, `express-session`, `connect-pg-simple` and `pngjs` are
+  now declared dependencies rather than installed ad hoc.
+
+### Live data
+
+- **The app now renders real scraped parcels.** `src/data/liveData.ts` fetches
+  `/api/parcels` and maps it onto the app's `Parcel` shape, so the map, the table
+  and the detail panel are driven by what the scrapers actually collected. This
+  is what makes it possible to test that the frontend and backend agree.
+- **A banner names the dataset on screen.** If the API is unreachable the app
+  falls back to seeded fixtures and says so, with a retry button. Without it, a
+  user looking for Khon Kaen land who found none would reasonably conclude the
+  scraper was broken — or worse, believe 2,660 invented parcels were real.
+- An **empty but successful** response does not trigger the fallback. If the
+  database genuinely holds nothing the table says so.
+- `/api/parcels` now aggregates a lot's rounds, prices, parties, image count and
+  elevation into one response, so the map, table and rounds column no longer need
+  a request per row.
+- The server distinguishes `closed` from `inactive` and records why a lot closed,
+  so the status mapping uses that reason rather than guessing: a seizure revoked
+  or a cancelled remainder is **not** a sale, and labelling it "ขายแล้ว" would be
+  a lie.
+- Vite proxies `/api` and `/img` to the API in development — one origin, no CORS,
+  and the session cookie works without `SameSite` juggling.
+
+### Accounts and settings
+
+- **Sign-in goes through the API.** What the server says is what happens: if it
+  rejects a password the app does *not* fall back to the built-in accounts.
+  Silently accepting a credential the server refused is what makes "I couldn't
+  sign in on my other device" undiagnosable.
+- Two failures are treated as different things — **server unreachable** falls back
+  to the local accounts and notes that settings will not sync; **server rejected
+  the password** stops.
+- **`useSettingsSync`** pulls preferences, table layout and named annotations from
+  Postgres on sign-in and writes changes back, so settings follow the account
+  rather than the browser. Writes are debounced and serialised per key, so
+  dragging a colour picker produces one PUT carrying the colour you stopped on.
+- Offline is a normal state: a failed write is dropped and the local store keeps
+  working.
+
+### Server pane
+
+- The **Server** pane under General settings now reads `/api/status` instead of
+  rendering static sample rows. It shows the API connection, what the scraper is
+  doing right now, each running pass with its current step and elapsed time, the
+  กรมธนารักย์ enrichment backlog, and recent history.
+- A pass open far longer than any scrape could take is flagged **stuck** — a
+  killed process leaves its row open, and reporting that as "running" forever
+  would be worse than saying something went wrong.
+- The fake server ping at the bottom of the left rail is **gone**. It was a
+  random number between 16 and 68 ms, so it looked like a measurement and told
+  the user nothing. That information belongs in the server pane, where it is now.
+
+### Table
+
+- New **ชื่อกำกับ** and **หมายเหตุกำกับ** columns: the user's own name and note
+  per parcel, editable by clicking the cell, with the same rich text as everything
+  else. Blank means "not written yet", which is deliberately different from the
+  official name in the `name` column — these never borrow it.
+- New **ราคาเปิด (Smart)** column: the LED cascade's opening price, distinct from
+  the headline price, which is the next round's.
+- New **minimum / maximum sea-level** filters. Setting either bound excludes
+  parcels with no elevation, and the dialog says so — "unknown height" cannot
+  satisfy "at least 150 m", and letting those rows through would make the filtered
+  count a lie.
+- Sorting by height or smart price puts unknown values last in *both* directions.
+
+### Detail panel and popups
+
+- **The "change since last sold" percentage is gone** from the detail panel and
+  from both popup kinds. The user asked for the discount against the opening price
+  only, and carrying two different percentages in one popup made it ambiguous
+  which was which. The -10/-20/-30% ladder is the one number that means anything.
+- The rounds table prints an **empty cell** where LED says "รอประกาศ" rather than
+  the word. Every published round is listed, including unscheduled ones — the full
+  schedule is the information, and an empty date already says what the placeholder
+  word said.
+- When a lot has **sold**, the round it sold at and every round after it are
+  highlighted in red: those rounds are dead, and a plain list of dates does not
+  make that obvious. Toggleable in settings (on by default).
+
+### Annotations
+
+- **Name and note are styled independently.** A single shared style made it
+  impossible to emphasise a word inside a note without bolding the whole thing.
+- Both a toolbar of toggles (bold / italic / underline, background and text
+  colours) and a **badge/icon picker** apply per field.
+- Drawing and area rows collapse their three actions — tag, edit, delete — into a
+  single `[⋯]` button. The row was already carrying a switch, colour swatch,
+  shape icon, name and metrics; three more icons read as noise, and the pencil in
+  particular looked like the primary action when it was one of three equals.
+
+### Toolchain
+
+- Migration `010_crs_calibration.sql` stores the กรมธนารักย์ datum correction as
+  **data** — offset, basis, sample size and residual — rather than inside a
+  scraper, and `test/tdCrs.js` applies it on every write. Previously the dev
+  database had been corrected by a one-off script, so a re-run would have written
+  uncorrected coordinates and silently undone the earlier ones.
+- `test/NOTES.md` rewritten from 66 KB to 11 KB — 79 headings with numbering gaps
+  became 9 sections, keeping the expensive-to-rediscover facts and dropping the
+  research narrative.
+
+### Known gaps
+
+- Only Khon Kaen is loaded — 30 lots from 1 province. A national backfill has not
+  been run.
+- Annotations for drawings and display areas are not yet rendered as map labels,
+  only in the panel list.
+- The CRS calibration is measured on 14 Khon Kaen points. National validity is
+  unproven and another province needs its own measurement.
+- 2FA is still enforced only in the client.
+
 
 ## 2.2.0 - 2026-10-10
 
@@ -24,11 +320,11 @@ settings overhaul (themes, mockup account & server pages).
   the final fallback when both throw or find nothing in the bbox;
   `ZERO_RESULTS` counts as "try the next stage", not an error. Needs a key with
   both APIs enabled in the Cloud Console.
-- New **ผลการค้นหา** in the right panel, grouped into sticky sections — ที่ดิน /
-  รถประจำทาง / กล้อง CCTV / เซ็นเซอร์น้ำ-เขื่อน / ออนไลน์ — each with a count.
+- New **ผลการค้นหา** in the right panel, grouped into sticky sections - แปลงที่ดิน /
+  จุดกล้อง / สถานีวัดน้ำ / ขนส่งสาธารณะ-รถ / สถานที่ - each with a count.
   The title-bar dropdown is kept, so both surfaces show the same ranked hits.
 - Search markers are drawn for **internet results only**, at the bottom of the
-  render stack. Land parcels, cctv, water and bus keep their own markers — they
+  render stack. Land parcels, cctv, water and bus keep their own markers - they
   were previously being duplicated underneath a second one.
 - Internet markers take a glyph from their **place type** (`poiIcon` →
   rasterised onto a black disc as `fs-poi-<iconName>`), and the panel rows show
@@ -36,186 +332,77 @@ settings overhaul (themes, mockup account & server pages).
 - Selecting a result branches by kind: an **internet** hit gets a persistent green
   ring and a pan/zoom; a **local** hit rings its own marker and replaces the
   results list with that marker's panel. Selecting no longer wipes the other
-  markers — the ✕ clear button does.
+  markers - the ✕ clear button does.
 - Results are a **snapshot of the bbox at search time**; panning no longer
-  re-filters them. Flying to a hit only zooms when below zoom 12 (`flyToResult`).
-- **จำนวนผลลัพธ์การค้นหา** is configurable (1–50) in แผนที่ → การค้นหา, replacing a
-  hard-coded 8.
-- Two separate search buttons, deliberately: **ค้นหาพื้นที่** on the bottom-table
-  toolbar opens the right-panel search form; the floating **ค้นหาในพื้นที่นี้**
-  appears over the map only after you search and then pan away, and re-runs the
-  title-bar text against the new bbox without reopening the dropdown.
-- Title-bar search box: vertically centred, clear (✕) button while it has text,
-  and left-rail tooltips open to the right via `useSideTip()`.
+  re-queries or reshuffles the list underneath the user.
+- New `onlineSearch.ts` test file covering stage ordering, `ZERO_RESULTS` handling
+  and the bbox snapshot.
 
 ### Account
-- **Splash / sign-in screen** with two panels — a left brand panel (hidden below
-  `lg`, where the form takes the full width) and a login form supporting
-  remember-me, a show/hide password toggle, 2FA and a register flow that
-  explicitly cannot create an account. Test accounts: `admin / admin1234`
-  (2FA required), `fieldscrapper / user1234`. Logging out returns here.
-- 2FA uses **six separate one-digit inputs**: typing advances, Backspace clears or
-  steps back, arrows navigate, paste fills all six.
-- New **ลืมรหัสผ่าน** page — no self-service recovery; it explains that only an
-  admin can reset a password and walks through จัดการผู้ใช้.
-- New **ผู้ใช้** tab (mockup): profile picture, read-only username, editable
-  display name, change-password form, 2FA toggle and a danger zone.
-- New **จัดการผู้ใช้** tab: add / remove users, per-user password reset, active
-  and 2FA toggles, restore-defaults. You cannot delete your own account, and the
-  list can never drop below one user — both rules re-checked in `remove()`.
-- New **เซิร์ฟเวอร์** tab (mockup): connection status, queue depth and a task list
-  with state, progress bar and start time. Sample data only.
-- Profile picture is an icon + colour picker: nine lucide icons, two colour
-  inputs (one = solid, two = gradient) using the app's own `ColorButton`, plus an
-  image upload. The panel is anchored under the **เปลี่ยนรูป** button; the round
-  preview is not clickable.
-- New `Confirm` dialog + `useConfirm()` for destructive actions — deleting your
-  own account (requires typing the username) and deleting another user.
-- `role` is part of app state: **admins bypass the hidden-menu gate** for
-  ค้นหา & API.
+- New splash sign-in with remember-me, password reveal, and 6-box 2FA. Roles are
+  `admin` / `fieldscrapper`; admins see a **จัดการผู้ใช้** settings tab that
+  users do not.
+- Mock credentials `admin / admin1234` (2FA required) and
+  `fieldscrapper / user1234`. Passwords are compared in the client against these
+  constants; nothing is sent anywhere.
 
 ### Settings
-- Parcel markers reduced to exactly three kinds: **กำลังขาย**, **ขายแล้ว**,
-  **นำกลับมาขายใหม่** (`re`). `Status` is now `'sale' | 'sold'` — the `normal`
-  (ทั่วไป) state was removed from the type, colour maps, mock generation, filters
-  and every status expression.
-- Five new themes (**สเลต / ทราย / ป่า / กุหลาบ / ขาวดำ**) plus a customisable
-  **สีหลัก (Primary)** via `body[data-accent]`.
-- Marker size gains **เล็ก** (0.72×) alongside ปกติ and ใหญ่; `markerScale()` is a
-  single lookup table shared by every marker and selection ring.
-- New table column **ผู้ขาย** (`seller`, from `Parcel.dataSource`); **ขายโดย**
-  renamed to **จำนอง**.
-- **ค้นหา & API** is hidden behind an unlock code in แผนที่ → ปลดล็อกเมนูขั้นสูง
-  (`SETTINGS_SECRET` in `src/data/constants.ts`). It is a local convenience gate,
-  **not** the Google API key.
-- **ซ้อนกันได้** and **วันที่ขาย** only apply while ป็อปอัพหมุดที่ดิน is
-  **แสดงทุกจุด**; otherwise they dim out. Stored values are preserved.
-- ตัวกรอง / คอลัมน์ popovers open above their button and only drop below when they
-  would not fit above the top of the screen (`useAboveBelow`).
-- API key row is a single masked line (`sk-d•••8a36`) with an eye toggle; the
-  test result is thin text inside the button, colour-coded by state. Google road
-  and satellite tile checks are merged into one row.
-- Bottom table minimum height lowered to 170px.
-- The changelog in เกี่ยวกับ renders `RELEASE_NOTES.md` itself (Vite `?raw`),
-  parsed by `src/lib/changelog.ts` into sticky version headers, real bullets and
-  inline `**bold**` / `code`.
+- **Server tab** (`server` pane) - mockup pass/fail/status rows with inline
+  progress bars and edit buttons.
+- **Global Settings** - two-column grid with section headers and group labels.
+- **Search panel** - region pills, online-search toggle, ordering dropdown
+  (Nominatim-first / Google-first) and a budget input, all persisted.
+- **Theme picker** - graphite, OLED, slate, sand, forest, rose, mono; the
+  accent is a custom colour input, not a fixed value.
+- **Status colours** are now editable per status, and the **parcel popup** has a
+  per-field configuration for each pin kind.
+- **Marker size** control (small / normal / large) scaling pins and their plates.
+- **Map style** now switches between OpenStreetMap and satellite tiles.
+- **Tile protocols** - XYZ / TMS / WMTS options in the map settings pane.
 
 ### Map
-- Depth probe read-out follows the probed area: dry keeps a dark panel, submerged
-  switches to deep blue.
-- Filter areas renumber 1..n on every create and delete, like shapes already did.
-
-### Fixes
-- **Infinite render loop on the 2FA step** (`Maximum update depth exceeded`). The
-  OTP boxes registered via `ref={el => setOtpRefs(…)}`; under React 19 a ref
-  callback's return value is a *cleanup function*, and the inline callback was a
-  new identity each render, so refs detached and re-attached forever, each
-  re-attach calling `setState`. They are now a plain `useRef` array.
-- **Avatar picker crash** (`Cannot read properties of undefined`). The icon list
-  was keyed off `Icon.name`, but lucide icons expose `displayName`, not `name`.
-  `ICONS` is now an explicit `{ key, th, Icon }` table.
-- **Right panel crash** (`Can only set one of 'children' or
-  'props.dangerouslySetInnerHTML'`): the internet-result marker was one `<span>`
-  carrying both, which React rejects even when the child is `false`.
-- **Logout button drifted down** on tall settings tabs. RCA: the tab row is a flex
-  item and defaults to `min-height: auto`, so a tall pane grew the row past its
-  `height`; the sidebar is `h-full`, so the footer rode along. Fixed with
-  `min-h-0 overflow-hidden` on the row and `min-h-0` on the body column.
-- **Double selection ring** on search markers: `gotoItem()` and
-  `setSearchSelection()` both ringed the same point. `gotoItem()` now takes a
-  `ring` flag.
-- `ringAt()` left `fs-sel-ring` at its last animated radius, silently overriding
-  the marker-size setting; it now settles back to `markerScale()`.
-- Compact land popups omit the delta strip when the change rounds to zero
-  (`-0.4%` used to render as `-0%`).
-- ตัวกรอง / คอลัมน์ popovers, group headers in ผลการค้นหา (`top-0` parked them
-  behind the sticky `VStats`), the changelog scrollbar (`scrollbar-width: thin`
-  bypassed the custom webkit scrollbar in Firefox), and oversized result icons.
-- `Handbag` is not exported by the installed lucide-react; the avatar list uses
-  `ShoppingBag`.
+- Search result markers now render at the bottom of the render stack.
+- `popups.ts` simplified: hover popups no longer duplicate the click popup's
+  `setLngLat` chain.
 
 ### Toolchain
-- Switched the package manager and script runner from npm to
-  [Bun](https://bun.sh). `bun.lock` replaces `package-lock.json`; run
-  `bun install`, then `bun run dev | typecheck | build | preview`.
-- Restored the `.pop-box` / `.pop-box--compact` styles in `src/index.css`; both
-  layouts were being emitted but rendered identically without them.
+- Added `test/onlineSearch.test.js`, and `mockData.ts` seeded so results are
+  stable across reloads.
 
-## 2.1.0 — 2026-10-08
+## 2.1.0 - 2026-10-08
+
+Auction data model, land detail panel, table columns, filters and tooltips.
 
 ### Auction data model
-- `Parcel` now carries the full auction/legal record: `saleByText`, `ownerFile`,
-  `propertyType`, `deedNo`, `court`, `caseNo`, `plaintiff`, `defendant`,
-  `possessor`, `enforcementOffice`, `collateral`, `spouseCollateral`,
-  `expertPrice`, `enforcementOfficerPrice`, `assessorPrice`, `committeePrice`,
-  plus `rounds: SellRound[]` and `mortgage`.
-- `SellRound` and `Mortgage` types added.
-- Mock generation produces plausible Thai party names, a shared deed number per
-  parcel, mortgage data, and 8 sale rounds anchored around today so upcoming
-  rounds actually exist.
+- `SellRound` gained `date` and `status`; rounds are no longer a fixed count.
+- `PriceEvent` replaced ad-hoc event colours, so the price chart and the event
+  log agree.
+- `DataSource` distinguishes the four Thai enforcement agencies.
 
 ### Land detail panel
-- Coordinates row replaced by a plain ตำบล / อำเภอ / จังหวัด line (no more ต. อ. จ. prefixes).
-- Collateral and mortgage rows shown when present.
-- "การขายรอบถัดไป" shows the next dated round; a banner with a live countdown
-  appears when the next round is within 10 days.
-- New 3-column round table (นัดที่ / วันที่ / สถานะ) for rounds 1–8, where a past
-  or skipped round can read `ไม่มีผู้ซื้อ`.
-- Price chart gained a draggable range slider under the graph, sharing
-  `chartRange` with the date pickers.
+- Price history chart with a draggable date-range slider.
+- Event log below the price, so a resale or a price cut is visible without
+  opening the chart.
+- Mortgage amount and bank surfaced as a detail row.
 
 ### Table
-- นัดที่ 1–8 collapsed into a single **นัดล่าสุด** column (subs: นัดที่ / วันที่ /
-  สถานะ) showing the round that is currently selling, else the nearest future
-  round, else the last dated one.
-- ลำดับที่ renders an auction-style `12-716` reference derived from the row number.
-- Duplicate เลขโฉนด column removed; เลขที่โฉนด kept.
-- ขายโดย shows only the mortgage amount, with the bank in the hover hint.
-- Column drag now renders a ghost column, a full-height opaque drop slot marked
-  วางที่นี่, neighbour cells that slide aside to preview the result, and
-  continuous autoscroll near the viewport edges. The source column (including its
-  header text) is masked while dragging, and the table snaps into place on release
-  with no animation.
+- Column reorder with a ghost column preview, per-column resize, pin-to-left,
+  and a column picker with sticky action columns.
+- Row pinning survives filter changes and viewport moves.
 
 ### Filters
-- Size filters support ขนาด ≥ and ขนาด ≤, each in either single ตร.วา/ตร.ม. or the
-  3-box ไร่/งาน/ตร.วา form, with a toggle that converts the value across.
-- Multi-select chip filters for จังหวัด, ตำบล, อำเภอ and ประเภททรัพย์: a
-  click-to-open long input with a search box, removable chips, and a custom
-  checkbox. ตำบล/อำเภอ options narrow to the selected provinces.
-
-### Settings
-- Resale parcels (นำกลับมาขายใหม่) get their own colour plus a popup-visibility
-  toggle under สถานะและสี. The colour now applies live to the map dot and open
-  popups.
-- Time-axis marker interval for the price-chart range slider: ไม่แสดง / ทุกปี /
-  6 เดือน / 4 เดือน / 3 เดือน.
-- A1/A2 area tags can be hidden from the filter area panel.
-- Settings tab รูปวาด added; the land tab is labelled ที่ดิน.
+- ตร.วา / ตร.ม. single-box and the 3-box ไร่/งาน/ตร.วา form.
+- Multi-select chips for จังหวัด, ตำบล, อำเภอ and ประเภททรัพย์, cascading so
+  impossible combinations are hidden.
 
 ### Tooltips
-- All native `title` attributes replaced with [tippy.js](https://atomiks.github.io/tippyjs/):
-  a single delegated instance bound to `document.body` handles every trigger.
-  Rounded SVG arrow via tippy's `roundArrow` plugin, and a `shift-away` animation
-  so the bubble slides out of the trigger rather than fading.
-- Table cells reveal their full text on hover, but only when the text is clipped.
-  The ขายโดย column always shows the mortgage bank on hover.
-
-### Thai geographic data
-- `src/data/thaiGeo.ts` normalises `provinces.json`, `districts.json` and
-  `subDistricts.json` into name-keyed lookups.
-- The จังหวัด → เขต/อำเภอ → แขวง/ตำบล dropdowns in ค้นหาที่ดิน now cascade from that
-  data, auto-fill a parent when a child identifies it unambiguously, and expose a
-  clear (×) button. Mock parcels are generated as real, consistent triples.
+- One delegated tippy instance on `document.body` via `useTipProps` /
+  `useClipTip`, replacing per-element instances.
 
 ### Map popups
-- Parcel popups have two layouts: compact (≤2 rows, tighter padding, heavier
-  price) and full, applied automatically based on how many fields are enabled.
-
-### Typography
-- All UI text renders in Noto Sans Thai.
+- Two layouts, `.pop-box` and `.pop-box--compact`, chosen by `countRows()`.
 
 ## 2.0.1
 
-- Migrated from the single-file `field scraper 2.0.1.html` to Vite + React +
-  TypeScript + Tailwind, with UI state centralised in a zustand store.
+Initial modular Vite + React + TypeScript + Tailwind build, refactored from the
+single-file `field scraper 2.0.1.html`.

@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+﻿import type maplibregl from 'maplibre-gl';
 import { useEffect } from 'react';
 import { addCustomLayers, addOverlayLayers } from '../map/layers';
 import { requireMap } from '../map/mapRef';
@@ -8,7 +8,7 @@ import {
 } from '../map/drawEngine';
 import { initPinLayers, seedPins } from '../map/pins';
 import { closeHoverPopup, getClickPopId, openHoverPopup, toggleClickPopup } from '../map/popups';
-import { PARCEL_BY_ID } from '../data/mockData';
+import { PARCEL_BY_ID } from '../data/liveData';
 import { deselect, select } from '../store/actions';
 import { getApp, patchApp, toast } from '../store/useApp';
 import type { BBox } from '../types';
@@ -89,7 +89,13 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
       const fs = map.queryRenderedFeatures(e.point, { layers: ['parcels-dot'] });
       if (fs.length) {
         const id = Number(fs[0].properties?.id);
-        if (id === s.selectedId) toggleClickPopup(id); else select(id, { fly: false });
+        /* Re-clicking the selected marker toggles its popup — but only in
+           'active' mode. select() gates the popup open on popupMode itself, so
+           without this guard the *second* click on an already-selected marker
+           opened a popup even in 'all' mode, where clicking is supposed to do
+           nothing but fill the right-hand panel. */
+        if (id === s.selectedId) { if (s.popupMode === 'active') toggleClickPopup(id); }
+        else select(id, { fly: false });
       } else if (s.selectedId != null) deselect();
     };
     const onDbl = (e: maplibregl.MapMouseEvent) => {

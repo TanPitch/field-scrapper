@@ -62,12 +62,6 @@ export function RangeSlider({ parcel: p }: { parcel: Parcel }) {
 
   return (
     <div className="mt-1.5 select-none px-[2px]">
-      <div className="relative">
-        {/* marker lines sit above the track; their labels hang below it */}
-        {markers.map(m => (
-          <span key={m.ts} className="pointer-events-none absolute bottom-full h-[7px] w-px bg-dim2" style={{ left: `${m.pct}%` }} />
-        ))}
-      </div>
       <div ref={track} className="relative h-1.5 w-full cursor-pointer rounded-full bg-line2">
         <div className="absolute inset-y-0 rounded-full bg-accent/45" style={{ left: `${loPct}%`, width: `${Math.max(hiPct - loPct, 0.5)}%` }} />
         <button
@@ -83,7 +77,14 @@ export function RangeSlider({ parcel: p }: { parcel: Parcel }) {
           style={{ left: `${hiPct}%` }}
         />
       </div>
+      {/* Tick lines hang *below* the track, level with their labels. They used
+          to sit above it, which put the mark for a date visually detached from
+          the label naming that same date — the gap between the two made it read
+          as belonging to the neighbouring tick. */}
       <div className="relative h-[13px] w-full">
+        {markers.map(m => (
+          <span key={m.ts} className="pointer-events-none absolute left-0 top-0 h-[7px] w-px bg-dim2" style={{ left: `${m.pct}%` }} />
+        ))}
         {markers.map(m => (
           <span key={m.ts} className="pointer-events-none absolute top-0 whitespace-nowrap text-[9px] text-dim2" style={{ left: `${m.pct}%`, transform: 'translateX(-50%)' }}>
             {tickLabel(m.ts, chartTick)}

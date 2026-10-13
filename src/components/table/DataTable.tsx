@@ -6,7 +6,9 @@ import { useMoney } from '../../hooks/useMoney';
 import { useParcels } from '../../hooks/useParcels';
 import { fdate, splitWah } from '../../lib/format';
 import { parcelDot } from '../../lib/parcelColor';
+import { RichText, RichTextEditor } from '../ui/RichText';
 import { applyReorder, select, toggleColPin, togglePinRow } from '../../store/actions';
+import { useAnnotations } from '../../store/useAnnotations';
 import { patchApp, useApp } from '../../store/useApp';
 import type { ColKey, Parcel, SellRound, SortKey } from '../../types';
 
@@ -81,10 +83,12 @@ interface RowProps {
   dot: string; fmt: (v: number) => string; dragging: ColKey | null; no: number;
   /** px to slide this row's cells while a column drag is in flight. */
   shiftOf: (key: ColKey) => number;
-  /** true for the column currently being dragged (masked out). */
-  isSrcOf: (key: ColKey) => boolean;
-}
-const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot, fmt, dragging, no, shiftOf, isSrcOf }: RowProps) {
+    /** true for the column currently being dragged (masked out). */
+    isSrcOf: (key: ColKey) => boolean;
+    /** Opens the per-parcel name/note editor. */
+    onAnnotEdit: (v: NonNullable<AnnotEdit>) => void;
+  }
+const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot, fmt, dragging, no, shiftOf, isSrcOf, onAnnotEdit }: RowProps) {
   const bg = selected ? 'bg-accent-dim' : pinned ? 'bg-[rgba(184,241,63,.05)]' : 'bg-panel hover:bg-panel2';
   const edge = selected || pinned ? 'shadow-[inset_2px_0_0_var(--accent)]' : '';
   const pinBg = selected || pinned ? 'bg-[#1B2213]' : 'bg-panel group-hover:bg-panel2';
@@ -94,7 +98,38 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
       case 'name': return p.name;
       case 'status': return <><span className="inline-block size-[7px] flex-none rounded-full" style={{ background: dot }} />&nbsp;{STATUS[p.status].th}</>;
       case 'size': return splitWah(p.wah)[c.sub ?? 0];
-      case 'price': return fmt(p.price);
+      case 'height': {
+        /* Two different "no value" cases, and they must not look alike:
+           a DEM that did not cover the point, versus a parcel we only know to
+           subdistrict precision — where the centroid's height would be a
+           different place entirely. */
+        const m = p.elevation?.m ?? null;
+        if (m == null) {
+          return (
+            <span {...useTipProps(p.elevation?.m == null && p.geoPrecision && p.geoPrecision !== 'parcel'
+              ? 'ยังไม่มีพิกัดระดับแปลง — ความสูงจะเป็นค่าของจุดกึ่งกลางตำบล ซึ่งไม่ใช่ความสูงของแปลงนี้'
+              : 'ไม่มีข้อมูลความสูง ณ จุดนี้')} className="text-dim2">
+              {p.geoPrecision && p.geoPrecision !== 'parcel' ? 'ไม่ทราบ' : '—'}
+            </span>
+          );
+        }
+        return (
+          <span {...useTipProps(`±${p.elevation?.uncertaintyM ?? '?'} ม. · ${p.elevation?.source ?? 'DEM'}`)}>
+            {m.toLocaleString('th-TH', { maximumFractionDigits: 1 })}
+          </span>
+        );
+      }
+      /* A zero here means LED never published a figure for this parcel, not
+         that the land cost nothing. Printing "0" invites the reader to believe
+         the second; "-" reads as absent. */
+      case 'price': return p.price > 0 ? fmt(p.price) : '-';
+      /* The cascade's opening price, straight from the ladder's first rung. */
+      case 'smartPrice': return p.hist[0]?.v != null ? fmt(p.hist[0].v) : '—';
+      /* The user's own text about this parcel. Editable by clicking the cell;
+         blank means "not written yet", which is different from the official
+         name in the `name` column and must not borrow it. */
+      case 'pName': return <AnnotCell id={p.id} field="name" onEdit={onAnnotEdit} />;
+      case 'pNote': return <AnnotCell id={p.id} field="note" onEdit={onAnnotEdit} />;
       case 'perWah': return fmt(p.perWah);
       case 'saleBy': {
         /* show the mortgage amount only; the bank name is the hover title */
@@ -143,11 +178,18 @@ case 'ownerFile': return p.ownerFile;
         const dx = shiftOf(c.key);
         const d = COL_DEFS[c.key], cp = colPinned.has(c.key);
         const num = d.num || c.key === 'size';
+        /* Columns whose content is data — a number, a date, or a 3-part unit
+           split — are centred. Left-aligned digits read as ragged prose, and a
+           ไร่/งาน/ตร.วา row is three figures that should line up under their
+           headers. Falls back to `num` so money keeps its right alignment. */
+        const mid = d.center;
         return (
           <div
-            key={i} data-td
+            key={i} data-td data-selectable
             {...(c.key === 'saleBy' ? useTipProps(cellTip(c.key, p)) : useClipTip(cellTip(c.key, p)))}
-            className={`flex min-w-0 flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap px-2 ${num ? 'justify-end text-xs' : ''} ${cp ? `shadow-[inset_-1px_0_0_var(--border2),3px_0_8px_-3px_rgba(0,0,0,.4)] ${pinBg}` : ''} ${isSrcOf(c.key) ? 'invisible' : ''} ${dragging ? 'transition-transform duration-200 ease-out' : ''}`}
+            className={`flex min-w-0 flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap px-2 ${
+              mid ? 'justify-center text-center' : num ? 'justify-end text-xs' : ''
+            } ${cp ? `shadow-[inset_-1px_0_0_var(--border2),3px_0_8px_-3px_rgba(0,0,0,.4)] ${pinBg}` : ''} ${isSrcOf(c.key) ? 'invisible' : ''} ${dragging ? 'transition-transform duration-200 ease-out' : ''}`}
             style={{ width: c.w, transform: dx ? `translateX(${dx}px)` : undefined, ...(cp ? stickyStyle(c.left) : {}) }}
           >{content(c)}</div>
         );
@@ -163,6 +205,60 @@ const GripIcon = () => (
     <circle cx="15" cy="12" r="1.7" /><circle cx="9" cy="18" r="1.7" /><circle cx="15" cy="18" r="1.7" />
   </svg>
 );
+
+/* Which parcel's name/note editor is open, and where to put it.
+ *
+ * Row height and the grid are measured in ROW_H, and the table scrolls, so a
+ * popover parented to a cell would be clipped. It is therefore rendered once at
+ * the table's own level, positioned from the clicked cell's offset.
+ *
+ * This state belongs to DataTable, not to this module — a hook at module scope
+ * runs outside any component and React throws "invalid hook call" immediately. */
+type AnnotEdit = { id: number; field: 'name' | 'note'; at: { x: number; y: number } } | null;
+
+/** `onEdit` comes from DataTable, which owns the popover. This cell must not hold
+ *  the state itself: every row would then own a copy, and the popover would have
+ *  to be rendered inside a scrolling row. */
+function AnnotCell({
+  id, field, onEdit,
+}: {
+  id: number;
+  field: 'name' | 'note';
+  onEdit: (v: NonNullable<AnnotEdit>) => void;
+}) {
+const a = useAnnotations(s => s.layers[`parcel-${id}`]);
+  const text = field === 'name' ? a?.name : a?.note;
+  const style = field === 'name' ? (a?.nameStyle ?? a?.style) : (a?.noteStyle ?? a?.style);
+
+  return (
+    /* A pencil rather than the whole cell as the hit target. The cell is only
+       ~150px wide and sits inside a row that is itself clickable, so making the
+       entire cell open an editor meant stray clicks during row selection kept
+       popping a form open. An explicit affordance is unambiguous. */
+    <span className="flex items-center gap-1">
+      <button
+        onClick={e => {
+          e.stopPropagation();
+          /* getBoundingClientRect is viewport-relative, and that is also what
+             the popover is positioned against (it is `fixed`, so it escapes the
+             table's scroll container). Mixing the two put the editor
+             off-screen and it looked like clicking did nothing. */
+          const r = e.currentTarget.closest('td,div')?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
+          onEdit({ id, field, at: { x: r.left, y: r.bottom + 4 } });
+        }}
+        {...useTipProps(text ? 'คลิกเพื่อแก้ไข' : 'คลิกเพื่อใส่ชื่อ/หมายเหตุของคุณ')}
+        className="grid size-[16px] flex-none cursor-pointer place-items-center rounded-[4px] text-[9px] text-dim2 transition hover:bg-panel2 hover:text-accent"
+      >
+        ✎
+      </button>
+      {/* Blank, not a dash. The user asked for an empty cell, and a dash reads
+          as a value rather than as "nothing written here yet". */}
+      {text
+        ? <RichText value={text} style={style} className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" />
+        : null}
+    </span>
+  );
+}
 
 export function DataTable() {
   const { pinRows, normRows, viewRows, emptyWhy } = useParcels();
@@ -184,6 +280,10 @@ export function DataTable() {
   /** Ghost column that follows the pointer while reordering: key, pointer pos, drop index. */
   const [ghost, setGhost] = useState<{ key: ColKey; x: number; y: number; idx: number } | null>(null);
   const [resizing, setResizing] = useState<ColKey | null>(null);
+  /** Which parcel's name/note editor is open, if any. */
+  const [annotEdit, setAnnotEdit] = useState<AnnotEdit>(null);
+  const setLayer = useAnnotations(s => s.setLayer);
+  const parcelAnnots = useAnnotations(s => s.layers);
 
   /* viewport size */
   useEffect(() => {
@@ -317,7 +417,7 @@ export function DataTable() {
 
   const isSrcOf = (key: ColKey): boolean => ghost?.key === key;
   const rowProps = (p: Parcel, pinned: boolean) => (
-    <Row key={p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} no={noOf.get(p.id) ?? 0} shiftOf={shiftFor} isSrcOf={isSrcOf} />
+    <Row key={p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} no={noOf.get(p.id) ?? 0} shiftOf={shiftFor} isSrcOf={isSrcOf} onAnnotEdit={setAnnotEdit} />
   );
 
   /**
@@ -347,8 +447,7 @@ export function DataTable() {
     const cs = lay.filter(c => c.key === k);
     const w = cs.reduce((s, c) => s + c.w, 0);
     const sk = (d.sortKey ?? k) as SortKey;
-    const dir = d.sortable && sort.key === sk ? sort.dir : null;
-    /* While dragging, columns between the origin and the drop slot slide aside so the
+    const dir = d.sortable && sort.key === sk ? sort.dir : null;    /* While dragging, columns between the origin and the drop slot slide aside so the
 user sees the result before releasing. The transition class only exists mid-drag:
 on release the table snaps to the new order with no movement. */
     const shift = shiftFor(k);
@@ -358,6 +457,9 @@ on release the table snaps to the new order with no movement. */
     const base = `hcell group relative flex items-center justify-center gap-[3px] overflow-hidden whitespace-nowrap border-r border-line text-[11px] font-semibold ${ghost ? 'transition-transform duration-200 ease-out' : ''} ${d.sortable ? 'cursor-pointer text-dim hover:text-ink' : 'text-dim'} ${cp ? 'bg-panel shadow-[inset_-1px_0_0_var(--border2),3px_0_8px_-3px_rgba(0,0,0,.45)]' : ''} ${isSrc ? 'invisible' : ''}`;
     const inner = (
       <>
+        {/* Built-in label. The per-column name/note feature was removed: the
+            user wanted those as real COLUMNS holding their own text per parcel,
+            not as a way to relabel the header of every column. */}
         <span className="overflow-hidden text-ellipsis">{d.label}</span>
         {d.sortable && <ChevronUp size={10} className={`flex-none text-accent transition ${dir ? 'opacity-100' : 'opacity-0'} ${dir === 'desc' ? 'rotate-180' : ''}`} />}
         <button data-hpin {...useTipProps('ปักหมุดคอลัมน์')} onPointerDown={ev => { ev.preventDefault(); ev.stopPropagation(); toggleColPin(k); }}
@@ -459,10 +561,29 @@ on release the table snaps to the new order with no movement. */
               <GripIcon />
               <span className="truncate">{d.label}</span>
             </div>
-            <div className="mt-[3px] h-[3px] rounded-full bg-accent/70" />
+              <div className="mt-[3px] h-[3px] rounded-full bg-accent/70" />
+            </div>
+          );
+        })()}
+{annotEdit && (
+          <div className="fixed z-[98]" style={{ left: annotEdit.at.x, top: annotEdit.at.y }}>
+            <RichTextEditor
+              label={annotEdit.field === 'name' ? 'ชื่อกำกับของคุณ' : 'หมายเหตุของคุณ'}
+              value={(parcelAnnots[`parcel-${annotEdit.id}`]?.[annotEdit.field] as string) ?? ''}
+              note=""
+              style={parcelAnnots[`parcel-${annotEdit.id}`]?.style ?? {}}
+              onChange={({ value, style }) => {
+                const cur = parcelAnnots[`parcel-${annotEdit.id}`] ?? {};
+                setLayer(annotEdit.id, {
+                  ...cur,
+                  [annotEdit.field]: value.trim() || null,
+                  ...(annotEdit.field === 'name' ? { nameStyle: style } : { noteStyle: style }),
+                });
+              }}
+              onClose={() => setAnnotEdit(null)}
+            />
           </div>
-        );
-      })()}
-    </div>
-  );
-}
+        )}
+      </div>
+    );
+  }

@@ -90,7 +90,6 @@ export function AvatarPicker({ cfg, onChange, label = 'เปลี่ยนร�
             </div>
 
             <div className="mt-3 flex items-center gap-2.5">
-              <AvatarPreview cfg={c} size={44} />
               <div className="flex flex-1 items-center gap-2">
                 <ColorButton
                   title="สีที่ 1"
@@ -99,34 +98,30 @@ export function AvatarPicker({ cfg, onChange, label = 'เปลี่ยนร�
                   className="h-8 w-8 flex-none cursor-pointer rounded-lg border border-line2 p-0"
                   style={{ background: c.from }}
                 />
-                <span className="text-[10.5px] text-dim2">สี 1</span>
                 <ColorButton
-                  title="สีที่ 2 (ไล่เฉด)"
+                  title="สีที่ 2"
                   value={c.to || c.from}
                   onChange={hex => onChange({ ...c, to: hex === c.from ? '' : hex })}
                   className="h-8 w-8 flex-none cursor-pointer rounded-lg border border-line2 p-0"
                   style={{ background: c.to || c.from }}
                 />
-                <span className="text-[10.5px] text-dim2">สี 2</span>
               </div>
             </div>
-            <p className="mt-1.5 text-[10px] text-dim2">
-              เลือกสีเดียว = สีทึบ · เลือกสองสี = ไล่เฉด{c.to ? '' : ' (กดสี 2 เพื่อเปิดไล่เฉด)'}
-            </p>
+            <span className="text-[10px] text-dim2">เลือกสีเพื่อไล่เฉด</span>
 
-            <div className="mt-2.5 grid grid-cols-5 gap-1.5">
+            <div className="mt-2.5 grid grid-cols-6 gap-1.5">
               {ICONS.map(({ key, th, Icon }) => (
                 <button
                   key={key}
                   title={th}
                   onClick={() => onChange({ ...c, icon: key, image: '' })}
-                  className={`grid h-9 cursor-pointer place-items-center rounded-[8px] border transition ${
+                  className={`grid h-8 cursor-pointer place-items-center rounded-[8px] border transition ${
                     !c.image && c.icon === key
                       ? 'border-accent bg-accent-dim text-accent'
                       : 'border-line2 bg-bg text-dim hover:text-ink'
                   }`}
                 >
-                  <Icon size={15} />
+                  <Icon size={14} />
                 </button>
               ))}
             </div>

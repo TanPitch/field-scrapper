@@ -34,7 +34,8 @@ export function MapView() {
       container: el.current,
       style: buildStyle(getApp().basemap),
       center: DEFAULT_CENTER,
-      zoom: 12.35,
+      // zoom: 12.35,
+      zoom: 13, // TODO:
       attributionControl: { compact: true },
       maxPitch: 0,
       dragRotate: false,

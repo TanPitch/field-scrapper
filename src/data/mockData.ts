@@ -47,14 +47,19 @@ function generateParcels(): Parcel[] {
       /* the very first Bangkok parcel is always a "นำกลับมาขายใหม่" sample so the style is testable */
       const forceRe = reg === REGIONS[0] && i === 0;
       const roll = rnd();
-      const status: Status = forceRe || roll < 0.62 ? 'sale' : 'sold';
+      /* ~8% inactive: ran its rounds with nobody bidding, then came off the
+         listing. Kept in the fixtures because the muted marker, the "no next
+         round" price fallback and the filter option all need a real case. */
+      const status: Status = forceRe || roll < 0.54 ? 'sale' : roll < 0.92 ? 'sold' : 'inactive';
       let perWah = rint(reg.pricePerWah[0], reg.pricePerWah[1]) * (0.75 + rnd() * 0.5);
       const wah = Math.round((Math.pow(rnd(), 1.5) * 2600 + 120) / 10) * 10;
       const price = Math.round((perWah * wah) / 1000) * 1000;
       const announce = now - rint(20, 900) * DAY;
       const soldTs = status === 'sold' ? announce + rint(40, 420) * DAY : null;
       const n = 4 + Math.floor(rnd() * 4);
-      const endTs = soldTs != null ? Math.min(soldTs, now) : now - rint(0, 60) * DAY;
+      /* A withdrawn lot's history stops when the listing came down, so its last
+         point is the final round rather than today. */
+      const endTs = soldTs != null ? Math.min(soldTs, now) : status === 'inactive' ? now - rint(30, 200) * DAY : now - rint(0, 60) * DAY;
       const start = price * (0.72 + rnd() * 0.22);
       const hist = [];
       for (let k = 0; k < n; k++) {
@@ -68,6 +73,7 @@ function generateParcels(): Parcel[] {
       let isRe = false;
       events.push({ idx: 0, label: 'ประกาศขาย', color: ACCENT, ink: '#151B06' });
       if (status === 'sold') events.push({ idx: n - 1, label: 'ขายออกแล้ว', color: '#9BA1A6', ink: '#101211' });
+      else if (status === 'inactive') events.push({ idx: n - 1, label: 'หมดอายุประกาศ ไม่มีผู้สู้ราคา', color: '#5C5247', ink: '#fff' });
       else if (forceRe || (n >= 5 && rnd() < 0.18)) {
         const m = 2 + Math.floor(rnd() * (n - 3));
         hist[m].v = Math.round((hist[m].v * 0.9) / 1000) * 1000;
@@ -79,34 +85,80 @@ function generateParcels(): Parcel[] {
       const mortgage = rnd() < 0.35 ? { amount: Math.round(price * (0.25 + rnd() * 0.35) / 1000) * 1000, bank: pick(BANKS) } : null;
       /* Sale rounds every 30 days. Rounds run from the announce date, but the schedule is
          kept anchored around today so some rounds are still upcoming (drives the
-         "next selling round" row and the 10-day banner). */
+         "next selling round" row and the 10-day banner).
+
+         statusCode mirrors LED's raw codes so the price ladder in lib/price.ts
+         has something to work from:
+           0 = scheduled, not held yet
+           1 = sold
+           3 = งดขายไม่มีผู้สู้ราคา — the ONLY code that deepens the discount
+         Past rounds go unsold most of the time, which is what produces the
+         -10 / -20 / -30% ladder the price display is built to show. */
       const rounds: SellRound[] = Array.from({ length: 8 }, (_, idx) => {
         if (status === 'sold') {
           const dateTs = announce + idx * 30 * DAY;
-          return { date: dateTs, status: dateTs <= (soldTs ?? now) ? 'ขายออกแล้ว' : 'ยกเลิก' };
+          return {
+            date: dateTs,
+            status: dateTs <= (soldTs ?? now) ? 'ขายออกแล้ว' : 'ยกเลิก',
+            statusCode: dateTs <= (soldTs ?? now) ? 1 : 26,
+          };
         }
         /* current round index: 0..7, cycling every 90 days from the announce date */
         const elapsed = now - announce;
-        const current = Math.min(7, Math.floor(elapsed / (30 * DAY)));
+        /* A withdrawn lot ran every round it had and then came down, so its
+           schedule is entirely in the past — current = 8 pushes all eight rounds
+           behind us, which is what makes the lot show no next-round price. */
+        const current = status === 'inactive' ? 8 : Math.min(7, Math.floor(elapsed / (30 * DAY)));
         const dateTs = announce + idx * 30 * DAY;
         const past = idx < current;
+        /* Unsold is the common case, so most past rounds are no-bid. `rnd() < 0.7`
+           keeps a few bid rounds around so the ladder is not uniformly deep.
+           A withdrawn lot is no-bid on every single round — that is what it is. */
+        const noBid = status === 'inactive' ? true : past && rnd() < 0.7;
         return {
           date: idx > current + 2 ? null : dateTs,
-          status: past ? 'ประกาศขาย' : idx === current ? 'กำลังขาย' : 'รอประกาศ',
+          status: past ? (noBid ? 'งดขายไม่มีผู้สู้ราคา' : 'ประกาศขาย') : idx === current ? 'กำลังขาย' : 'รอประกาศ',
+          statusCode: past ? (noBid ? 3 : 0) : 0,
         };
       });
 /* district + subdistrict are a real pair from thaiGeo, so the cascade is consistent */
       const amp = pick(reg.amphoes);
       const tambon = pick(subDistrictNames(reg.province, amp)) || pick(VILLAGES);
+
+      /* Enrichment state, drawn before out.push so the coordinate can agree
+         with it: a subdistrict-fallback parcel must not sit at its own point. */
+      const hasParcelPoint = rnd() >= 0.17;
+      const tdRoll = rnd();
+      const tdState = tdRoll < 0.62
+        ? {
+            /* Exact per-parcel assessment. Roughly in the ballpark of what
+               กรมธนารักย์ returns for provincial land, which is the point: it is
+               a different fact from the LED asking price, not a variant of it. */
+            perSqWa: Math.round(price / wah * (0.75 + rnd() * 0.3) / 100) * 100,
+            rawang: `${pick(['กรุงเทพ', 'นางิ้ว', 'โชคสุข', 'เขาสวนกวาง', 'หนองบัว'])}`,
+            surveyNo: String(rint(100, 999)),
+            landNo: deedNo,
+            status: null,
+          }
+        : tdRoll < 0.85
+          ? { perSqWa: null, rawang: null, surveyNo: null, landNo: null, status: 'skipped: NS3K not on TD โฉนด layer' }
+          : { perSqWa: null, rawang: null, surveyNo: null, landNo: null, status: 'unresolved: no_location_match' };
       out.push({
         id: id++, status, wah, price, perWah: Math.round(price / wah),
-        lng: reg.center[0] + (rnd() - 0.5) * 2 * reg.spread,
-        lat: reg.center[1] + (rnd() - 0.5) * 2 * reg.spread,
+        lng: hasParcelPoint
+          ? reg.center[0] + (rnd() - 0.5) * 2 * reg.spread
+          : reg.center[0],
+        lat: hasParcelPoint
+          ? reg.center[1] + (rnd() - 0.5) * 2 * reg.spread
+          : reg.center[1],
         name: `${pick(TYPES)} ${tambon} บ้าน เลขที่ ${rint(1, 9)}`,
         deed: deedNo,
         province: reg.province, amp, tambon,
         announce, soldTs, hist, events, resell: isRe,
-        imgs: 1 + Math.floor(rnd() * 4),
+        /* Some lots genuinely carry no photograph, and the carousel needs a real
+           empty case to render rather than an unreachable branch. Roughly one in
+           eight. */
+        imgs: rnd() < 0.12 ? 0 : 1 + Math.floor(rnd() * 4),
         lastTs: soldTs ?? announce,
 saleByText: mortgage ? `${mortgage.amount.toLocaleString('en-US')} ติดจำนอง ${mortgage.bank}` : 'ปลอดการจำนอง',
         dataSource: pick(DATA_SOURCES),
@@ -128,12 +180,30 @@ saleByText: mortgage ? `${mortgage.amount.toLocaleString('en-US')} ติดจ�
         committeePrice: rnd() < 0.3 ? Math.round(price * (0.6 + rnd() * 0.5) / 1000) * 1000 : null,
         rounds,
         mortgage,
+
+        /* ---- enrichment ----
+           Stands in for what the backend now supplies, and deliberately keeps the
+           awkward cases: roughly one parcel in six has no parcel-level point, and
+           a few have no กรมธนารักย์ figure. Those are the states the UI has to
+           render honestly, so the fixtures must contain them. */
+        geoPrecision: hasParcelPoint ? 'parcel' : 'subdistrict',
+        elevation: hasParcelPoint
+          ? {
+              m: Math.round((120 + rnd() * 120) * 10) / 10,
+              source: 'aws-terrarium-z14',
+              uncertaintyM: 9.2,
+            }
+          : null,
+        td: tdState,
       });
     }
   }
   return out;
 }
 
-export const ALL_PARCELS: Parcel[] = generateParcels();
-export const PARCEL_BY_ID: Map<number, Parcel> = new Map(ALL_PARCELS.map(p => [p.id, p]));
-export const PROVINCES: string[] = [...new Set(ALL_PARCELS.map(p => p.province))].sort((a, b) => a.localeCompare(b, 'th'));
+/* Seeded fixtures. These are the app's FALLBACK dataset, shown only when the API
+   is unreachable — never as a silent stand-in for real data, because the UI says
+   which one is on screen. The live collection is published by data/liveData.ts;
+   import ALL_PARCELS / PARCEL_BY_ID from there, not from here. */
+export const FALLBACK_PARCELS: Parcel[] = generateParcels();
+export const PROVINCES: string[] = [...new Set(FALLBACK_PARCELS.map(p => p.province))].sort((a, b) => a.localeCompare(b, 'th'));

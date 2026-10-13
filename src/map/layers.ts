@@ -13,9 +13,16 @@ const safeAddLayer = (def: LayerSpecification): void => {
 };
 
 /* ---------- zoom-driven radius / fades ---------- */
-const RADIUS_STOPS: [number, number][] = [[11, 3.2], [13, 4.6], [15, 6.5], [18, 9.5]];
+/* Fixed dot radius, in px. Deliberately NOT zoom-dependent.
+ *
+ * This used to interpolate 3.2px at z11 → 9.5px at z18, so the same parcel
+ * visibly changed size as you panned. That reads as the data changing rather
+ * than the camera, and it made labels detach from their dots. The size is now
+ * constant and only the user's ขนาดปักหมัด preference scales it. */
+const DOT_RADIUS = 5;
+
 const radiusExpr = (pad: number): ExpressionSpecification =>
-  ['interpolate', ['linear'], ['zoom'], ...RADIUS_STOPS.flatMap(([z, r]) => [z, (r + pad) * markerScale()])] as ExpressionSpecification;
+  (DOT_RADIUS + pad) * markerScale() as unknown as ExpressionSpecification;
 const zoomFadeIcon = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8, 0.9] as ExpressionSpecification;
 const zoomFadeText = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8, 1] as ExpressionSpecification;
 
@@ -23,7 +30,13 @@ const zoomFadeText = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8
 const statusColor = (c: Record<Status, string>, reColor: string): ExpressionSpecification =>
   ['case',
     ['all', ['==', ['get', 'status'], 'sale'], ['==', ['get', 'resell'], true]], reColor,
-    ['match', ['get', 'status'], 'sale', c.sale, 'sold', c.sold, '#fff'],
+    ['match', ['get', 'status'],
+      'sale', c.sale,
+      'sold', c.sold,
+      /* Withdrawn from the listing. Muted, and the fallback below stays white so
+         an unrecognised status is obvious rather than silently borrowed. */
+      'inactive', c.inactive,
+      '#fff'],
   ] as ExpressionSpecification;
 
 /* ---------- 9-slice plate images + hairline tick ---------- */
@@ -39,8 +52,14 @@ function plateImage(hex: string, alpha = 255): PlateImage {
   ctx.scale(s, s);
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(0, 0, w, h, r); else ctx.rect(0, 0, w, h);
-  ctx.globalAlpha = alpha / 255;
-  ctx.fillStyle = hex; ctx.fill();
+    /* Alpha is baked in here rather than left to icon-opacity. An earlier
+       attempt drew the plate fully opaque to stop the 9-slice stretching the
+       semi-transparent corners into four spikes — but it stopped the draw and
+       area labels rendering at all, and a cosmetic artefact is a much smaller
+       cost than a missing label. The spikes remain; the fix belongs in the
+       9-slice geometry, not in the plate's alpha. */
+    ctx.globalAlpha = alpha / 255;
+    ctx.fillStyle = hex; ctx.fill();
   const id = ctx.getImageData(0, 0, c.width, c.height);
   return {
     image: { width: c.width, height: c.height, data: new Uint8Array(id.data) },
@@ -66,6 +85,9 @@ export function addPlateImages(): void {
   addPlate('plate-n', plateImage('#0D0F0D', 238));
   addPlate('plate-s', plateImage(popColors.sale, 244));
   addPlate('plate-d', plateImage(popColors.sold, 244));
+  /* third block — withdrawn lots, muted plate so the compact label carries the
+     same distinction as the dot */
+  addPlate('plate-i', plateImage(popColors.inactive, 244));
   /* second block of the compact label — the percent row, light so it reads */
   addPlate('plate-b', plateImage('#F1F3EA', 246));
   try { if (!map.hasImage('rbar')) map.addImage('rbar', tickImage(), { pixelRatio: 2 }); } catch { /* non-fatal */ }
@@ -74,8 +96,9 @@ export function refreshPlates(): void {
   const map = getMap(); if (!map) return;
   const { popColors } = getApp();
   try {
-    if (map.hasImage('plate-s')) { const p = plateImage(popColors.sale, 244); map.updateImage('plate-s', p.image); }
-    if (map.hasImage('plate-d')) { const p = plateImage(popColors.sold, 244); map.updateImage('plate-d', p.image); }
+  if (map.hasImage('plate-s')) { const p = plateImage(popColors.sale, 244); map.updateImage('plate-s', p.image); }
+  if (map.hasImage('plate-d')) { const p = plateImage(popColors.sold, 244); map.updateImage('plate-d', p.image); }
+  if (map.hasImage('plate-i')) { const p = plateImage(popColors.inactive, 244); map.updateImage('plate-i', p.image); }
   } catch { /* non-fatal */ }
 }
 

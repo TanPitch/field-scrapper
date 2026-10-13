@@ -1,5 +1,6 @@
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { api } from '../../lib/api';
 import { patchApp, toast } from '../../store/useApp';
 import { useTipProps } from '../ui/Tip';
 
@@ -28,14 +29,46 @@ export function Splash() {
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [err, setErr] = useState('');
 
-  const signIn = () => {
-    const acct = ACCOUNTS.find(a => a.id === id.trim().toLowerCase() || a.id === id.trim());
-    if (!acct) { setErr('ไม่พบบัญชีนี้'); return; }
-    if (pw !== acct.pw) { setErr('รหัสผ่านไม่ถูกต้อง'); return; }
-    setErr('');
-    /* the admin account is the one that already has 2FA switched on */
-    if (acct.role === 'admin') { setStage('otp'); return; }
-    patchApp({ signedIn: true, role: acct.role, userName: acct.name });
+  const signIn = async () => {
+    const name = id.trim().toLowerCase();
+
+    /* Try the real backend first. This is what makes an account follow the user
+       across devices: the session cookie is what useSettingsSync pulls prefs and
+       annotations with. */
+    const r = await api.post<{ user: { displayName: string | null; isAdmin: boolean } }>(
+      '/api/auth/login', { username: name, password: pw });
+
+    if (r.ok && r.data?.user) {
+      setErr('');
+      const isAdmin = r.data.user.isAdmin;
+      /* Admin accounts still go through the 2FA step; the server does not check
+         it yet, so it is enforced here and the check belongs server-side when
+         OTP lands there. */
+      if (isAdmin) { setStage('otp'); return; }
+      patchApp({ signedIn: true, role: isAdmin ? 'admin' : 'user', userName: r.data.user.displayName ?? name });
+      return;
+    }
+
+    /* Two very different failures, and they must not be conflated:
+         - the server could not be REACHED  -> fall back to the local accounts,
+           saying so, because offline use is legitimate
+         - the server REJECTED the password -> say so and stop. Falling through
+           to the local accounts here is how you get "I could not sign in on my
+           other device" with no explanation anywhere. */
+    const offline = /เชื่อมต่อ|network|fetch|Failed|ไม่สามารถ|ENOTFOUND/i.test(r.error ?? '');
+
+    if (offline) {
+      const acct = ACCOUNTS.find(a => a.id === name || a.id === name.replace('fieldscrapper', 'user'));
+      if (acct && pw === acct.pw) {
+        patchApp({ signedIn: true, role: acct.role, userName: acct.name });
+        setErr('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เข้าใช้แบบออฟไลน์ การตั้งค่าจะไม่ซิงก์');
+        return;
+      }
+      setErr(r.error ?? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+      return;
+    }
+
+    setErr(r.error ?? 'ไม่พบบัญชีนี้ หรือรหัสผ่านไม่ถูกต้อง');
   };
 
   const verifyOtp = () => {

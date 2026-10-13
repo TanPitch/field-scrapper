@@ -136,16 +136,12 @@ export function Rail({ small, floating = false }: { small: boolean; floating?: b
   const glassLevel = useApp(s => s.glassLevel);
   const landOn = useApp(s => s.landOn);
   const bottomH = useApp(s => s.bottomH);
-  const ping = useRef<HTMLSpanElement>(null);
-  const [ms, setMs] = useState<number | null>(null);
   const closePop = useCallback(() => setPop(null), []);
 
-  useEffect(() => {
-    const tick = () => { if (!document.hidden) setMs(16 + Math.floor(Math.random() * 52)); };
-    tick();
-    const t = setInterval(tick, 3000);
-    return () => clearInterval(t);
-  }, []);
+  /* The fake server ping that used to sit at the bottom of this rail is gone.
+     It was a random number between 16 and 68 ms, so it told the user nothing and
+     looked like a measurement. Live scraper and API state now lives in the
+     server pane under General settings, where it belongs. */
 
   useEffect(() => { if (!rightOpen) closePop(); }, [rightOpen, closePop]);
 
@@ -200,10 +196,6 @@ export function Rail({ small, floating = false }: { small: boolean; floating?: b
           </button>
         ))}
         <div className="flex-1" />
-        <div className="flex flex-col items-center gap-[5px] pb-1.5" {...useSideTip('เซิร์ฟเวอร์: ปกติ')}>
-          <span className="relative size-[7px] rounded-full bg-accent after:absolute after:-inset-1 after:animate-pulse2 after:rounded-full after:border after:border-accent after:content-['']" />
-          <span ref={ping} className="font-display text-[9px] font-medium" style={{ color: ms != null && ms > 58 ? '#E5484D' : 'var(--dim2)' }}>{ms != null ? ms + 'ms' : '--'}</span>
-        </div>
       </div>
       {pop && <RailPopup id={pop.id} anchor={pop.el} onClose={closePop} />}
     </nav>

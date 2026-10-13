@@ -1,8 +1,8 @@
-import { RotateCcw, X } from 'lucide-react';
+﻿import { RotateCcw, X } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { LB_FIELDS, STATUS } from '../../data/constants';
-import { PARCEL_BY_ID } from '../../data/mockData';
+import { PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
 import { fdate, fmtRai } from '../../lib/format';
 import { popupKind } from '../../map/popups';
@@ -150,7 +150,7 @@ export function Lightbox() {
         onDoubleClick={e => zoomAt(e.clientX, e.clientY, tRef.current.scale > 1 ? 1 / tRef.current.scale : 2.2)}
       >
         <img
-          ref={img} src={landImg(p, i, 1280, 720)} alt="ภาพขยายแปลงที่ดิน" draggable={false}
+          ref={img} src={landImg(p, i) ?? undefined} alt="ภาพขยายแปลงที่ดิน" draggable={false}
           className="pointer-events-none max-h-[82vh] max-w-[92vw] will-change-transform"
           style={{ transform: `translate(${t.x}px, ${t.y}px) scale(${t.scale})`, transition: gesturing ? 'none' : 'transform .18s ease' }}
         />

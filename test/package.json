@@ -1,0 +1,17 @@
+{
+  "name": "field-scrapper-bots",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Discovery scrapers for กรมบังคับคดี (auction list) and กรมที่ดิน (parcel geometry). Phase 1 = data discovery only.",
+  "scripts": {
+    "discover:list": "node scrapeLED.js",
+    "discover:geo": "node scrapeLand.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "iconv-lite": "^0.6.3",
+    "puppeteer": "^23.6.0"
+  }
+}

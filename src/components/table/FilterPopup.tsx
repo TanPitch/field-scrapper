@@ -1,7 +1,7 @@
 ﻿import { Check as CheckIcon, RotateCcw, X } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ALL_PARCELS } from '../../data/mockData';
+import { ALL_PARCELS } from '../../data/liveData';
 import { useAboveBelow } from '../../hooks/usePlacement';
 import { useOutsideClose } from '../../hooks/useOutsideClose';
 import { convertShortInput, sizeFromWah, sizeToWah, toggleSizeMode, wahLabel, type SizeValue } from '../../lib/landSize';
@@ -182,6 +182,7 @@ export function FilterPopup({ anchor, onClose }: { anchor: HTMLElement; onClose:
     const f = useApp.getState().filters;
     return {
       status: f.status, minWah: f.minWah, maxWah: f.maxWah, minPrice: f.minPrice, maxPrice: f.maxPrice,
+    minElev: f.minElev, maxElev: f.maxElev,
       province: f.province, provinces: f.provinces ?? [], tambons: f.tambons ?? [], amps: f.amps ?? [], propertyTypes: f.propertyTypes ?? [],
     };
   });
@@ -192,10 +193,14 @@ options must not read as "outside the dialog" and close it. */
   useOutsideClose([ref, { current: anchor }], () => { if (!busy) onClose(); }, true, true);
   const pos = useAboveBelow(ref, anchor, 400);
 
+  /* The four marker kinds, matching the colours used on the map. Order is what
+     the user reads top-to-bottom: live inventory first, history last. */
   const statusItems: SelectItem[] = [
     { v: '', l: 'ทุกสถานะ' },
     { v: 'sale', l: 'กำลังขาย', dot: popColors.sale },
     { v: 'sold', l: 'ขายแล้ว', dot: popColors.sold },
+    { v: 're', l: 'นำกลับมาขายใหม่', dot: popColors.re },
+    { v: 'inactive', l: 'หมดอายุประกาศ', dot: popColors.inactive },
   ];
   const provinceItems = useMemo(() => uniqueOf(p => p.province), []);
   /* tambon/amp lists narrow to the picked provinces so impossible combos are hidden */
@@ -210,7 +215,7 @@ options must not read as "outside the dialog" and close it. */
   const chipCount = fd.provinces.length + fd.tambons.length + fd.amps.length + fd.propertyTypes.length;
 
   const clearAll = () => {
-    setFd({ status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, province: '', provinces: [], tambons: [], amps: [], propertyTypes: [] });
+    setFd({ status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '', provinces: [], tambons: [], amps: [], propertyTypes: [] });
     setSizeMin(sizeFromWah(null));
     setSizeMax(sizeFromWah(null));
   };
@@ -245,6 +250,15 @@ options must not read as "outside the dialog" and close it. */
         <SizeRow label="ขนาด ≤" value={sizeMax} onChange={setSizeMax} />
         <div className={row}><span className={lab}>ราคาต่ำสุด<br /><span className="text-[9px]">(บาท)</span></span><Stepper value={fd.minPrice} step={50000} sep onChange={v => upd('minPrice', v)} /></div>
         <div className={row}><span className={lab}>ราคาสูงสุด<br /><span className="text-[9px]">(บาท)</span></span><Stepper value={fd.maxPrice} step={50000} sep onChange={v => upd('maxPrice', v)} /></div>
+        <div className={row}><span className={lab}>ความสูงต่ำสุด<br /><span className="text-[9px]">(เหนือระดับน้ำทะเล ม.)</span></span><Stepper value={fd.minElev} step={5} onChange={v => upd('minElev', v)} /></div>
+        <div className={row}><span className={lab}>ความสูงสูงสุด<br /><span className="text-[9px]">(เหนือระดับน้ำทะเล ม.)</span></span><Stepper value={fd.maxElev} step={5} onChange={v => upd('maxElev', v)} /></div>
+        {/* Setting either bound drops parcels with no elevation. Say so, rather
+            than letting rows quietly vanish and looking like a filter bug. */}
+        {(fd.minElev != null || fd.maxElev != null) && (
+          <div className="px-1 pb-1.5 text-[9.5px] leading-[1.5] text-dim2">
+            แปลงที่ยังไม่มีข้อมูลความสูงจะถูกตัดออกจากผลลัพธ์
+          </div>
+        )}
         <div className="border-b border-line" />
         <ChipMulti label="จังหวัด" options={provinceItems} value={fd.provinces} onChange={v => upd('provinces', v)} />
         <ChipMulti label="ตำบล" options={tambonItems} value={fd.tambons} onChange={v => upd('tambons', v)} />

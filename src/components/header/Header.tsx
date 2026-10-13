@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, PanelRight, PenTool, Search, Settings2, X, type LucideIcon } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useRef } from 'react';
@@ -13,24 +14,37 @@ import { UserManagePane } from './settings/UserManagePane';
 
 const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
   { id: 'user', label: 'ผู้ใช้', Icon: User },
-  { id: 'users', label: 'จัดการผู้ใช้', Icon: Users },
   { id: 'map', label: 'แผนที่', Icon: MapIcon },
   { id: 'look', label: 'รูปลักษณ์', Icon: Palette },
   { id: 'popup', label: 'ที่ดิน', Icon: Grid2x2 },
   { id: 'draw', label: 'รูปวาด', Icon: PenTool },
   { id: 'search', label: 'ค้นหา & API', Icon: Search },
   { id: 'server', label: 'เซิร์ฟเวอร์', Icon: Server },
+  { id: 'users', label: 'จัดการผู้ใช้', Icon: Users },
   { id: 'about', label: 'เกี่ยวกับ', Icon: Info },
 ];
+
+/** Tabs only an admin may open. Gated on the account's role, which the server
+ *  sets — not on a local unlock code.
+ *
+ *  A code typed into the app is not access control: it ships in the bundle and
+ *  anyone can read it out of the JavaScript. Role is the only thing here that is
+ *  actually enforced somewhere else. */
+const ADMIN_ONLY: SetTab[] = ['users'];
 
 function SettingsPanel({ onClose }: { onClose: () => void }) {
   const tab = useApp(s => s.setTab);
   const glassLevel = useApp(s => s.glassLevel);
-  /* ค้นหา & API stays hidden until the unlock code is entered under แผนที่ —
-     admins bypass the gate entirely. */
-  const unlocked = useApp(s => s.showApiSettings);
-  const isAdmin = useApp(s => s.role === 'admin');
-  const tabs = TABS.filter(t => t.id !== 'search' || unlocked || isAdmin);
+  const role = useApp(s => s.role);
+  const isAdmin = role === 'admin';
+  const tabs = TABS.filter(t => !ADMIN_ONLY.includes(t.id) || isAdmin);
+
+  /* If the signed-in user is not an admin, the pane must not stay parked on a
+     tab they cannot see. */
+  useEffect(() => {
+    if (!ADMIN_ONLY.includes(tab) || isAdmin) return;
+    patchApp({ setTab: 'map' });
+  }, [tab, isAdmin]);
   return (
     <div className={`fs-panel absolute right-2.5 top-[calc(100%+8px)] z-[85] h-[calc(100vh-var(--header-h)-20px)] w-[640px] max-w-[calc(100vw-20px)] isolate animate-tin overflow-hidden rounded-[14px] border border-line2 shadow-[0_22px_60px_rgba(0,0,0,.6)] ${glassLevel === 'none' ? 'bg-panel' : 'bg-[rgba(18,21,18,.82)] backdrop-blur-md'}`}>
       <div className="relative z-10 flex h-full flex-col">
@@ -60,8 +74,8 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
               it never moves with the tab list. */}
           <div className="shrink-0 p-1.5">
             <button
-              {...useTipProps('ออกจากระบบ (จำลอง)')}
-              onClick={() => { patchApp({ signedIn: false }); onClose(); toast('ออกจากระบบแล้ว (จำลอง)'); }}
+              {...useTipProps('ออกจากระบบ')}
+              onClick={() => { patchApp({ signedIn: false }); onClose(); toast('ออกจากระบบแล้ว'); }}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-line2 px-2.5 py-2 text-xs font-medium text-dim transition hover:border-[#E5484D] hover:bg-[#E5484D]/10 hover:text-[#FF8B7D]"
             >
               <LogOut size={15} className="flex-none" /><span>ออกจากระบบ</span>

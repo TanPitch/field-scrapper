@@ -15,3 +15,16 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+# scraper reference data and downloads — hundreds of MB, re-fetchable.
+# Kept out of git deliberately: these are inputs to the pipeline, not source.
+#   test/data/    Treasury reference CSVs, scraped HTML, cached responses
+#   test/public/  downloaded land imagery and elevation tiles
+#   test/out/     generated artefacts from a run
+test/data/
+test/public/
+test/out/
+test/NUL
+
+# Local database dumps
+*.dump

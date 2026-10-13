@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+﻿import maplibregl from 'maplibre-gl';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -6,7 +6,7 @@ import { icons, type LucideIcon } from 'lucide-react';
 import type { ExpressionSpecification } from 'maplibre-gl';
 import { CctvPopup } from '../components/pins/CctvPopup';
 import { MIN_ZOOM } from '../data/constants';
-import { PARCEL_BY_ID, ALL_PARCELS } from '../data/mockData';
+import { PARCEL_BY_ID, ALL_PARCELS } from '../data/liveData';
 import { select, showRight } from '../store/actions';
 import { getApp, patchApp } from '../store/useApp';
 import type { BBox, CctvPin, LngLat, MarkerSize, SearchHit, SensorPin, TransportPin } from '../types';

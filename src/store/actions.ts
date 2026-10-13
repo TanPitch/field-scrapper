@@ -1,18 +1,47 @@
 import { BASEMAPS, DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER } from '../data/constants';
-import { PARCEL_BY_ID } from '../data/mockData';
+import { PARCEL_BY_ID, diagnoseParcels } from '../data/liveData';
 import { getMap, hasLayer } from '../map/mapRef';
-import { closeClickPopup, closeHoverPopup, getHoverPopId, openClickPopup } from '../map/popups';
+import { closeClickPopup, closeHoverPopup, getClickPopId, getHoverPopId, openClickPopup, setPopupDismissHandler } from '../map/popups';
 import type { BasemapId, ColKey, Overlay, OverlayId, RightView } from '../types';
 import { EMPTY_FILTERS, getApp, patchApp, toast } from './useApp';
 
-export function setRight(open: boolean): void { patchApp({ rightOpen: open }); }
+/**
+ * Clear the selection only once *both* the popup and the panel are gone.
+ *
+ * They are two separate dismissals and the user may mean either one. Closing
+ * just the popup leaves the ring and the panel; closing just the panel leaves
+ * the popup and the ring. Only when neither surface is showing any more does
+ * the selection become stale, and only then is it cleared — the green ring and
+ * the highlighted table row have nothing left to refer to.
+ */
+function maybeClearSelection(): void {
+    if (getApp().selectedId == null) return;
+    if (getApp().rightOpen) return;
+    if (getClickPopId() != null) return;
+    deselect();
+}
+
+export function setRight(open: boolean): void {
+    patchApp({ rightOpen: open });
+    if (!open) maybeClearSelection();
+}
 export function setLeft(open: boolean): void { patchApp({ leftOpen: open }); }
 export function setRpView(v: RightView): void { patchApp({ rpView: v }); }
 export function showRight(v: RightView): void { patchApp({ rpView: v, rightOpen: true }); }
 
 export function select(id: number, { fly = true }: { fly?: boolean } = {}): void {
-  const p = PARCEL_BY_ID.get(id);
-  if (!p) return;
+const p = PARCEL_BY_ID.get(id);
+    /* Silent failure is what made this look like "clicking does nothing": the
+       marker highlights, the panel does not open, and nothing says why. Report
+       what is actually in each collection rather than a bare "not found" — if
+       the table is rendering rows that this Map has never heard of, that is two
+       live copies of the data module, and `instance` proves it. */
+    if (!p) {
+      const d = diagnoseParcels(id);
+      console.error('[select] parcel not found', d);
+      toast(`ไม่พบแปลงหมายเลข ${id} — แถว ${d.rows} / ดัชนี ${d.mapSize} / id ตัวอย่าง ${JSON.stringify(d.sampleIds)}`, 'warn');
+      return;
+    }
   const map = getMap();
   patchApp({ selectedId: id, rpView: 'detail', rightOpen: true, pinSel: String(id) });
   if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], id]);
@@ -23,10 +52,21 @@ export function select(id: number, { fly = true }: { fly?: boolean } = {}): void
 
 export function deselect(): void {
   const map = getMap();
+  /* selectedId is cleared first, deliberately. closeClickPopup() fires the
+     popup's own close event, which calls back into here; by then there is
+     nothing selected and the handler stops. Clearing it after the close would
+     re-enter deselect() and recurse. */
   patchApp({ selectedId: null, pinSel: null });
   if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], -1]);
   closeClickPopup();
 }
+
+/* Dismissing the popup by hand (its X, or Escape) is one of the two closable
+   surfaces. Whether it counts as "done" depends on the panel — see
+   maybeClearSelection. */
+setPopupDismissHandler(() => {
+  maybeClearSelection();
+});
 
 /**
  * Drops the green ring around a cctv / water / bus pin without touching the land

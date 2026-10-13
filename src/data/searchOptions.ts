@@ -1,4 +1,4 @@
-import { ALL_PARCELS } from './mockData';
+﻿import { ALL_PARCELS } from './liveData';
 import {
   districtLabel, districtNames, parentsOfSub, provinceNames, provincesOfDistrict,
   subDistrictLabel, subDistrictNames,

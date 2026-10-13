@@ -5,7 +5,17 @@ import { fdate, dfmtShort } from '../../lib/format';
 import { fmtMoneyNow } from '../../hooks/useMoney';
 import { getApp, patchApp, toast, useApp } from '../../store/useApp';
 import type { ChartTick, Parcel } from '../../types';
-import { evFlagPlugin, setupCharts } from './chartSetup';
+import { evFlagPlugin, setupCharts, todayLinePlugin } from './chartSetup';
+import { nextRoundPrice } from '../../lib/price';
+
+/** ACCENT at reduced opacity, for the forecast leg. Canvas cannot use
+ *  color-mix, so hex is expanded here. */
+function fade(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 const DAY = 864e5;
 type Pt = { x: number; y: number };
@@ -72,23 +82,71 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
   const cv = useRef<HTMLCanvasElement>(null);
   const chart = useRef<Chart<'line', Pt[]> | null>(null);
   const range = useApp(s => s.chartRange);
-    useApp(s => s.priceBath); /* re-render the tooltip formatter's source of truth */
+    const priceBath = useApp(s => s.priceBath); /* re-render the tooltip formatter's source of truth */
+  const showToday = useApp(s => s.chartTodayLine);
+  /* Component scope, not effect scope: the chart is rebuilt by this effect, and
+     a toggle that only re-reads inside the effect body would leave the already
+     drawn canvas untouched until the parcel changed. */
+  const showFc = useApp(s => s.chartForecast);
 
   useEffect(() => {
     const canvas = cv.current;
     if (!canvas) return;
     setupCharts();
-    const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
-    const evs = p.events.map(e => ({ ...e, d: p.hist[e.idx].d }));
+    /* Only what has actually happened is plotted. p.hist carries a point per
+       round including scheduled ones still ahead, and drawing those connected
+       up to today implies a trend that has not happened. Knowing the next round
+       date is useful for the price headline; it is not evidence about the past. */
+    const now = Date.now();
+    const past = p.hist.filter(h => h.d <= now);
+    /* A single point cannot draw a line. Fall back to the full history so the
+       chart still shows something rather than an empty box. */
+    const plot = past.length >= 2 ? past : p.hist;
+
+    /* The next round's price is computable — the discount ladder is public
+       arithmetic, not a guess — so it belongs on the chart. It is drawn as a
+       dashed, half-strength tail rather than a solid point, because it has not
+       happened: a solid marker would read as a result the same way the old
+       future points did. The break in styling is what separates "sold" from
+       "will be". */
+    const next = showFc ? nextRoundPrice(p, now) : null;
+    const lastReal = plot[plot.length - 1];
+    const fc = next && lastReal && next.date > lastReal.d ? { d: next.date, v: next.price } : null;
+    const pts = fc ? [...plot, fc] : plot;
+    /* Index of the final real point: any segment ending after it is forecast. */
+    const realEnd = plot.length - 1;
+
+    const f0 = plot[0].d, f1 = fc ? fc.d : plot[plot.length - 1].d;
+    const evs = p.events
+      .map(e => ({ ...e, d: p.hist[e.idx]?.d }))
+      .filter(e => e.d != null && e.d <= now);
     const thai = { family: "'Noto Sans Thai',sans-serif" };
     const tick = { color: '#666D62', font: { family: 'Noto Sans Thai', size: 9 } };
     const cfg: ChartConfiguration<'line', Pt[]> = {
       type: 'line',
       data: {
         datasets: [{
-          data: p.hist.map(h => ({ x: h.d, y: h.v })),
-          borderColor: ACCENT, borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: ACCENT,
-          pointHoverRadius: 6, pointHitRadius: 14, tension: 0.3,
+          data: pts.map(h => ({ x: h.d, y: h.v })),
+          borderColor: ACCENT, borderWidth: 2, pointRadius: 4,
+          pointHoverRadius: 6, pointHitRadius: 14,
+          /* Per-segment styling. p1DataIndex is the *later* endpoint of the
+             segment, so `> realEnd` picks out exactly the one forecast leg and
+             leaves every historical leg solid. */
+          segment: {
+            borderDash: c => (c.p1DataIndex > realEnd ? [5, 4] : undefined),
+            borderColor: c => (c.p1DataIndex > realEnd ? fade(ACCENT, 0.45) : ACCENT),
+            borderWidth: c => (c.p1DataIndex > realEnd ? 1.5 : 2),
+          },
+          /* The forecast point is hollow, so it reads as "not yet" on its own
+             even if the dashes are lost at a glance. */
+          pointBackgroundColor: c => (c.dataIndex > realEnd ? 'transparent' : '#fff'),
+          pointBorderColor: c => (c.dataIndex > realEnd ? fade(ACCENT, 0.45) : ACCENT),
+          pointStyle: c => (c.dataIndex > realEnd ? 'circle' : 'circle'),
+          /* Sharp corners. tension 0.3 curved between points, which smoothed a
+             discrete auction ladder into a shape the data never took — and a
+             dip that never happened would look like a real one. */
+          tension: 0,
+          cubicInterpolationMode: 'default',
         }],
       },
       options: {
@@ -108,7 +166,13 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
           y: { ticks: { ...tick, maxTicksLimit: 4, callback: v => (Number(v) >= 1e6 ? (Number(v) / 1e6).toFixed(1) + 'M' : Math.round(Number(v) / 1000) + 'K') }, grid: { color: 'rgba(255,255,255,.05)' } },
         },
       },
-      plugins: [evFlagPlugin(evs)],
+      plugins: [
+        evFlagPlugin(evs),
+        /* Vertical line at today, so "how stale is this" is readable at a glance.
+           Toggleable in settings — it is useful for a live lot and clutter on a
+           closed one. */
+        ...(showToday ? [todayLinePlugin(now)] : []),
+      ],
     };
     const ch = new Chart<'line', Pt[]>(canvas, cfg);
     chart.current = ch;
@@ -166,7 +230,10 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
       ch.destroy();
       chart.current = null;
     };
-  }, [p]);
+    /* showToday and priceBath must be deps: toggling either in settings re-renders
+       this component, but the Chart instance is only rebuilt by this effect. Leaving
+       them out meant the toggle appeared to do nothing until the parcel changed. */
+  }, [p, showToday, showFc, priceBath]);
 
   useEffect(() => { if (chart.current) applyChartRange(chart.current, p); }, [range, p]);
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Header } from './components/header/Header';
 import { MapView } from './components/map/MapView';
 import { Lightbox } from './components/panel/Lightbox';
@@ -10,6 +10,7 @@ import { Splash } from './components/auth/Splash';
 import { Toasts } from './components/map/Toasts';
 import { HEADER_H, LEFT_W, RIGHT_W } from './data/constants';
 import { ParcelsProvider } from './hooks/useParcels';
+import { useSettingsSync } from './hooks/useSettingsSync';
 import { patchApp, useApp } from './store/useApp';
 import { setLeft } from './store/actions';
 
@@ -70,6 +71,11 @@ export default function App() {
         };
 
   const signedIn = useApp(s => s.signedIn);
+  /* Pull the signed-in user's settings from Postgres and push changes back, so
+     their table layout and annotations follow the account rather than the
+     browser. Mounted here because this is the first component that only exists
+     once signed in. */
+  useSettingsSync();
 
   if (!signedIn) return <><Splash /><Toasts /></>;
 

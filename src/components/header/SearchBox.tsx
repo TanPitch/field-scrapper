@@ -1,6 +1,6 @@
-import { Bus, Database, Globe, MapPin, Search, Video, Waves, X } from 'lucide-react';
+﻿import { Bus, Database, Globe, MapPin, Search, Video, Waves, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/mockData';
+import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
 import { esc, debounce } from '../../lib/format';
 import { parcelDot } from '../../lib/parcelColor';

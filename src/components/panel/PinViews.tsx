@@ -1,9 +1,9 @@
-import { Search } from 'lucide-react';
+﻿import { Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, patchApp } from '../../store/useApp';
 import { gotoItem } from '../../map/pins';
 import { esc } from '../../lib/format';
-import { ALL_PARCELS } from '../../data/mockData';
+import { ALL_PARCELS } from '../../data/liveData';
 import {
   getDistrictItems, getProvinceItems, getSubdistrictItems, parentsOfDistrict, parentsOfSubdistrict,
   PROPERTY_TYPES, SELLER_AGENCIES,

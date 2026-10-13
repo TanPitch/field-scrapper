@@ -6,7 +6,9 @@ import {
   rebuildFlood, refreshPlates,
 } from '../map/layers';
 import { position as positionParcelLabels, registerParcels, syncParcelLabels } from '../map/parcelLabels';
+import { subscribeParcels } from '../data/liveData';
 import { fc, getMap, ptF, setSourceData } from '../map/mapRef';
+import { computeRows } from '../lib/visibility';
 import { syncDraws } from '../map/drawEngine';
 import { applyPinMarkerSize, syncPinData, syncPinSelectionRing } from '../map/pins';
 import { closeAllPopups, refreshOpenPopups } from '../map/popups';
@@ -28,7 +30,7 @@ export function useMapSync(): void {
   const reColor = useApp(s => s.reColor);
   const popupMode = useApp(s => s.popupMode);
   const labelOverlap = useApp(s => s.labelOverlap);
-  const labelSold = useApp(s => s.labelSold);
+  const labelNextDate = useApp(s => s.labelNextDate);
   const showLandKindIcon = useApp(s => s.showLandKindIcon);
   const priceBath = useApp(s => s.priceBath);
   const priceSpace = useApp(s => s.priceSpace);
@@ -49,13 +51,50 @@ export function useMapSync(): void {
   const pinSel = useApp(s => s.pinSel);
   const markerSize = useApp(s => s.markerSize);
 
-  /* parcel dots + compact labels (DOM overlay: two blocks, price/date over percent) */
+/* Parcel dots + compact labels.
+   *
+   * Refreshes from the collection's own subscription, not from `vis` changing
+   * identity. React's memo and the map's GeoJSON source are two separate caches,
+   * and when they drifted — map holding the fixture features while the lookup
+   * held the live rows — clicking a marker reported "ไม่พบแปลงหมายเลข N" with no
+   * visible cause. Driving the source from the same subscription that swaps the
+   * collection means the two cannot disagree about which one is current.
+   *
+   * Inputs are read straight from the store rather than from props, so the
+   * subscription callback always sees current state without having to be
+   * re-subscribed on every filter tweak. */
   useEffect(() => {
     if (!mapReady) return;
-    setSourceData('parcels', fc(vis.map(p => ptF([p.lng, p.lat], { id: p.id, status: p.status, resell: isResell(p) }))));
-    registerParcels(vis);
-    syncParcelLabels(vis, labelSold);
-  }, [mapReady, vis, labelSold, priceBath]);
+
+    const refresh = () => {
+      const s = useApp.getState();
+      const rows = computeRows({
+        filters: s.filters, statusVisible: s.statusVisible, pinnedIds: s.pinnedIds,
+        restrict: s.restrict, override: s.override, areas: s.areas,
+        forceArea: s.forceArea, bounds: s.bounds, zoom: s.zoom,
+        mapReady: true, sort: s.sort,
+      });
+      setSourceData('parcels', fc(rows.vis.map(p => ptF([p.lng, p.lat], { id: p.id, status: p.status, resell: isResell(p) }))));
+      registerParcels(rows.vis);
+      syncParcelLabels(rows.vis, s.labelNextDate);
+    };
+
+    refresh();
+    /* Fires the instant liveData.publish() swaps the collection, before React
+       has necessarily re-rendered. */
+    const unsub = subscribeParcels(refresh);
+
+    /* …and refresh on every viewport change too. Without these deps the source
+       was populated once at load (with whatever bounds existed then) and never
+       again, so panning updated the table — whose memo does depend on bounds —
+       while the map kept its empty initial set. That was the "table has rows,
+       map has no dots" state. */
+    const unsubBounds = useApp.subscribe((s, prev) => {
+      if (s.bounds !== prev.bounds || s.zoom !== prev.zoom) refresh();
+    });
+
+    return () => { unsub(); unsubBounds(); };
+  }, [mapReady, priceBath]);
 
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */
   useEffect(() => { if (mapReady) { applyPaint(); refreshPlates(); } }, [mapReady, popColors, reColor]);
@@ -68,7 +107,7 @@ export function useMapSync(): void {
   useEffect(() => { if (mapReady) positionParcelLabels(); }, [mapReady, labelOverlap]);
 
   /* the land-kind icon is baked into the label markup, so rebuild on toggle */
-  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelSold); }, [mapReady, showLandKindIcon]);
+  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelNextDate); }, [mapReady, showLandKindIcon, labelNextDate]);
 
   /* the DOM labels are positioned in screen space, so they follow the camera */
   useEffect(() => {

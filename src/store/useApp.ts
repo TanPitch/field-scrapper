@@ -11,7 +11,7 @@ import type {
 } from '../types';
 
 export const EMPTY_FILTERS: Filters = {
-  text: '', status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, province: '',
+  text: '', status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '',
   provinces: [], tambons: [], amps: [], propertyTypes: [],
 };
 
@@ -23,6 +23,19 @@ export interface AppState {
   popupMode: PopupMode;
   labelOverlap: boolean;
   labelSold: boolean;
+  /** Show the next scheduled selling date on each marker label. Separate from
+   *  labelSold, which controls whether SOLD parcels keep a label. */
+  labelNextDate: boolean;
+  /** Draw a vertical 'today' marker on the price chart. */
+  chartTodayLine: boolean;
+  /** Draw the dashed, semi-transparent leg to the predicted next-round price. */
+  chartForecast: boolean;
+  /** Reveals the API/server settings block in the header. */
+  showApiSettings: boolean;
+  /** Detail-panel rows the user has hidden. */
+  detailRowHidden: string[];
+  /** User-chosen display order for detail-panel rows. */
+  detailRowOrder: string[];
   /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
   showLandKindIcon: boolean;
   priceBath: boolean;
@@ -36,9 +49,15 @@ export interface AppState {
   accentColor: string;
   cascade: Cascade;
   gkey: string;
-  restrict: boolean;
-  override: boolean;
-statusVisible: Record<Status, boolean>;
+    restrict: boolean;
+    override: boolean;
+    /**
+     * Highlight, in the detail panel's round table, the round a lot sold at and
+     * every round after it. On by default: those rounds are dead, and a plain
+     * list of dates does not make that obvious. The user can turn it off.
+     */
+    highlightSoldRounds: boolean;
+  statusVisible: Record<Status, boolean>;
   /** Kept for backwards-compat with saved state; `re` now lives in popColors. */
   reColor: string;
   popColors: Record<PopupKind, string>;
@@ -108,7 +127,6 @@ statusVisible: Record<Status, boolean>;
   /** Max hits shown for a search, per source group. */
   searchLimit: number;
   /** Reveals the ค้นหา & API settings tab (needs the unlock code from แผนที่). */
-  showApiSettings: boolean;
   /** Mockup account fields (ผูใช้ pane) — no backend. */
   /** dmin sees hidden settings tabs without the unlock code. */
   role: 'user' | 'admin';
@@ -137,6 +155,12 @@ export const useApp = create<AppState>(set => ({
   popupMode: 'active',
   labelOverlap: false,
   labelSold: true,
+  labelNextDate: true,
+  chartTodayLine: true,
+  chartForecast: true,
+  showApiSettings: false,
+  detailRowHidden: [],
+  detailRowOrder: [],
   showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,
@@ -150,7 +174,11 @@ export const useApp = create<AppState>(set => ({
   gkey: '',
   restrict: false,
   override: false,
-statusVisible: { sale: true, sold: true },
+  highlightSoldRounds: false,
+  /* inactive is ON by default. A withdrawn lot is history the user is actively
+     looking for, so hiding it by default would lose rows silently; the land-type
+     filter is how you narrow back to live inventory. */
+  statusVisible: { sale: true, sold: true, inactive: true },
   reColor: DEFAULT_POP_COLORS.re,
   popColors: { ...DEFAULT_POP_COLORS },
   popupCfg: structuredClone(DEFAULT_POPUP_CFG),
@@ -210,7 +238,6 @@ statusVisible: { sale: true, sold: true },
   sensOpacity: 0.9,
   markerSize: 'normal',
   searchLimit: 8,
-  showApiSettings: false,
   role: 'admin',
   signedIn: false,
   userName: 'fieldscrapper',

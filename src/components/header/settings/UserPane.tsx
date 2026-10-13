@@ -56,12 +56,12 @@ export function UserPane() {
         <AvatarPicker cfg={avatarCfg} onChange={next => patchApp({ avatarCfg: next })} />
       </div>
 
-      <div className={frow}>
+      {/* <div className={frow}>
         <span className={fl}>ชื่อผู้ใช้</span>
         <input className={`${inp} pointer-events-none opacity-60`} value={username} readOnly />
-      </div>
+      </div> */}
       <div className={frow}>
-        <span className={fl}>ชื่อที่แสดง</span>
+        <span className={fl}>ชื่อผู้ใช้</span>
         <input className={inp} value={displayName} onChange={e => patchApp({ displayName: e.target.value })} placeholder="เช่น สมชาย ใจดี" />
       </div>
 

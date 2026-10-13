@@ -15,7 +15,6 @@ export const RENDER_ORDER = ['overlay', 'cctv', 'bus', 'water', 'land parcel', '
  * Unlock code for the hidden "ค้นหา & API" settings tab. Not the Google API key —
  * this is just a local gate so the tab is not a one-click away. Change it here.
  */
-export const SETTINGS_SECRET = 'field-admin';
 
 export const ROW_H = 36;
 export const HEADER_H = 56;
@@ -34,9 +33,10 @@ export const MAP_FONTS = ['Noto Sans Regular'];
 export const STATUS: Record<PopupKind, { th: string }> = {
   sale: { th: 'กำลังขาย' },
   sold: { th: 'ขายแล้ว' },
+  inactive: { th: 'หมดอายุประกาศ' },
   re: { th: 'นำกลับมาขายใหม่' },
 };
-export const STATUS_KEYS: Status[] = ['sale', 'sold'];
+export const STATUS_KEYS: Status[] = ['sale', 'sold', 'inactive'];
 
 export const POP_FIELDS: [PopupField, string][] = [
   ['size', 'ขนาดที่ดิน'], ['perWah', 'ราคา/ตร.วา'], ['announce', 'วันประกาศขาย'],
@@ -44,7 +44,8 @@ export const POP_FIELDS: [PopupField, string][] = [
 ];
 /** [popup kind, label, colour source status] */
 export const POP_KINDS: [PopupKind, string, Status][] = [
-  ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'], ['re', 'นำกลับมาขายใหม่', 'sale'],
+  ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'],
+  ['re', 'นำกลับมาขายใหม่', 'sale'], ['inactive', 'หมดอายุประกาศ', 'inactive'],
 ];
 export const LB_FIELDS: [LightboxField, string][] = [
   ['name', 'ชื่อแปลง'], ['status', 'สถานะ'], ['price', 'ราคา'], ['size', 'ขนาด'], ['deed', 'เลขโฉนด'], ['soldTs', 'วันขายออก'],
@@ -53,13 +54,21 @@ export const DEFAULT_POPUP_CFG: PopupConfig = {
   sale: { size: true, perWah: true, announce: true, soldTs: false, resale: false, deed: true },
   re: { size: true, perWah: true, announce: true, soldTs: false, resale: true, deed: true },
   sold: { size: true, perWah: true, announce: true, soldTs: true, resale: false, deed: true },
+  /* Pulled from the listing, so there is no upcoming round to advertise. The
+     useful fields are the schedule it ran and the deed. */
+  inactive: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
 };
 export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
   name: true, status: true, price: true, size: true, deed: false, soldTs: false,
 };
 /** Default colour per popup kind. `re` covers นำกลับมาขายใหม่ — a parcel that is
- *  still on sale but was already sold once, so it gets its own kind colour. */
-export const DEFAULT_POP_COLORS: Record<PopupKind, string> = { sale: '#E5484D', sold: '#8B9096', re: '#242424' };
+ *  still on sale but was already sold once, so it gets its own kind colour.
+ *  `inactive` is deliberately dull and desaturated: it should read as withdrawn
+ *  at a glance without being hidden, so it sits between the sold grey and the
+ *  background rather than shouting. */
+export const DEFAULT_POP_COLORS: Record<PopupKind, string> = {
+  sale: '#E5484D', sold: '#8B9096', re: '#242424', inactive: '#5C5247',
+};
 
 export const PRESET_COLORS = [
   '#B8F13F', '#F5F6F4', '#E5484D', '#FF7A6B', '#FF9F43', '#F5A623', '#FFD93D', '#9BE564', '#3DDAD7',
@@ -103,15 +112,28 @@ export const POIS: [string, number, number, string][] = [
   ['ท่าเรือศรีราชา', 100.93, 13.12, 'harbour'], ['วัดพระธาตุดอยสุเทพ', 98.922, 18.805, 'place_of_worship'],
 ];
 
-export const DEFAULT_CENTER: LngLat = [100.5018, 13.7563];
+// export const DEFAULT_CENTER: LngLat = [100.5018, 13.7563];
+export const DEFAULT_CENTER: LngLat = [102.8283, 16.4404];  // TODO:
 
 /* ---------- table columns ---------- */
 export const COL_DEFS: Record<ColKey, ColDef> = {
   no: { label: 'ลำดับที่', w: 92, num: true },
   name: { label: 'ชื่อแปลง', w: 200, sortable: true },
   status: { label: 'สถานะ', w: 96, sortable: true },
-  size: { label: 'ขนาดที่ดิน', w: 168, subs: ['ไร่', 'งาน', 'ตร.วา'], sortable: true, sortKey: 'wah' },
+  size: { label: 'ขนาดที่ดิน', w: 168, subs: ['ไร่', 'งาน', 'ตร.วา'], sortable: true, sortKey: 'wah', center: true },
+  /* Height above sea level. Hidden by default like most descriptive columns,
+     because it is only meaningful where the parcel has its own coordinate — for
+     the rest the cell says so instead of showing the centroid's height. */
+  height: { label: 'ความสูง (ม.)', w: 112, num: true, sortable: true, sortKey: 'height' },
   price: { label: 'ราคา (บาท)', w: 120, sortable: true, num: true },
+  /* The LED cascade's opening price — what the lot was first offered at, before
+     any of the -10/-20/-30% reductions. Distinct from the headline price, which
+     is the next round's. */
+  smartPrice: { label: 'ราคาเปิด', w: 132, sortable: true, num: true, sortKey: 'smartPrice' },
+  /* User-authored, per parcel. Blank until typed into — which is the point: an
+     empty cell means "I have not named this", not "this has no name". */
+  pName: { label: 'ชื่อกำกับ', w: 150 },
+  pNote: { label: 'หมายเหตุกำกับ', w: 170 },
   perWah: { label: 'ราคา/ตร.วา', w: 108, sortable: true, num: true },
   saleBy: { label: 'จำนอง', w: 190 },
   seller: { label: 'ผู้ขาย', w: 180 },
@@ -131,15 +153,19 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
   enforcementOfficerPrice: { label: 'ราคา เจ้าพนักงานบังคับคดี', w: 150, num: true },
   assessorPrice: { label: 'ราคา เจ้าพนักงานประเมินราคา', w: 160, num: true },
   committeePrice: { label: 'ราคา คณะกรรมการ', w: 130, num: true },
-  announceDate: { label: 'วันที่ประกาศ', w: 112 },
+  announceDate: { label: 'วันที่ประกาศ', w: 112, center: true },
   amp: { label: 'อำเภอ/เขต', w: 120 },
-  announce: { label: 'วันประกาศขาย', w: 112, sortable: true },
-  lastTs: { label: 'วันที่ล่าสุด', w: 112, sortable: true, sortKey: 'lastTs' },
+  announce: { label: 'วันประกาศขาย', w: 112, sortable: true, center: true },
+  lastTs: { label: 'วันที่ล่าสุด', w: 112, sortable: true, sortKey: 'lastTs', center: true },
   province: { label: 'จังหวัด', w: 110, sortable: true },
-  roundLast: { label: 'นัดล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'] },
+  roundLast: { label: 'นัดก่อนล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
 };
-export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'name', 'status', 'size', 'price', 'perWah', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast'];
-export const DEFAULT_COL_HIDDEN: ColKey[] = ['amp', 'announce'];
+export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast'];
+/* The two annotation columns are visible but empty by default — a user who wants
+   them reaches for them immediately, and they are the whole point of the
+   feature. Height stays hidden because it is only meaningful where a parcel has
+   its own coordinate. */
+export const DEFAULT_COL_HIDDEN: ColKey[] = ['amp', 'announce', 'height', 'name'];
 
 export const SORT_LABELS: Record<string, string> = {
   name: 'ชื่อแปลง', status: 'สถานะ', wah: 'ขนาดที่ดิน', price: 'ราคา (บาท)', perWah: 'ราคา/ตร.วา',
@@ -148,3 +174,12 @@ export const SORT_LABELS: Record<string, string> = {
 
 export const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 export const TH_WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+
+/**
+ * Shared passphrase that reveals the API/settings section in the header.
+ * This is a UI gate, not a security boundary: the bundle ships to the browser
+ * and anyone can read this constant. It keeps the panel out of the way of
+ * ordinary use; anything that must actually be protected belongs behind the
+ * server's session check, not here.
+ */
+export const SETTINGS_SECRET = 'landmap';

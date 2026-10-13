@@ -114,10 +114,34 @@ body[data-accent] {
     -webkit-user-select: none;
     user-select: none;
   }
+  /* Text the user may want to copy: table cells, popups, and the detail panel.
+     Deed numbers, case numbers and prices are exactly what someone copies into
+     a spreadsheet, so blocking selection there was purely in the way.
+     Inputs opt back in below. */
   input,
-  textarea {
+  textarea,
+  .selectable,
+  [data-selectable] {
     -webkit-user-select: text;
     user-select: text;
+  }
+  /* Themed selection. Without this the highlight is the UA default — a pale
+     blue that is unreadable on the darker themes and invisible on OLED. It
+     follows --accent, so every theme gets a highlight that matches it. */
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 38%, transparent);
+    color: var(--ink);
+  }
+  ::-moz-selection {
+    background: color-mix(in srgb, var(--accent) 38%, transparent);
+    color: var(--ink);
+  }
+  /* The image carousel is a drag surface: selecting across it fights the swipe,
+     so it stays unselectable even though the rest of the panel does not. */
+  .selectable img,
+  [data-selectable] img {
+    -webkit-user-select: none;
+    user-select: none;
   }
   /* inputs carry UA line-height + padding that push text off-centre in flex rows */
   input {
@@ -330,24 +354,34 @@ body.reduce-motion .spin-keep {
   letter-spacing: -0.015em;
   padding: 0 3px;
 }
-/* price change since the last opening, signed and rounded to a whole percent */
-.pop-delta {
+/* discount badge sitting beside the next-round price, in both popup kinds */
+.pop-disc {
   font: 600 10.5px 'Noto Sans Thai', sans-serif;
   padding: 1px 6px;
   border-radius: 99px;
-  border: 1px solid rgba(0, 0, 0, 0.22);
-  background: rgba(255, 255, 255, 0.94);
-  color: #16210f;
+  border: 1px solid rgba(63, 107, 42, 0.55);
+  background: #1b2a12;
+  color: #b8f13f;
   white-space: nowrap;
+  align-self: center;
 }
-.pop-delta.is-down {
-  color: #8C1B1F;
+/* the starting price, demoted: struck through, dimmed, and smaller than the
+   price it is comparing against. Never the headline. */
+.pop-was {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font: 400 11px 'Noto Sans Thai', sans-serif;
+  opacity: 0.7;
+  color: inherit;
 }
-/* compact: the delta gets its own line under the price */
-.pop-box--compact .pop-delta-row {
-  display: flex;
-  margin: 2px 0 1px;
-  padding: 0 2px;
+.pop-was s {
+  text-decoration-thickness: 1px;
+}
+.pop-was i {
+  font: 400 9.5px 'Noto Sans Thai', sans-serif;
+  font-style: normal;
+  opacity: 0.85;
 }
 /* land-kind icon inside the compact popup price line */
 .pop-kind-ic {
@@ -464,3 +498,40 @@ body.fs-land-off .sp-pin {
 .hrs.active::after {
   background: var(--accent);
 }
+/* compact popup: the single-line variant shown for every marker at once */
+.pop-next {
+  font: 500 9.5px 'Noto Sans Thai', sans-serif;
+  color: rgba(255, 255, 255, 0.78);
+  padding: 1px 3px 0;
+  text-align: center;
+  white-space: nowrap;
+}
+/* land-type badge now carries a glyph from ประเภททรัพย์ */
+.pop-kind {
+  gap: 3px;
+}
+/* Hand-off links at the foot of the full popup. `display: inline-flex` keeps
+   the <a> boxes tight to their labels; without it the anchors stretch across
+   the popup and the whole width reads as one giant link. */
+  .pop-geo {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 7px;
+    border-top: 1px solid var(--line);
+  }
+  .pop-geo a {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border: 1px solid var(--line2);
+    border-radius: 6px;
+    background: var(--panel2);
+    color: var(--ink);
+    font-size: 11px;
+    line-height: 1.5;
+    text-decoration: none;
+  }
+  .pop-geo a:hover {
+    border-color: var(--line3);
+  }

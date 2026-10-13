@@ -1,4 +1,4 @@
-import { ChevronDown, Crosshair, Filter, Search, Table2 } from 'lucide-react';
+﻿import { ChevronDown, Crosshair, Filter, Search, Table2 } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { HEADER_H, MIN_BH } from '../../data/constants';
 import { debounce } from '../../lib/format';
@@ -7,6 +7,7 @@ import { btn, btnAcc, iconBtn } from '../ui/styles';
 import { useTipProps } from '../ui/Tip';
 import { showRight } from '../../store/actions';
 import { ColumnPicker } from './ColumnPicker';
+import { DataSourceBanner } from './DataSourceBanner';
 import { DataTable } from './DataTable';
 import { FilterPopup } from './FilterPopup';
 
@@ -23,7 +24,7 @@ export function BottomPanel({ small }: { small: boolean }) {
   const search = useRef<HTMLInputElement>(null);
 
   const hasFilters = !!(filters.status || filters.province || filters.minWah != null || filters.maxWah != null || filters.minPrice != null || filters.maxPrice != null
-    || filters.tambons?.length || filters.amps?.length || filters.propertyTypes?.length);
+    || filters.minElev != null || filters.maxElev != null || filters.tambons?.length || filters.amps?.length || filters.propertyTypes?.length);
   const onText = useRef(debounce((v: string) => patchApp({ filters: { ...useApp.getState().filters, text: v.trim() } }), 140)).current;
 
   /* keep the stored height valid when the viewport shrinks */
@@ -75,7 +76,8 @@ export function BottomPanel({ small }: { small: boolean }) {
         <button className={btnAcc} {...useTipProps('เปิดแผงค้นหาพื้นที่ในแผงขวา')} onClick={() => { patchApp({ searchPrefill: filters.text || '' }); showRight('search'); }}><Crosshair size={14} />ค้นหาพื้นที่</button>
         <button className={iconBtn} {...useTipProps('ย่อ/ขยายตาราง')} onClick={snap}><ChevronDown size={17} className={`transition-transform duration-200 ${flipped ? '' : 'rotate-180'}`} /></button>
       </div>
-      <DataTable />
+        <DataSourceBanner />
+        <DataTable />
       {colAnchor && <ColumnPicker anchor={colAnchor} onClose={() => setColAnchor(null)} />}
       {fltAnchor && <FilterPopup anchor={fltAnchor} onClose={() => setFltAnchor(null)} />}
     </section>
