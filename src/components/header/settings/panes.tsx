@@ -5,6 +5,7 @@ import {
   LB_FIELDS, POP_FIELDS, POP_KINDS, SETTINGS_SECRET, STATUS, STATUS_KEYS,
 } from '../../../data/constants';
 import { resetAll } from '../../../store/actions';
+import { DETAIL_ROWS } from '../../../lib/detailRows';
 import { showRight } from '../../../store/actions';
 import { patchApp, toast, useApp } from '../../../store/useApp';
 import { changelogVersion, parseChangelog, parseInline } from '../../../lib/changelog';
@@ -91,8 +92,67 @@ export function LookPane() {
   const glassLevel = useApp(s => s.glassLevel);
   const lbCfg = useApp(s => s.lbCfg);
   const layoutMode = useApp(s => s.layoutMode);
+  const detailRowHidden = useApp(s => s.detailRowHidden);
+  const detailRowOrder = useApp(s => s.detailRowOrder);
+
+  /* Shown order = the saved order for rows it names, then anything it does not
+     mention in built-in order. Appending the leftovers rather than sorting the
+     whole set keeps a partial saved order from scattering rows it never
+     mentioned, and guarantees every row has a control — a row absent from both
+     lists would render in the panel with no way to hide or move it. */
+  const detailRowList: string[] = [];
+  for (const k of detailRowOrder) if (DETAIL_ROWS.includes(k as never) && !detailRowList.includes(k)) detailRowList.push(k);
+  for (const k of DETAIL_ROWS) if (!detailRowList.includes(k)) detailRowList.push(k);
+
+  const moveRow = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= detailRowList.length) return;
+    const next = [...detailRowList];
+    [next[i], next[j]] = [next[j], next[i]];
+    patchApp({ detailRowOrder: next });
+  };
+  const toggleRow = (k: string, on: boolean) => patchApp({
+    detailRowHidden: on ? detailRowHidden.filter(x => x !== k) : [...detailRowHidden, k],
+  });
+
   return (
     <>
+      <div className={setSec}>แถวในแผงรายละเอียด</div>
+      <Hint>ซ้ายขึ้นก่อน ขวาลงทีหลัง · สว่าง = แสดง</Hint>
+      <div className="pt-1">
+        {detailRowList.map((k, i) => {
+          const on = !detailRowHidden.includes(k);
+          return (
+            <div key={k} className={`flex items-center gap-1.5 py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'}`}>
+              <button
+                type="button"
+                aria-label={`ย้าย ${k} ขึ้น`}
+                disabled={i === 0}
+                onClick={() => moveRow(i, -1)}
+                className="size-[20px] flex-none rounded border border-line2 text-[10px] leading-none text-dim enabled:hover:border-line3 enabled:hover:text-ink disabled:opacity-25"
+              >↑</button>
+              <button
+                type="button"
+                aria-label={`ย้าย ${k} ลง`}
+                disabled={i === detailRowList.length - 1}
+                onClick={() => moveRow(i, 1)}
+                className="size-[20px] flex-none rounded border border-line2 text-[10px] leading-none text-dim enabled:hover:border-line3 enabled:hover:text-ink disabled:opacity-25"
+              >↓</button>
+              <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
+              <Switch checked={on} onChange={v => toggleRow(k, v)} />
+            </div>
+          );
+        })}
+      </div>
+      {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
+        <button
+          type="button"
+          className="mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
+          onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
+        >
+          <RotateCcw size={11} /> รีเซ็ตการเรียงแถว
+        </button>
+      )}
       <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
       <div className={frow}>
         <span className={fl}>ธีมสี</span>
@@ -147,13 +207,16 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const popupMode = useApp(s => s.popupMode);
   const allPops = popupMode === 'all';
   const labelOverlap = useApp(s => s.labelOverlap);
-  const labelSold = useApp(s => s.labelSold);
   const popColors = useApp(s => s.popColors);
   const statusVisible = useApp(s => s.statusVisible);
   const popupCfg = useApp(s => s.popupCfg);
   const reColor = useApp(s => s.reColor);
   const chartTick = useApp(s => s.chartTick);
   const showLandKindIcon = useApp(s => s.showLandKindIcon);
+  const chartTodayLine = useApp(s => s.chartTodayLine);
+  const chartForecast = useApp(s => s.chartForecast);
+  const labelNextDate = useApp(s => s.labelNextDate);
+  const hlSold = useApp(s => s.highlightSoldRounds);
 
   return (
     <>
@@ -179,10 +242,20 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} />
       </div>
       <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
-        <span className={fl}>วันที่ขาย</span>
-        <Switch checked={labelSold} onChange={v => patchApp({ labelSold: v })} />
+        <span className={fl}>วันที่นัดขายถัดไปบนป้าย</span>
+        <Switch checked={labelNextDate} onChange={v => patchApp({ labelNextDate: v })} />
       </div>
       <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
+      <div className={frow}>
+        <span className={fl}>หรี่รอบที่ขายไปแล้วในตารางนัด</span>
+        <Switch checked={hlSold} onChange={v => patchApp({ highlightSoldRounds: v })} />
+      </div>
+      <Hint>เมื่อแปลงขายไปแล้ว รอบที่ขายและทุกรอบหลังจากนั้นจะถูกหรี่ลง ปิดเพื่อให้ทุกรอบเป็นสีเดียวกัน</Hint>
+
+      <div className={setSec}>กราฟราคา</div>
+      <div className={frow}><span className={fl}>เส้นวันนี้</span><Switch checked={chartTodayLine} onChange={v => patchApp({ chartTodayLine: v })} /></div>
+      <div className={frow}><span className={fl}>เส้นประมาณราคารอบถัดไป</span><Switch checked={chartForecast} onChange={v => patchApp({ chartForecast: v })} /></div>
+      <Hint>เส้นประมาณเป็นเส้นประที่โปร่งใส แยกจากเส้นที่ขายจริง</Hint>
 
       <div className={setSec}>สถานะและสี</div>
       {STATUS_KEYS.map(k => (

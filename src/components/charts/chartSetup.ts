@@ -95,23 +95,17 @@ export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
       ctx.save();
       const off: { ev: EventFlag; side: 'left' | 'right' }[] = [];
       evs.forEach(ev => {
-        /* Anchor to where the dot is actually drawn.
-           chart.getPixelForValue() interpolates within the scale's tick
-           spacing, so for a date that is not itself a tick it returns a pixel
-           slightly off the data point — enough for the dashes to visibly miss
-           the dot, which is what this flag was doing. The dataset meta holds
-           the exact pixel Chart.js used for each rendered point, so snapping to
-           the nearest one guarantees the line and the dot share an x. */
-        const meta: any = (chart as any).getDatasetMeta?.(0);
-        const pts: { x: number }[] = meta?.data ?? [];
-        let px = x.getPixelForValue(ev.d);
-        if (pts.length) {
-          let best = Infinity;
-          for (const p of pts) {
-            const d = Math.abs(p.x - px);
-            if (d < best) { best = d; px = p.x; }
-          }
-        }
+        /* Straight from the scale. The x axis is linear, so getPixelForValue is
+           exact for any date rather than interpolated between ticks — and ev.d
+           is the date of a point that is actually plotted, since the caller
+           filters events against the same window it plots.
+
+           Do not "improve" this by snapping to the nearest rendered point. That
+           was tried and made the flags land on neighbouring dots, which read as
+           a second dot at the same date. Verified against the real dataset:
+           no parcel has two rounds sharing a date, so the nearest point is
+           only ever correct by accident. */
+        const px = x.getPixelForValue(ev.d);
         if (px < chartArea.left || px > chartArea.right) {
           off.push({ ev, side: px < chartArea.left ? 'left' : 'right' });
           return;
