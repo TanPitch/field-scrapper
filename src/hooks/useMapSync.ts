@@ -12,7 +12,7 @@ import { computeRows } from '../lib/visibility';
 import { syncDraws } from '../map/drawEngine';
 import { applyPinMarkerSize, syncPinData, syncPinSelectionRing } from '../map/pins';
 import { closeAllPopups, refreshOpenPopups } from '../map/popups';
-import { useApp } from '../store/useApp';
+import { patchApp, useApp } from '../store/useApp';
 import { useParcels } from './useParcels';
 
 const rebuildFloodSoft = debounce(rebuildFlood, 280);
@@ -24,6 +24,7 @@ const rebuildFloodSoft = debounce(rebuildFlood, 280);
 export function useMapSync(): void {
   const { vis } = useParcels();
   const mapReady = useApp(s => s.mapReady);
+  const persistMapView = useApp(s => s.persistMapView);
   const bounds = useApp(s => s.bounds);
 
   const popColors = useApp(s => s.popColors);
@@ -121,9 +122,30 @@ export function useMapSync(): void {
     return () => {
       map.off('move', on);
       map.off('zoom', on);
-      map.off('resize', on);
+map.off('resize', on);
     };
   }, [mapReady]);
+
+  /* Remember where the user left the map, and come back to it on the next
+     login. Saved on `moveend` rather than `move`: `move` fires continuously
+     during a drag and would push a settings write per frame. `moveend` fires
+     once the gesture settles.
+
+     Writing to the synced store is what persists it, so this effect depends on
+     `persistMapView` — turning the setting off has to detach the listener, not
+     just stop writing, or the map would keep overwriting a deliberately
+     discarded position. */
+  useEffect(() => {
+    if (!mapReady || !persistMapView) return;
+    const map = getMap();
+    if (!map) return;
+    const on = () => {
+      const c = map.getCenter();
+      patchApp({ lastView: { lng: +c.lng.toFixed(5), lat: +c.lat.toFixed(5), zoom: +map.getZoom().toFixed(2) } });
+    };
+    map.on('moveend', on);
+    return () => { map.off('moveend', on); };
+  }, [mapReady, persistMapView]);
 
   /* popups follow settings */
   useEffect(() => { if (popupMode === 'all') closeAllPopups(); }, [popupMode]);

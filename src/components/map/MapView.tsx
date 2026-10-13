@@ -30,12 +30,19 @@ export function MapView() {
   useEffect(() => {
     if (!el.current) return;
     registerProtocols();
+    /* Resume where the user left off, if that is turned on and there is a saved
+       position. Read from the store directly rather than a hook subscription:
+       this runs once on mount, before any preference has been re-synced from
+       the server, and a subscription would capture the default centre.
+       Falls back to the default view when the setting is off or nothing has
+       been saved yet. */
+    const s0 = getApp();
+    const v0 = s0.persistMapView ? s0.lastView : null;
     const m = new maplibregl.Map({
       container: el.current,
       style: buildStyle(getApp().basemap),
-      center: DEFAULT_CENTER,
-      // zoom: 12.35,
-      zoom: 13, // TODO:
+      center: v0 ? [v0.lng, v0.lat] : DEFAULT_CENTER,
+      zoom: v0 ? v0.zoom : 13,
       attributionControl: { compact: true },
       maxPitch: 0,
       dragRotate: false,

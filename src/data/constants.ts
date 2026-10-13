@@ -158,9 +158,13 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
   announce: { label: 'วันประกาศขาย', w: 112, sortable: true, center: true },
   lastTs: { label: 'วันที่ล่าสุด', w: 112, sortable: true, sortKey: 'lastTs', center: true },
   province: { label: 'จังหวัด', w: 110, sortable: true },
-  roundLast: { label: 'นัดก่อนล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
+  /* Two round columns, each with one fixed rule, so the table can be read across
+     instead of one column whose meaning shifted per row: นัดล่าสุด is the most
+     recent round already held, นัดถัดไป the next one still ahead. */
+  roundLast: { label: 'นัดล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
+  roundNext: { label: 'นัดถัดไป', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
 };
-export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast'];
+export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast', 'roundNext'];
 /* The two annotation columns are visible but empty by default — a user who wants
    them reaches for them immediately, and they are the whole point of the
    feature. Height stays hidden because it is only meaningful where a parcel has

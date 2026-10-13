@@ -30,6 +30,10 @@ export interface AppState {
   chartTodayLine: boolean;
   /** Draw the dashed, semi-transparent leg to the predicted next-round price. */
   chartForecast: boolean;
+  /** Restore the map to wherever it was left, rather than the default view. */
+  persistMapView: boolean;
+  /** Last camera position, saved so the next login resumes there. */
+  lastView: { lng: number; lat: number; zoom: number } | null;
   /** Reveals the API/server settings block in the header. */
   showApiSettings: boolean;
   /** Detail-panel rows the user has hidden. */
@@ -158,6 +162,8 @@ export const useApp = create<AppState>(set => ({
   labelNextDate: true,
   chartTodayLine: true,
   chartForecast: true,
+  persistMapView: true,
+  lastView: null,
   showApiSettings: false,
   detailRowHidden: [],
   detailRowOrder: [],

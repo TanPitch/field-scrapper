@@ -199,6 +199,7 @@ export function LookPane() {
 export function PopupPane({ onClose }: { onClose: () => void }) {
   const restrict = useApp(s => s.restrict);
   const override = useApp(s => s.override);
+  const persistMapView = useApp(s => s.persistMapView);
   const areas = useApp(s => s.areas);
   const setRestrict = (on: boolean) => {
     patchApp(on ? { restrict: true } : { restrict: false, override: false });
@@ -230,6 +231,14 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span>
         <Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} />
       </div>
+      <div className={frow}>
+        <span className={fl}>จดจำตำแหน่งแผนที่เมื่อเข้าสู่ระบบ</span>
+        <Switch
+          checked={persistMapView}
+          onChange={v => patchApp({ persistMapView: v, lastView: v ? useApp.getState().lastView : null })}
+        />
+      </div>
+      <Hint>เปิดเพื่อกลับไปที่เดิมทุกครั้งที่เข้าสู่ระบบ ปิดเพื่อเริ่มที่มุมมองเริ่มต้นทุกครั้ง</Hint>
 
       <div className={setSec}>ป็อปอัพ</div>
       <div className={frow}>

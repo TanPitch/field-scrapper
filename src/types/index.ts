@@ -252,7 +252,7 @@ export type ColKey =
   | 'enforcementOffice' | 'collateral' | 'spouseCollateral'
   | 'expertPrice' | 'enforcementOfficerPrice' | 'assessorPrice'
   | 'committeePrice' | 'announceDate' | 'amp' | 'announce' | 'lastTs' | 'province'
-  | 'roundLast';
+  | 'roundLast' | 'roundNext';
 export interface ColDef {
 label: string;
     w: number;

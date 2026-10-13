@@ -61,21 +61,37 @@ export function caseNoOf(n: number): string {
 }
 
 /**
- * The one sale round worth showing in the table: the round that is currently selling,
- * otherwise the nearest one after today, otherwise the latest dated round.
+ * The two round columns, each with one fixed rule, so the table can be read
+ * across instead of one column whose meaning shifted per row.
+ *
+ * Kept separate on purpose. A single "most interesting round" column had to
+ * choose, and every choice was wrong for some lot: it preferred the round being
+ * sold right now, then the next one, then the last one — so the same column
+ * meant three different things depending on the row.
  */
-function latestRound(p: Parcel): { index: number; round: SellRound } | null {
+/**
+ * The most recent round that has already been held — strictly `date <= now`.
+ * Two columns with fixed rules can be read across the whole table.
+ */
+function lastPastRound(p: Parcel): { index: number; round: SellRound } | null {
   const now = Date.now();
-  const selling = p.rounds.findIndex(r => r.status === 'กำลังขาย');
-  if (selling >= 0) return { index: selling, round: p.rounds[selling] };
+  let hit = -1;
+  p.rounds.forEach((r, i) => { if (r.date != null && r.date <= now) hit = i; });
+  return hit >= 0 ? { index: hit, round: p.rounds[hit] } : null;
+}
+
+/**
+ * The next round still ahead — strictly `date > now`, earliest first. Rounds
+ * LED has not dated are excluded: they are not scheduled, so there is no date
+ * to report and nothing for the reader to plan around.
+ */
+function nextUpcomingRound(p: Parcel): { index: number; round: SellRound } | null {
+  const now = Date.now();
   const future = p.rounds
     .map((r, i) => ({ i, r }))
-    .filter(x => x.r.date != null && x.r.date >= now)
+    .filter(x => x.r.date != null && x.r.date > now)
     .sort((a, b) => (a.r.date as number) - (b.r.date as number))[0];
-  if (future) return { index: future.i, round: future.r };
-  let last = -1;
-  p.rounds.forEach((r, i) => { if (r.date != null) last = i; });
-  return last >= 0 ? { index: last, round: p.rounds[last] } : null;
+  return future ? { index: future.i, round: future.r } : null;
 }
 
 interface RowProps {
@@ -158,13 +174,20 @@ case 'ownerFile': return p.ownerFile;
       case 'announce': return fdate(p.announce);
       case 'lastTs': return fdate(p.lastTs);
       case 'province': return p.province;
-      case 'roundLast': {
-        const r = latestRound(p);
-        if (!r) return '-';
-        if (c.sub === 0) return r.index + 1;
-        if (c.sub === 1) return r.round.date != null ? fdate(r.round.date) : '-';
-        return r.round.status;
-      }
+case 'roundLast': {
+    const r = lastPastRound(p);
+    if (!r) return '-';
+    if (c.sub === 0) return r.index + 1;
+    if (c.sub === 1) return r.round.date != null ? fdate(r.round.date) : '-';
+    return r.round.status;
+    }
+      case 'roundNext': {
+    const r = nextUpcomingRound(p);
+    if (!r) return '-';
+    if (c.sub === 0) return r.index + 1;
+    if (c.sub === 1) return r.round.date != null ? fdate(r.round.date) : '-';
+    return r.round.status;
+    }
       default: return null;
     }
   };
