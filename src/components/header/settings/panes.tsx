@@ -29,6 +29,7 @@ export function MapPane() {
   const markerSize = useApp(s => s.markerSize);
   const searchLimit = useApp(s => s.searchLimit);
   const showApiSettings = useApp(s => s.showApiSettings);
+  const persistMapView = useApp(s => s.persistMapView);
   const [secret, setSecret] = useState('');
 
   const submitSecret = () => {
@@ -44,7 +45,14 @@ export function MapPane() {
 
   return (
     <>
-      <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
+    
+      <div className={`${setSec} !mt-0.5`}>แผนที่</div>
+      <div className={frow}>
+        <span className={fl}>จำตำแหน่งแผนที่ล่าสุด</span>
+        <Switch checked={persistMapView} onChange={v => patchApp({ persistMapView: v, lastView: v ? useApp.getState().lastView : null })}/>
+      </div>
+
+      <div className={setSec}>หมุดบนแผนที่</div>
       <div className={frow}>
         <span className={fl}>ขนาดหมุด</span>
         <Seg<MarkerSize> items={[['small', 'เล็ก'], ['normal', 'ปกติ'], ['large', 'ใหญ่']]} value={markerSize} onChange={v => patchApp({ markerSize: v })} />
@@ -92,6 +100,74 @@ export function LookPane() {
   const glassLevel = useApp(s => s.glassLevel);
   const lbCfg = useApp(s => s.lbCfg);
   const layoutMode = useApp(s => s.layoutMode);
+
+  return (
+    <>
+      <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
+      <div className={frow}>
+        <span className={fl}>ธีมสี</span>
+        <Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} />
+      </div>
+      <div className={frow}>
+        <span className={fl}>สีหลัก (Primary)</span>
+        <div className="flex items-center gap-2">
+          <ColorButton
+            title="เลือกสีหลัก"
+            value={accentColor || getThemeAccent(theme)}
+            onChange={hex => patchApp({ accentColor: hex })}
+            className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
+            style={{ background: accentColor || getThemeAccent(theme) }}
+          />
+          {accentColor && (
+            <button type="button" className={`${btn} flex-none`} onClick={() => patchApp({ accentColor: '' })}>รีเซ็ต</button>
+          )}
+        </div>
+      </div>
+      <div className={frow}>
+        <span className={fl}>เมนูด้านซ้ายมือ</span>
+        <Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} />
+      </div>
+      <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
+      <div className={setSec}>การแสดงราคา</div>
+      <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
+      <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
+      <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
+      <div className={setSec}>การเคลื่อนไหว</div>
+      <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
+      <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
+      <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
+        {LB_FIELDS.map(([f, l]) => (
+          <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
+        ))}
+      </div>
+      <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
+    </>
+  );
+}
+
+/* ======================= ที่ดิน ======================= */
+export function PopupPane({ onClose }: { onClose: () => void }) {
+  const restrict = useApp(s => s.restrict);
+  const override = useApp(s => s.override);
+  const areas = useApp(s => s.areas);
+  const setRestrict = (on: boolean) => {
+    patchApp(on ? { restrict: true } : { restrict: false, override: false });
+    if (on && !areas.length) toast('ยังไม่มีพื้นที่กรอง — กด "วาดพื้นที่กรอง" ในแผงพื้นที่กรองจุด', 'warn');
+  };
+  const popupMode = useApp(s => s.popupMode);
+  const allPops = popupMode === 'all';
+  const labelOverlap = useApp(s => s.labelOverlap);
+  const popColors = useApp(s => s.popColors);
+  const statusVisible = useApp(s => s.statusVisible);
+  const popupCfg = useApp(s => s.popupCfg);
+  const reColor = useApp(s => s.reColor);
+  const chartTick = useApp(s => s.chartTick);
+  const showLandKindIcon = useApp(s => s.showLandKindIcon);
+  const chartTodayLine = useApp(s => s.chartTodayLine);
+  const chartForecast = useApp(s => s.chartForecast);
+  const labelNextDate = useApp(s => s.labelNextDate);
+  const hlSold = useApp(s => s.highlightSoldRounds);
+
   const detailRowHidden = useApp(s => s.detailRowHidden);
   const detailRowOrder = useApp(s => s.detailRowOrder);
 
@@ -151,9 +227,35 @@ export function LookPane() {
 
   return (
     <>
-      <div className={setSec}>แถวในแผงรายละเอียด</div>
-      <Hint>ลากที่ไอคอน ⠿ เพื่อจัดลำดับ · สว่าง = แสดง</Hint>
-      <div className="pt-1">
+      <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
+      <div className={frow}>
+        <span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span>
+        <button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button>
+        <Switch checked={restrict} onChange={setRestrict} />
+      </div>
+      <div className={frow}>
+        <span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span>
+        <Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} />
+      </div>
+
+      <div className={setSec}>ป็อปอัพ</div>
+      <div className={frow}>
+        <span className={fl}>ป็อปอัพหมุดที่ดิน</span>
+        <Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} />
+      </div>
+      {/* these two only apply when pop-ups are forced on for every parcel */}
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
+        <span className={fl}>ซ้อนกันได้</span>
+        <Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} />
+      </div>
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
+        <span className={fl}>วันที่นัดถัดไป</span>
+        <Switch checked={labelNextDate} onChange={v => patchApp({ labelNextDate: v })} />
+      </div>
+      <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
+      
+      <div className={setSec}>แผงรายละเอียด</div>
+      <div className="py-1 px-2 rounded-lg border border-line2">
         {detailRowList.map((k, i) => {
           const on = !detailRowHidden.includes(k);
           /* While dragging, the source row dims and the slot it would land in
@@ -181,127 +283,36 @@ export function LookPane() {
           );
         })}
       </div>
-      {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
-        <button
-          type="button"
-          className="mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
-          onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
-        >
-          <RotateCcw size={11} /> รีเซ็ตการเรียงแถว
-        </button>
-      )}
-      <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
-      <div className={frow}>
-        <span className={fl}>ธีมสี</span>
-        <Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} />
+      <div className="flex">
+        <Hint>ลากที่ ⠿ เพื่อจัดลำดับ</Hint>
+        {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
+          <button
+            type="button"
+            className="ml-auto mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
+            onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
+          >
+            <RotateCcw size={11} /> รีเซ็ต
+          </button>
+        )}
       </div>
-      <div className={frow}>
-        <span className={fl}>สีหลัก (Primary)</span>
-        <div className="flex items-center gap-2">
-          <ColorButton
-            title="เลือกสีหลัก"
-            value={accentColor || getThemeAccent(theme)}
-            onChange={hex => patchApp({ accentColor: hex })}
-            className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
-            style={{ background: accentColor || getThemeAccent(theme) }}
-          />
-          {accentColor && (
-            <button type="button" className={`${btn} flex-none`} onClick={() => patchApp({ accentColor: '' })}>รีเซ็ต</button>
-          )}
-        </div>
-      </div>
-      <div className={frow}>
-        <span className={fl}>เมนูด้านซ้ายมือ</span>
-        <Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} />
-      </div>
-      <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
-      <div className={setSec}>การแสดงราคา</div>
-      <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
-      <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
-      <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
-      <div className={setSec}>การเคลื่อนไหว</div>
-      <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
-      <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
-      <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
-        {LB_FIELDS.map(([f, l]) => (
-          <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
-        ))}
-      </div>
-      <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
-    </>
-  );
-}
 
-/* ======================= ที่ดิน ======================= */
-export function PopupPane({ onClose }: { onClose: () => void }) {
-  const restrict = useApp(s => s.restrict);
-  const override = useApp(s => s.override);
-  const persistMapView = useApp(s => s.persistMapView);
-  const areas = useApp(s => s.areas);
-  const setRestrict = (on: boolean) => {
-    patchApp(on ? { restrict: true } : { restrict: false, override: false });
-    if (on && !areas.length) toast('ยังไม่มีพื้นที่กรอง — กด "วาดพื้นที่กรอง" ในแผงพื้นที่กรองจุด', 'warn');
-  };
-  const popupMode = useApp(s => s.popupMode);
-  const allPops = popupMode === 'all';
-  const labelOverlap = useApp(s => s.labelOverlap);
-  const popColors = useApp(s => s.popColors);
-  const statusVisible = useApp(s => s.statusVisible);
-  const popupCfg = useApp(s => s.popupCfg);
-  const reColor = useApp(s => s.reColor);
-  const chartTick = useApp(s => s.chartTick);
-  const showLandKindIcon = useApp(s => s.showLandKindIcon);
-  const chartTodayLine = useApp(s => s.chartTodayLine);
-  const chartForecast = useApp(s => s.chartForecast);
-  const labelNextDate = useApp(s => s.labelNextDate);
-  const hlSold = useApp(s => s.highlightSoldRounds);
-
-  return (
-    <>
-      <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
+      <div className={setSec}>ตารางรอบขาย</div>
       <div className={frow}>
-        <span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span>
-        <button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button>
-        <Switch checked={restrict} onChange={setRestrict} />
-      </div>
-      <div className={frow}>
-        <span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span>
-        <Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} />
-      </div>
-      <div className={frow}>
-        <span className={fl}>จดจำตำแหน่งแผนที่เมื่อเข้าสู่ระบบ</span>
-        <Switch
-          checked={persistMapView}
-          onChange={v => patchApp({ persistMapView: v, lastView: v ? useApp.getState().lastView : null })}
-        />
-      </div>
-      <Hint>เปิดเพื่อกลับไปที่เดิมทุกครั้งที่เข้าสู่ระบบ ปิดเพื่อเริ่มที่มุมมองเริ่มต้นทุกครั้ง</Hint>
-
-      <div className={setSec}>ป็อปอัพ</div>
-      <div className={frow}>
-        <span className={fl}>ป็อปอัพหมุดที่ดิน</span>
-        <Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} />
-      </div>
-      {/* these two only apply when pop-ups are forced on for every parcel */}
-      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
-        <span className={fl}>ซ้อนกันได้</span>
-        <Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} />
-      </div>
-      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
-        <span className={fl}>วันที่นัดขายถัดไปบนป้าย</span>
-        <Switch checked={labelNextDate} onChange={v => patchApp({ labelNextDate: v })} />
-      </div>
-      <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
-      <div className={frow}>
-        <span className={fl}>หรี่รอบที่ขายไปแล้วในตารางนัด</span>
+        <span className={fl}>สีรอบถัดไปอ่อนลง</span>
         <Switch checked={hlSold} onChange={v => patchApp({ highlightSoldRounds: v })} />
       </div>
-      <Hint>เมื่อแปลงขายไปแล้ว รอบที่ขายและทุกรอบหลังจากนั้นจะถูกหรี่ลง ปิดเพื่อให้ทุกรอบเป็นสีเดียวกัน</Hint>
 
       <div className={setSec}>กราฟราคา</div>
+      <div className={frow}>
+        <span className={fl}>เส้นเวลา</span>
+        <Seg<ChartTick>
+          items={[['none', 'ไม่แสดง'], ['year', 'ทุกปี'], ['m6', '6 เดือน'], ['m4', '4 เดือน'], ['m3', '3 เดือน']]}
+          value={chartTick}
+          onChange={v => patchApp({ chartTick: v })}
+        />
+      </div>
       <div className={frow}><span className={fl}>เส้นวันนี้</span><Switch checked={chartTodayLine} onChange={v => patchApp({ chartTodayLine: v })} /></div>
-      <div className={frow}><span className={fl}>เส้นประมาณราคารอบถัดไป</span><Switch checked={chartForecast} onChange={v => patchApp({ chartForecast: v })} /></div>
-      <Hint>เส้นประมาณเป็นเส้นประที่โปร่งใส แยกจากเส้นที่ขายจริง</Hint>
+      <div className={frow}><span className={fl}>ราคารอบถัดไป</span><Switch checked={chartForecast} onChange={v => patchApp({ chartForecast: v })} /></div>
 
       <div className={setSec}>สถานะและสี</div>
       {STATUS_KEYS.map(k => (
@@ -332,16 +343,6 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
             const cur = useApp.getState().popupCfg;
             patchApp({ popupCfg: { ...cur, re: { ...cur.re, resale: v } } });
           }}
-        />
-      </div>
-
-      <div className={setSec}>กราฟราคา</div>
-      <div className={frow}>
-        <span className={fl}>เส้นเวลา</span>
-        <Seg<ChartTick>
-          items={[['none', 'ไม่แสดง'], ['year', 'ทุกปี'], ['m6', '6 เดือน'], ['m4', '4 เดือน'], ['m3', '3 เดือน']]}
-          value={chartTick}
-          onChange={v => patchApp({ chartTick: v })}
         />
       </div>
 

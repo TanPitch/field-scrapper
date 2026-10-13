@@ -14,7 +14,7 @@ export const inp =
 export const frow = 'flex flex-wrap items-center gap-2.5 border-b border-line py-2.5';
 export const fl = 'min-w-0 flex-1 text-[12.5px]';
 export const hint = 'py-[9px] text-[10.5px] leading-[1.6] text-dim2';
-export const setSec = 'mb-0.5 mt-4 text-[10.5px] font-semibold uppercase tracking-[.1em] text-dim first:mt-0';
+export const setSec = 'mb-0.5 mt-6 text-[10.5px] font-semibold uppercase tracking-[.1em] text-dim first:mt-0';
 export const detSub = 'mb-[7px] mt-3.5 text-[10.5px] font-semibold uppercase tracking-[.1em] text-dim';
 export const resCap = 'pt-2 text-[10.5px] text-dim2';
 

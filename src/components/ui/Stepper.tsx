@@ -33,7 +33,7 @@ export function Stepper({ value, onChange, step, sep = false, title, placeholder
   };
 
   return (
-    <div className={`flex h-7 min-w-0 items-stretch overflow-hidden rounded-lg border border-line2 bg-bg ${compact ? 'w-[104px] flex-none' : 'flex-1'}`}>
+    <div className={`flex h-7 min-w-0 items-stretch overflow-hidden rounded-lg border border-line2 bg-bg ${compact ? 'w-[114px] flex-none' : 'flex-1'}`}>
       <button type="button" {...useTipProps('ลด')} className={stepBtn} onMouseDown={e => e.preventDefault()} onClick={() => bump(-1)}>−</button>
       <input
         inputMode="numeric"
