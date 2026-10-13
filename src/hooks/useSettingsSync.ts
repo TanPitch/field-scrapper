@@ -39,7 +39,7 @@ const SYNCED_PREFS = [
   'statusVisible', 'popColors', 'reColor', 'popupCfg', 'lbCfg', 'popupMode',
   'showLandKindIcon', 'priceBath', 'priceSpace', 'chartTick', 'markerSize',
   'labelSold', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
-  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'persistMapView', 'lastView', 'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
+  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'persistMapView', 'lastView', 'sectionsCollapsed', 'detailRowHidden', 'detailRowOrder', 'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
 ] as const;
 
 export interface SyncState {

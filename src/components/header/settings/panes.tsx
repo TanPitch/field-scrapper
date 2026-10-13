@@ -1,4 +1,4 @@
-import { Eye, EyeOff, RotateCcw, ScanLine } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, RotateCcw, ScanLine } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import RELEASE_NOTES from '../../../../RELEASE_NOTES.md?raw';
 import {
@@ -100,12 +100,107 @@ export function LookPane() {
   const glassLevel = useApp(s => s.glassLevel);
   const lbCfg = useApp(s => s.lbCfg);
   const layoutMode = useApp(s => s.layoutMode);
+  const detailRowHidden = useApp(s => s.detailRowHidden);
+  const detailRowOrder = useApp(s => s.detailRowOrder);
+  const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const rowEls = useRef<(HTMLDivElement | null)[]>([]);
 
-  return (
+  const detailRowList: string[] = [];
+  for (const k of detailRowOrder) if (DETAIL_ROWS.includes(k as never) && !detailRowList.includes(k)) detailRowList.push(k);
+  for (const k of DETAIL_ROWS) if (!detailRowList.includes(k)) detailRowList.push(k);
+
+  const dragStart = (e: React.PointerEvent, i: number) => {
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    setDragIdx(i);
+    setOverIdx(i);
+  };
+  const dragMove = (e: React.PointerEvent, i: number) => {
+    if (dragIdx == null) return;
+    let target = i;
+    for (let k = 0; k < detailRowList.length; k++) {
+      const el = rowEls.current[k];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { target = k; break; }
+      target = k;
+    }
+    setOverIdx(target);
+  };
+  const dragEnd = () => {
+    if (dragIdx != null && overIdx != null && dragIdx !== overIdx) {
+      const next = [...detailRowList];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(overIdx, 0, moved);
+      patchApp({ detailRowOrder: next });
+    }
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+  const toggleRow = (k: string, on: boolean) => patchApp({
+    detailRowHidden: on ? detailRowHidden.filter(x => x !== k) : [...detailRowHidden, k],
+  });
+
+return (
     <>
-      <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
-      <div className={frow}>
-        <span className={fl}>ธีมสี</span>
+    {/* Master collapse. All the bordered lists move together, so one toggle
+        either folds the whole pane down to its headers or opens it up. */}
+    <button
+      type="button"
+      onClick={() => patchApp({ sectionsCollapsed: !sectionsCollapsed })}
+      className="mb-2 flex w-full cursor-pointer items-center gap-1.5 rounded-lg border border-line2 px-2.5 py-[6px] text-[11px] text-dim hover:border-line3 hover:text-ink"
+    >
+      <ChevronDown size={13} className={`flex-none transition-transform ${sectionsCollapsed ? '' : 'rotate-180'}`} />
+      <span>{sectionsCollapsed ? 'ขยายรายการแถว' : 'ย่อรายการแถว'}</span>
+    </button>
+
+    <div className={setSec}>แถวในแผงรายละเอียด</div>
+    {!sectionsCollapsed && (
+      <>
+        <Hint>ลากที่ไอคอน ⠿ เพื่อจัดลำดับ · สว่าง = แสดง</Hint>
+        <div className="pt-1">
+          {detailRowList.map((k, i) => {
+            const on = !detailRowHidden.includes(k);
+            const dragging = dragIdx === i;
+            const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
+            return (
+              <div
+                key={k}
+                ref={el => { rowEls.current[i] = el; }}
+                className={`flex items-center gap-1.5 rounded py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'} ${dragging ? 'opacity-35' : ''} ${dropping ? 'bg-accent/15 ring-1 ring-accent/40' : ''}`}
+              >
+                <button
+                  type="button"
+                  aria-label={`ลากเพื่อจัดลำดับ ${k}`}
+                  onPointerDown={e => dragStart(e, i)}
+                  onPointerMove={e => dragMove(e, i)}
+                  onPointerUp={dragEnd}
+                  onPointerCancel={dragEnd}
+                  className="size-[20px] flex-none cursor-grab touch-none rounded text-[11px] leading-none text-dim2 hover:bg-panel2 hover:text-ink active:cursor-grabbing"
+                >⠿</button>
+                <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
+                <Switch checked={on} onChange={v => toggleRow(k, v)} />
+              </div>
+            );
+          })}
+        </div>
+        {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
+          <button
+            type="button"
+            className="mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
+            onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
+          >
+            <RotateCcw size={11} /> รีเซ็ตการเรียงแถว
+          </button>
+        )}
+</>
+    )}
+
+    <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
+    <div className={frow}>
+    <span className={fl}>ธีมสี</span>
         <Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} />
       </div>
       <div className={frow}>

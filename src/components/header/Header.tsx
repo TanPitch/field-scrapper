@@ -38,13 +38,13 @@ const ADMIN_ONLY: SetTab[] = ['users'];
    broad — one per control family, not per control — so a near miss still lands
    somewhere useful instead of returning nothing. */
 const SETTING_INDEX: { terms: string[]; tab: SetTab }[] = [
-  { tab: 'look', terms: ['รูปลักษณ์', 'ธีม', 'theme', 'สีหลัก', 'accent', 'หน้าจอ', 'layout', 'ทึบ', 'โปร่งใส', 'ราคา', 'bath', 'comma', 'ลดการเคลื่อนไหว', 'reduce', 'lightbox', 'แถวในแผงรายละเอียด'] },
-  { tab: 'map', terms: ['แผนที่', 'map', 'basemap', 'หมุด', 'cctv', 'ประตูน้ำ', 'รถเมล์', 'รถไฟ', 'ปลดล็อก', 'รหัสผ่าน'] },
-  { tab: 'popup', terms: ['ป็อปอัพ', 'popup', 'ป้าย', 'label', 'ไอคอน', 'หรี่', 'dim', 'กราฟ', 'วันนี้', 'ประมาณ', 'รอบถัดไป', 'ชนิดที่ดิน'] },
-  { tab: 'draw', terms: ['รูปวาด', 'วาด', 'draw', 'เส้น', 'วงกลม', 'พื้นที่', 'สีเส้น', 'ความหนา', 'ป้ายกำกับ'] },
-  { tab: 'search', terms: ['ค้นหา', 'search', 'google', 'api', 'เอกสาร', 'doc'] },
-  { tab: 'server', terms: ['เซิร์ฟเวอร์', 'server', 'ฐานข้อมูล', 'database', 'cron', 'pipeline', 'สถานะ', 'log'] },
-  { tab: 'user', terms: ['ผู้ใช้', 'user', 'บัญชี', 'รหัสผ่าน', '2fa', 'otp', 'avatar', 'สลับผู้ใช้'] },
+  { tab: 'look', terms: ['รูปลักษณ์', 'ธีม', 'theme', 'สีหลัก', 'accent', 'หน้าจอ', 'layout', 'ทึบ', 'โปร่งใส', 'ราคา', 'bath', 'comma', 'ลดการเคลื่อนไหว', 'reduce', 'lightbox', 'แถวในแผงรายละเอียด', 'เลขที่โฉนด', 'ขนาดที่ดิน', 'พิกัด', 'ตำแหน่งบนแผนที่'] },
+  { tab: 'map', terms: ['แผนที่', 'map', 'basemap', 'หมุด', 'ประตูน้ำ', 'รถเมล์', 'รถไฟ', 'cctv', 'ปลดล็อก', 'รหัสผ่าน', 'พื้นที่'] },
+  { tab: 'popup', terms: ['ป็อปอัพ', 'popup', 'ป้าย', 'label', 'ไอคอน', 'หรี่', 'dim', 'กราฟ', 'วันนี้', 'ประมาณ', 'รอบถัดไป', 'ชนิดที่ดิน', 'ซ้อนกันได้', 'นัดขายถัดไป', 'สถานะและสี'] },
+  { tab: 'draw', terms: ['รูปวาด', 'วาด', 'draw', 'เส้น', 'วงกลม', 'พื้นที่', 'สีเส้น', 'ความหนา', 'ป้ายกำกับ', 'ระยะ'] },
+  { tab: 'search', terms: ['ค้นหา', 'search', 'google', 'api', 'เอกสาร', 'doc', 'test'] },
+  { tab: 'server', terms: ['เซิร์ฟเวอร์', 'server', 'ฐานข้อมูล', 'database', 'cron', 'pipeline', 'สถานะ', 'log', 'migrate'] },
+  { tab: 'user', terms: ['ผู้ใช้', 'user', 'บัญชี', 'รหัสผ่าน', '2fa', 'otp', 'avatar', 'สลับผู้ใช้', 'อีเมล'] },
   { tab: 'users', terms: ['จัดการผู้ใช้', 'เพิ่มผู้ใช้', 'สิทธิ์', 'role', 'admin'] },
   { tab: 'about', terms: ['เกี่ยวกับ', 'about', 'เวอร์ชัน', 'version', 'อัปเดต', 'changelog'] },
 ];
@@ -109,13 +109,33 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-1">
           {(needle ? hits : tabs).map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => { patchApp({ setTab: id }); setQ(''); }}
-              className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-[9px] text-left text-xs font-medium ${tab === id ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'}`}
-            >
-              <Icon size={15} className="flex-none" /><span>{label}</span>
-            </button>
+            <div key={id}>
+              <button
+                onClick={() => { patchApp({ setTab: id }); setQ(''); }}
+                className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-[9px] text-left text-xs font-medium ${tab === id ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'}`}
+              >
+                <Icon size={15} className="flex-none" /><span>{label}</span>
+              </button>
+              {/* Under a search, show the individual settings that matched, not
+                  just the tab. Hitting one jumps to the tab and clears the box —
+                  the app has no deep links to a single control, so this is the
+                  shortest honest path. */}
+              {needle && (
+                <ul className="mb-1 ml-[26px] border-l border-line pl-2">
+                  {(SETTING_INDEX.find(g => g.tab === id)?.terms ?? [])
+                    .filter(k => k.toLowerCase().includes(needle))
+                    .slice(0, 6)
+                    .map(k => (
+                      <li key={k}>
+                        <button
+                          onClick={() => { patchApp({ setTab: id }); setQ(''); }}
+                          className="w-full cursor-pointer truncate rounded py-[3px] text-left text-[10.5px] text-dim2 hover:text-accent"
+                        >{k}</button>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
           ))}
           {needle && hits.length === 0 && (
             <div className="px-2.5 py-3 text-[11px] leading-snug text-dim2">ไม่พบการตั้งค่าที่ตรงกับ “{q.trim()}”</div>

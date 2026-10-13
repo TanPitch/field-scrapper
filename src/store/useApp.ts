@@ -34,6 +34,8 @@ export interface AppState {
   persistMapView: boolean;
   /** Last camera position, saved so the next login resumes there. */
   lastView: { lng: number; lat: number; zoom: number } | null;
+  /** Collapse the settings sections down to their headers. */
+  sectionsCollapsed: boolean;
   /** Reveals the API/server settings block in the header. */
   showApiSettings: boolean;
   /** Detail-panel rows the user has hidden. */
@@ -164,6 +166,7 @@ export const useApp = create<AppState>(set => ({
   chartForecast: true,
   persistMapView: true,
   lastView: null,
+  sectionsCollapsed: false,
   showApiSettings: false,
   detailRowHidden: [],
   detailRowOrder: [],
