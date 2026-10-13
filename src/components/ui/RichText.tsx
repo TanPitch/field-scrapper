@@ -4,6 +4,7 @@ import {
   type RichTextStyle,
 } from '../../lib/richText';
 import { useTipProps } from './Tip';
+import { ColorButton } from './ColorButton';
 
 /**
  * Renders a label + note with their own styling.
@@ -159,6 +160,18 @@ function StyleRow({
               onClick={() => onChange({ ...s, bg: s.bg === c ? '' : c })}
             />
           ))}
+          {/* Custom colour. ColorButton is an HSV picker in a portal — not a
+              native <input type="color">, which renders the OS dialog, ignores
+              the panel's own contrast rules, and cannot be themed. */}
+          <ColorButton
+            value={s.bg || '#000000'}
+            title="เลือกสีพื้นหลังเอง"
+            onChange={hex => onChange({ ...s, bg: hex })}
+            className="size-[15px] flex-none rounded-[4px] border border-dashed border-line2"
+            style={{
+              background: s.bg || 'repeating-conic-gradient(rgba(127,127,127,.5) 0% 25%, transparent 0% 50%) 50% / 6px 6px',
+            }}
+          />
         </div>
       )}
       {!compact && (
@@ -174,6 +187,15 @@ function StyleRow({
               onClick={() => onChange({ ...s, fg: s.fg === c ? '' : c })}
             />
           ))}
+          <ColorButton
+            value={s.fg || '#000000'}
+            title="เลือกสีตัวอักษรเอง"
+            onChange={hex => onChange({ ...s, fg: hex })}
+            className="size-[15px] flex-none rounded-[4px] border border-dashed border-line2"
+            style={{
+              background: s.fg || 'repeating-conic-gradient(rgba(127,127,127,.5) 0% 25%, transparent 0% 50%) 50% / 6px 6px',
+            }}
+          />
         </div>
       )}
     </div>
@@ -248,11 +270,16 @@ export function RichTextEditor({
         placeholder="ชื่อ"
         className="mb-1 w-full rounded-[6px] border border-line2 bg-bg px-2 py-1 text-[12px] outline-none focus:border-accent"
       />
-      <input
+/* A textarea, not an input. A note is prose — it wraps to several lines, and
+         a single-line field forces the user to write "see above" or scroll a
+         one-line box sideways. Grows to a few rows rather than a fixed height
+         so a long note is readable while editing. */
+      <textarea
         value={n}
         onChange={e => setN(e.target.value)}
         placeholder="หมายเหตุ"
-        className="mb-1.5 w-full rounded-[6px] border border-line2 bg-bg px-2 py-1 text-[11px] outline-none focus:border-accent"
+        rows={2}
+        className="mb-1.5 w-full resize-y rounded-[6px] border border-line2 bg-bg px-2 py-1 text-[11px] leading-snug outline-none focus:border-accent"
       />
 
       <div className="mb-1 text-[9.5px] font-semibold uppercase tracking-[.08em] text-dim2">ชื่อ</div>

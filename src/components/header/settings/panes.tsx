@@ -100,142 +100,41 @@ export function LookPane() {
   const glassLevel = useApp(s => s.glassLevel);
   const lbCfg = useApp(s => s.lbCfg);
   const layoutMode = useApp(s => s.layoutMode);
-  const detailRowHidden = useApp(s => s.detailRowHidden);
-  const detailRowOrder = useApp(s => s.detailRowOrder);
-  const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
-  const rowEls = useRef<(HTMLDivElement | null)[]>([]);
 
-  const detailRowList: string[] = [];
-  for (const k of detailRowOrder) if (DETAIL_ROWS.includes(k as never) && !detailRowList.includes(k)) detailRowList.push(k);
-  for (const k of DETAIL_ROWS) if (!detailRowList.includes(k)) detailRowList.push(k);
-
-  const dragStart = (e: React.PointerEvent, i: number) => {
-    e.preventDefault();
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setDragIdx(i);
-    setOverIdx(i);
-  };
-  const dragMove = (e: React.PointerEvent, i: number) => {
-    if (dragIdx == null) return;
-    let target = i;
-    for (let k = 0; k < detailRowList.length; k++) {
-      const el = rowEls.current[k];
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (e.clientY < r.top + r.height / 2) { target = k; break; }
-      target = k;
-    }
-    setOverIdx(target);
-  };
-  const dragEnd = () => {
-    if (dragIdx != null && overIdx != null && dragIdx !== overIdx) {
-      const next = [...detailRowList];
-      const [moved] = next.splice(dragIdx, 1);
-      next.splice(overIdx, 0, moved);
-      patchApp({ detailRowOrder: next });
-    }
-    setDragIdx(null);
-    setOverIdx(null);
-  };
-  const toggleRow = (k: string, on: boolean) => patchApp({
-    detailRowHidden: on ? detailRowHidden.filter(x => x !== k) : [...detailRowHidden, k],
-  });
-
-return (
+  return (
     <>
-    {/* Master collapse. All the bordered lists move together, so one toggle
-        either folds the whole pane down to its headers or opens it up. */}
-    <button
-      type="button"
-      onClick={() => patchApp({ sectionsCollapsed: !sectionsCollapsed })}
-      className="mb-2 flex w-full cursor-pointer items-center gap-1.5 rounded-lg border border-line2 px-2.5 py-[6px] text-[11px] text-dim hover:border-line3 hover:text-ink"
-    >
-      <ChevronDown size={13} className={`flex-none transition-transform ${sectionsCollapsed ? '' : 'rotate-180'}`} />
-      <span>{sectionsCollapsed ? 'ขยายรายการแถว' : 'ย่อรายการแถว'}</span>
-    </button>
-
-    <div className={setSec}>แถวในแผงรายละเอียด</div>
-    {!sectionsCollapsed && (
-      <>
-        <Hint>ลากที่ไอคอน ⠿ เพื่อจัดลำดับ · สว่าง = แสดง</Hint>
-        <div className="pt-1">
-          {detailRowList.map((k, i) => {
-            const on = !detailRowHidden.includes(k);
-            const dragging = dragIdx === i;
-            const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
-            return (
-              <div
-                key={k}
-                ref={el => { rowEls.current[i] = el; }}
-                className={`flex items-center gap-1.5 rounded py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'} ${dragging ? 'opacity-35' : ''} ${dropping ? 'bg-accent/15 ring-1 ring-accent/40' : ''}`}
-              >
-                <button
-                  type="button"
-                  aria-label={`ลากเพื่อจัดลำดับ ${k}`}
-                  onPointerDown={e => dragStart(e, i)}
-                  onPointerMove={e => dragMove(e, i)}
-                  onPointerUp={dragEnd}
-                  onPointerCancel={dragEnd}
-                  className="size-[20px] flex-none cursor-grab touch-none rounded text-[11px] leading-none text-dim2 hover:bg-panel2 hover:text-ink active:cursor-grabbing"
-                >⠿</button>
-                <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
-                <Switch checked={on} onChange={v => toggleRow(k, v)} />
-              </div>
-            );
-          })}
-        </div>
-        {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
-          <button
-            type="button"
-            className="mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
-            onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
-          >
-            <RotateCcw size={11} /> รีเซ็ตการเรียงแถว
-          </button>
-        )}
-</>
-    )}
-
     <div className={`${setSec} !mt-0.5`}>รูปแบบหน้าจอ และธีมสี</div>
+    <div className={frow}><span className={fl}>ธีมสี</span><Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} /></div>
     <div className={frow}>
-    <span className={fl}>ธีมสี</span>
-        <Seg<Theme> items={THEMES} value={theme} onChange={v => patchApp({ theme: v })} />
+      <span className={fl}>สีหลัก (Primary)</span>
+      <div className="flex items-center gap-2">
+        <ColorButton
+          title="เลือกสีหลัก"
+          value={accentColor || getThemeAccent(theme)}
+          onChange={hex => patchApp({ accentColor: hex })}
+          className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
+          style={{ background: accentColor || getThemeAccent(theme) }}
+        />
+        {accentColor && (
+          <button type="button" className={`${btn} flex-none`} onClick={() => patchApp({ accentColor: '' })}>รีเซ็ต</button>
+        )}
       </div>
-      <div className={frow}>
-        <span className={fl}>สีหลัก (Primary)</span>
-        <div className="flex items-center gap-2">
-          <ColorButton
-            title="เลือกสีหลัก"
-            value={accentColor || getThemeAccent(theme)}
-            onChange={hex => patchApp({ accentColor: hex })}
-            className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
-            style={{ background: accentColor || getThemeAccent(theme) }}
-          />
-          {accentColor && (
-            <button type="button" className={`${btn} flex-none`} onClick={() => patchApp({ accentColor: '' })}>รีเซ็ต</button>
-          )}
-        </div>
-      </div>
-      <div className={frow}>
-        <span className={fl}>เมนูด้านซ้ายมือ</span>
-        <Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} />
-      </div>
-      <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
-      <div className={setSec}>การแสดงราคา</div>
-      <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
-      <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
-      <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
-      <div className={setSec}>การเคลื่อนไหว</div>
-      <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
-      <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
-      <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
-        {LB_FIELDS.map(([f, l]) => (
-          <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
-        ))}
-      </div>
-      <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
+    </div>
+    <div className={frow}><span className={fl}>เมนูด้านซ้ายมือ</span><Seg<LayoutMode> items={[['docked', 'ชิดขอบ'], ['floating', 'ลอย']]} value={layoutMode} onChange={v => patchApp({ layoutMode: v })} /></div>
+    <div className={frow}><span className={fl}>พื้นหลังแบบทึบ/โปร่งใส</span><Seg<GlassLevel> items={[['none', 'ทึบ'], ['transparent', 'โปร่งใส']]} value={glassLevel} onChange={v => patchApp({ glassLevel: v })} /></div>
+    <div className={setSec}>การแสดงราคา</div>
+    <div className={frow}><span className={fl}>แสดง ฿ นำหน้าราคา</span><Switch checked={bath} onChange={v => patchApp({ priceBath: v })} /></div>
+    <div className={frow}><span className={fl}>เว้นวรรคระหว่าง comma</span><Switch checked={space} onChange={v => patchApp({ priceSpace: v })} /></div>
+    <Hint>ตัวอย่าง: <b className="text-xs font-semibold">{formatMoney(1234567, { bath, space })}</b></Hint>
+    <div className={setSec}>การเคลื่อนไหว</div>
+    <div className={frow}><span className={fl}>ลดการเคลื่อนไหว (Reduce Motion)</span><Switch checked={reduce} onChange={v => patchApp({ reduceMotion: v })} /></div>
+    <div className={setSec}>Lightbox — ข้อมูลที่แสดงเหนือภาพขยาย</div>
+    <div className="flex flex-wrap gap-1.5 pb-0.5 pt-2">
+      {LB_FIELDS.map(([f, l]) => (
+        <button key={f} type="button" className={pillCls(lbCfg[f])} onClick={() => { const cur = useApp.getState().lbCfg; patchApp({ lbCfg: { ...cur, [f]: !cur[f] } }); }}>{l}</button>
+      ))}
+    </div>
+    <Hint>ปิดทั้งหมดเพื่อไม่แสดงข้อมูลใดใน Lightbox</Hint>
     </>
   );
 }
@@ -262,7 +161,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const chartForecast = useApp(s => s.chartForecast);
   const labelNextDate = useApp(s => s.labelNextDate);
   const hlSold = useApp(s => s.highlightSoldRounds);
-
+  
+  const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
   const detailRowHidden = useApp(s => s.detailRowHidden);
   const detailRowOrder = useApp(s => s.detailRowOrder);
 
@@ -323,21 +223,11 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
-      <div className={frow}>
-        <span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span>
-        <button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button>
-        <Switch checked={restrict} onChange={setRestrict} />
-      </div>
-      <div className={frow}>
-        <span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span>
-        <Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} />
-      </div>
+      <div className={frow}><span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span><button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button><Switch checked={restrict} onChange={setRestrict} /></div>
+      <div className={frow}><span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span><Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} /></div>
 
       <div className={setSec}>ป็อปอัพ</div>
-      <div className={frow}>
-        <span className={fl}>ป็อปอัพหมุดที่ดิน</span>
-        <Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} />
-      </div>
+      <div className={frow}><span className={fl}>ป็อปอัพหมุดที่ดิน</span><Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} /></div>
       {/* these two only apply when pop-ups are forced on for every parcel */}
       <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
         <span className={fl}>ซ้อนกันได้</span>
@@ -349,47 +239,62 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       </div>
       <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
       
-      <div className={setSec}>แผงรายละเอียด</div>
-      <div className="py-1 px-2 rounded-lg border border-line2">
-        {detailRowList.map((k, i) => {
-          const on = !detailRowHidden.includes(k);
-          /* While dragging, the source row dims and the slot it would land in
-             is marked, so the outcome is visible before releasing. */
-          const dragging = dragIdx === i;
-          const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
-          return (
-            <div
-              key={k}
-              ref={el => { rowEls.current[i] = el; }}
-              className={`flex items-center gap-1.5 rounded py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'} ${dragging ? 'opacity-35' : ''} ${dropping ? 'bg-accent/15 ring-1 ring-accent/40' : ''}`}
-            >
-              <button
-                type="button"
-                aria-label={`ลากเพื่อจัดลำดับ ${k}`}
-                onPointerDown={e => dragStart(e, i)}
-                onPointerMove={e => dragMove(e, i)}
-                onPointerUp={dragEnd}
-                onPointerCancel={dragEnd}
-                className="size-[20px] flex-none cursor-grab touch-none rounded text-[11px] leading-none text-dim2 hover:bg-panel2 hover:text-ink active:cursor-grabbing"
-              >⠿</button>
-              <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
-              <Switch checked={on} onChange={v => toggleRow(k, v)} />
-            </div>
-          );
-        })}
+      <div className="flex mt-6">
+        <div className={`${setSec} !mb-0`}>แผงรายละเอียด</div>
+        <button
+          type="button"
+          onClick={() => patchApp({ sectionsCollapsed: !sectionsCollapsed })}
+          className="mb-1.5 ml-auto flex cursor-pointer items-center gap-1.5 rounded border border-line2 px-2.5 text-[11px] text-dim hover:border-line3 hover:text-ink"
+        >
+          <ChevronDown size={13} className={`flex-none transition-transform ${sectionsCollapsed ? '' : 'rotate-180'}`} />
+          <span>{sectionsCollapsed ? 'แสดง' : 'ซ่อน'}</span>
+        </button>
       </div>
-      <div className="flex">
-        <Hint>ลากที่ ⠿ เพื่อจัดลำดับ</Hint>
-        {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
-          <button
+      {!sectionsCollapsed && (
+      <>
+        <div className="py-1 px-2 rounded-lg border border-line2">
+          {detailRowList.map((k, i) => {
+            const on = !detailRowHidden.includes(k);
+            /* While dragging, the source row dims and the slot it would land in
+              is marked, so the outcome is visible before releasing. */
+            const dragging = dragIdx === i;
+            const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
+            return (
+              <div
+                key={k}
+                ref={el => { rowEls.current[i] = el; }}
+                className={`flex items-center gap-1.5 rounded py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'} ${dragging ? 'opacity-35' : ''} ${dropping ? 'bg-accent/15 ring-1 ring-accent/40' : ''}`}
+              >
+                <button
+                  type="button"
+                  aria-label={`ลากเพื่อจัดลำดับ ${k}`}
+                  onPointerDown={e => dragStart(e, i)}
+                  onPointerMove={e => dragMove(e, i)}
+                  onPointerUp={dragEnd}
+                  onPointerCancel={dragEnd}
+                  className="size-[20px] flex-none cursor-grab touch-none rounded text-[11px] leading-none text-dim2 hover:bg-panel2 hover:text-ink active:cursor-grabbing"
+                >⠿</button>
+                <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
+                <Switch checked={on} onChange={v => toggleRow(k, v)} />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex mt-1.5">
+          <Hint>ลากที่ ⠿ เพื่อจัดลำดับ</Hint>
+          {(detailRowOrder.length > 0 || detailRowHidden.length > 0) && (
+            <button
             type="button"
-            className="ml-auto mt-1.5 flex items-center gap-1 text-[11px] text-dim hover:text-ink"
+            className="mb-2 ml-auto flex cursor-pointer items-center gap-1.5 rounded border border-line2 px-2.5 text-[11px] text-dim hover:border-line3 hover:text-ink"
             onClick={() => patchApp({ detailRowOrder: [], detailRowHidden: [] })}
-          >
-            <RotateCcw size={11} /> รีเซ็ต
-          </button>
-        )}
-      </div>
+            >
+              <RotateCcw size={11} /> รีเซ็ต
+            </button>
+          )}
+        </div>
+      </>
+      )}
+      {sectionsCollapsed && (<div className='text-[10.5px] leading-[1.6] text-dim2'>แผงรายละเอียดซ่อนอยู่ - เลือกแสดงแผงรายละเอียด</div>)}
 
       <div className={setSec}>ตารางรอบขาย</div>
       <div className={frow}>
