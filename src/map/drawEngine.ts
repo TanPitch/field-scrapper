@@ -31,8 +31,51 @@ export const shapeMeta = (d: DrawShape): string => shapeMetaLines(d).join(' · '
 export function labelPos(d: DrawShape | { type: 'poly'; coords: LngLat[] }): LngLat {
   if (d.type === 'circle') return destPoint(d.center, 0, Math.max(5, d.r * 0.3));
   if (d.type === 'line') return midPointByLength(d.coords);
-  const s = d.coords.reduce<LngLat>((a, c) => [a[0] + c[0], a[1] + c[1]], [0, 0]);
-  return [s[0] / d.coords.length, s[1] / d.coords.length];
+
+  /* Centroid of the ring, not the average of its vertices.
+     Averaging vertices puts the label wherever the vertex cloud balances, which
+     for an L-shape or any concave polygon is outside the shape entirely — the
+     label then sits over the corner spikes it was meant to describe. The
+     shoelace centroid is area-weighted, so it tracks the enclosed land.
+
+     It can still fall outside for a ring that loops around a hole or has a very
+     thin neck, hence the containment test and fallback below. */
+  const ring = closeRing(d.coords);
+  let a2 = 0, cx = 0, cy = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
+    const f = x1 * y2 - x2 * y1;
+    a2 += f;
+    cx += (x1 + x2) * f;
+    cy += (y1 + y2) * f;
+  }
+  if (Math.abs(a2) > 1e-12) {
+    const c: LngLat = [cx / (3 * a2), cy / (3 * a2)];
+    if (pointInRing(c, ring)) return c;
+  }
+
+  /* Outside the shape: use the midpoint of the longest edge. An edge midpoint
+     is on the boundary rather than inside, but it is always on the shape the
+     user drew, which beats a label floating over empty ground. */
+  let best: LngLat = ring[0], bestM = -1;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const m = havM(ring[i], ring[i + 1]);
+    if (m > bestM) { bestM = m; best = [(ring[i][0] + ring[i + 1][0]) / 2, (ring[i][1] + ring[i + 1][1]) / 2]; }
+  }
+  return best;
+}
+
+/** Ray-casting containment test. Standard even-odd algorithm. */
+function pointInRing(pt: LngLat, ring: LngLat[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 2; i < ring.length - 1; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) &&
+        pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
 }
 
 /* ---------- feature builders ---------- */
@@ -53,13 +96,27 @@ function roundFeats(d: Exclude<DrawShape, { type: 'circle' }>): GeoJSON.Feature[
     let acc = 0, pt: LngLat | null = null, rot = 0;
     for (let i = 1; i < cs.length; i++) {
       const seg = havM(cs[i - 1], cs[i]);
-      if (acc + seg >= target) { pt = lerpLL(cs[i - 1], cs[i], (target - acc) / seg); rot = bearingDeg(cs[i - 1], cs[i]); break; }
+      if (acc + seg >= target) { pt = lerpLL(cs[i - 1], cs[i], (target - acc) / seg); rot = uprightDeg(bearingDeg(cs[i - 1], cs[i])); break; }
       acc += seg;
     }
     if (pt) f.push(ptF(pt, { lbl: target >= 1000 ? (target / 1000).toLocaleString('th-TH') + ' กม.' : target.toLocaleString('th-TH') + ' ม.', rot }));
   }
   return f;
 }
+/**
+ * Keep a distance label readable.
+ *
+ * `bearingDeg` gives the direction of travel, 0-360. Anything heading west
+ * (90 < b < 270) would render the text upside down, because MapLibre rotates
+ * the glyph the same way it rotates the line. Flipping those by 180 puts the
+ * text back upright — the label then runs right-to-left along the edge rather
+ * than following it, which is the same convention printed maps use for labels
+ * on the left-hand side of a route.
+ */
+function uprightDeg(b: number): number {
+  return b > 90 && b < 270 ? b + 180 : b;
+}
+
 const vertFeatures = (d: DrawShape): GeoJSON.Feature[] =>
   d.type === 'circle'
     ? [ptF(d.center, { did: d.id, vi: -1 }), ptF(destPoint(d.center, 0, d.r), { did: d.id, vi: -2 })]
