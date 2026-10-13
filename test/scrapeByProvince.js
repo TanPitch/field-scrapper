@@ -26,9 +26,30 @@ const UA =
 const BASE = "https://asset.led.go.th/newbidreg/";
 const LIST = "./data/provinces.json";
 const OUT = process.env.LED_OUT || "./out";
-const DELAY_MS = Number(process.env.LED_DELAY_MS || 1500);
+/**
+ * Gap between provinces. Longer than the per-page gap: a province boundary is
+ * a natural place for a person to stop, and switching provinces also opens a
+ * fresh session against the site, so it deserves more room than the next page
+ * of the same search.
+ */
+const PROVINCE_DELAY_MS = Number(process.env.LED_PROVINCE_DELAY_MS || 12000);
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/**
+ * Randomised wait, uniformly spread over [mean * (1 - spread), mean * (1 + spread)].
+ *
+ * Shaped like `politeDelay` in scrapeLED.js. The point is a less mechanical
+ * request pattern and a flatter load on the origin: a constant interval lines
+ * every request up into an obvious sawtooth, and jitter evens that out. The
+ * floor is a quarter of the mean so the spread can never collapse to a burst.
+ *
+ * Rate limiting, not evasion — nothing here tries to defeat an access control.
+ */
+function politeDelay(ms, spread = 0.6) {
+    const lo = ms * (1 - spread);
+    const hi = ms * (1 + spread);
+    const wait = Math.max(ms * 0.25, lo + Math.random() * (hi - lo));
+    return new Promise(r => setTimeout(r, Math.round(wait)));
+}
 
 const loadProvinces = () => JSON.parse(fs.readFileSync(LIST, "utf8"));
 
@@ -108,6 +129,9 @@ const main = async () => {
     console.log(`== ${jobs.length} province job(s) ==`);
 
     for (const prov of jobs) {
+        /* Gap before every province, not just between them: the first request
+           of a fresh run should not be the run's most aggressive one. */
+        await politeDelay(PROVINCE_DELAY_MS);
         const started = Date.now();
         try {
             const r = await runProvince(prov);
@@ -120,7 +144,6 @@ const main = async () => {
             manifest.push({ province: prov.text, provinceId: prov.value, ok: false, error: err.message });
         }
         fs.writeFileSync(path.join(OUT, "province-jobs.json"), JSON.stringify(manifest, null, 2), "utf8");
-        await sleep(DELAY_MS);
     }
 
     const ok = manifest.filter((m) => m.ok).length;

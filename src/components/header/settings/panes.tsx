@@ -228,21 +228,15 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
 
       <div className={setSec}>ป็อปอัพ</div>
       <div className={frow}><span className={fl}>ป็อปอัพหมุดที่ดิน</span><Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} /></div>
-      {/* these two only apply when pop-ups are forced on for every parcel */}
-      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
-        <span className={fl}>ซ้อนกันได้</span>
-        <Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} />
-      </div>
-      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}>
-        <span className={fl}>วันที่นัดถัดไป</span>
-        <Switch checked={labelNextDate} onChange={v => patchApp({ labelNextDate: v })} />
-      </div>
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}><span className={fl}>ซ้อนกันได้</span><Switch checked={labelOverlap} onChange={v => patchApp({ labelOverlap: v })} /></div>
+      <div className={`${frow} ${allPops ? '' : 'pointer-events-none opacity-40'}`}><span className={fl}>วันที่นัดถัดไป</span><Switch checked={labelNextDate} onChange={v => patchApp({ labelNextDate: v })} /></div>
       <div className={frow}><span className={fl}>ไอคอนประเภท</span><Switch checked={showLandKindIcon} onChange={v => patchApp({ showLandKindIcon: v })} /></div>
       
       <div className="flex mt-6">
         <div className={`${setSec} !mb-0`}>แผงรายละเอียด</div>
         <button
           type="button"
+          {...useTipProps('แสดง/ซ่อนแผงรายละเอียด')}
           onClick={() => patchApp({ sectionsCollapsed: !sectionsCollapsed })}
           className="mb-1.5 ml-auto flex cursor-pointer items-center gap-1.5 rounded border border-line2 px-2.5 text-[11px] text-dim hover:border-line3 hover:text-ink"
         >
@@ -255,8 +249,6 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <div className="py-1 px-2 rounded-lg border border-line2">
           {detailRowList.map((k, i) => {
             const on = !detailRowHidden.includes(k);
-            /* While dragging, the source row dims and the slot it would land in
-              is marked, so the outcome is visible before releasing. */
             const dragging = dragIdx === i;
             const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
             return (
@@ -268,6 +260,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   aria-label={`ลากเพื่อจัดลำดับ ${k}`}
+                  {...useTipProps(`ลากเพื่อจัดลำดับ ${k}`)}
                   onPointerDown={e => dragStart(e, i)}
                   onPointerMove={e => dragMove(e, i)}
                   onPointerUp={dragEnd}

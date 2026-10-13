@@ -32,9 +32,31 @@ const CONFIG = {
     maxPages: Number(process.env.LED_MAX_PAGES || 3),
     outDir: process.env.LED_OUT || "./out",
     dumpHtml: process.env.LED_DUMP_HTML !== "0",
-    /** polite delay between page requests */
+    /** polite delay between page requests — the *mean*; actual waits are jittered */
     delayMs: Number(process.env.LED_DELAY_MS || 1500),
+    /**
+     * How much the per-request wait varies, as a fraction of delayMs.
+     *
+     * A fixed interval is the thing most worth changing here. Holding exactly
+     * 1500ms between every request makes the client easy to single out and,
+     * more to the point, keeps hammering in a way no person browsing would —
+     * the site's own latency then guarantees bursts. Randomising spreads the
+     * load out, and the occasional longer pause is what a person actually does
+     * when they stop to read a row.
+     *
+     * This is rate limiting, not an attempt to defeat anything: the goal is to
+     * ask for less, not to be harder to notice asking.
+     */
+    jitter: Number(process.env.LED_JITTER ?? 0.6),
 };
+
+/** Wait for a random interval around `ms`, never less than a quarter of it. */
+export function politeDelay(ms, spread = CONFIG.jitter) {
+    const lo = ms * (1 - spread);
+    const hi = ms * (1 + spread);
+    const wait = Math.max(ms * 0.25, lo + Math.random() * (hi - lo));
+    return new Promise(res => setTimeout(res, Math.round(wait)));
+}
 
 const isDebug = process.env.LED_QUIET !== "1";
 
@@ -481,14 +503,17 @@ export async function scrapeLED() {
             // stop at the configured cap or the site's own page count
             if (p >= total || p >= CONFIG.maxPages) break;
 
-            // polite delay before the next page
-            await new Promise((res) => setTimeout(res, CONFIG.delayMs));
+            // polite, jittered delay before the next page
+            await politeDelay(CONFIG.delayMs);
         } catch (error) {
             // one bad page must not kill the whole run — record it and move on
             errors.push({ page: p, kind: "fetch", message: error.message });
             console.error(`Error on page ${p}:`, error.message);
             if (p === 1) break; // nothing works without page 1
-            await new Promise((res) => setTimeout(res, CONFIG.delayMs * 2));
+            /* A failed page gets a longer, wider pause. Backing off harder after
+               an error is standard client behaviour and gives the site room
+               before we try again. */
+            await politeDelay(CONFIG.delayMs * 3);
         }
     }
 
