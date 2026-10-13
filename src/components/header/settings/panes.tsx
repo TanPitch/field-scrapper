@@ -1,5 +1,5 @@
 import { Eye, EyeOff, RotateCcw, ScanLine } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import RELEASE_NOTES from '../../../../RELEASE_NOTES.md?raw';
 import {
   LB_FIELDS, POP_FIELDS, POP_KINDS, SETTINGS_SECRET, STATUS, STATUS_KEYS,
@@ -104,12 +104,46 @@ export function LookPane() {
   for (const k of detailRowOrder) if (DETAIL_ROWS.includes(k as never) && !detailRowList.includes(k)) detailRowList.push(k);
   for (const k of DETAIL_ROWS) if (!detailRowList.includes(k)) detailRowList.push(k);
 
-  const moveRow = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= detailRowList.length) return;
-    const next = [...detailRowList];
-    [next[i], next[j]] = [next[j], next[i]];
-    patchApp({ detailRowOrder: next });
+  /* Drag to reorder, by pointer so one implementation covers mouse and touch.
+     The list is not mutated while dragging: `overIdx` only previews, and the
+     stored order is written once on release. Reordering on every pointermove
+     would fight the drag — the row under the cursor would move out from under
+     it, and the list would shuffle instead of following the pointer.
+     Row heights are measured at drag start because they are uniform, so one
+     midpoint test decides which slot the pointer has entered. */
+  const rowEls = useRef<(HTMLDivElement | null)[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
+  const dragStart = (e: React.PointerEvent, i: number) => {
+    /* Only the grip starts a drag, so the switches and labels stay clickable. */
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    rowEls.current = rowEls.current.slice(0, detailRowList.length);
+    setDragIdx(i);
+    setOverIdx(i);
+  };
+  const dragMove = (e: React.PointerEvent, i: number) => {
+    if (dragIdx == null) return;
+    let target = i;
+    for (let k = 0; k < detailRowList.length; k++) {
+      const el = rowEls.current[k];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { target = k; break; }
+      target = k;
+    }
+    setOverIdx(target);
+  };
+  const dragEnd = () => {
+    if (dragIdx != null && overIdx != null && dragIdx !== overIdx) {
+      const next = [...detailRowList];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(overIdx, 0, moved);
+      patchApp({ detailRowOrder: next });
+    }
+    setDragIdx(null);
+    setOverIdx(null);
   };
   const toggleRow = (k: string, on: boolean) => patchApp({
     detailRowHidden: on ? detailRowHidden.filter(x => x !== k) : [...detailRowHidden, k],
@@ -118,26 +152,29 @@ export function LookPane() {
   return (
     <>
       <div className={setSec}>แถวในแผงรายละเอียด</div>
-      <Hint>ซ้ายขึ้นก่อน ขวาลงทีหลัง · สว่าง = แสดง</Hint>
+      <Hint>ลากที่ไอคอน ⠿ เพื่อจัดลำดับ · สว่าง = แสดง</Hint>
       <div className="pt-1">
         {detailRowList.map((k, i) => {
           const on = !detailRowHidden.includes(k);
+          /* While dragging, the source row dims and the slot it would land in
+             is marked, so the outcome is visible before releasing. */
+          const dragging = dragIdx === i;
+          const dropping = overIdx === i && dragIdx != null && dragIdx !== i;
           return (
-            <div key={k} className={`flex items-center gap-1.5 py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'}`}>
+            <div
+              key={k}
+              ref={el => { rowEls.current[i] = el; }}
+              className={`flex items-center gap-1.5 rounded py-[3px] text-[11.5px] ${on ? '' : 'opacity-55'} ${dragging ? 'opacity-35' : ''} ${dropping ? 'bg-accent/15 ring-1 ring-accent/40' : ''}`}
+            >
               <button
                 type="button"
-                aria-label={`ย้าย ${k} ขึ้น`}
-                disabled={i === 0}
-                onClick={() => moveRow(i, -1)}
-                className="size-[20px] flex-none rounded border border-line2 text-[10px] leading-none text-dim enabled:hover:border-line3 enabled:hover:text-ink disabled:opacity-25"
-              >↑</button>
-              <button
-                type="button"
-                aria-label={`ย้าย ${k} ลง`}
-                disabled={i === detailRowList.length - 1}
-                onClick={() => moveRow(i, 1)}
-                className="size-[20px] flex-none rounded border border-line2 text-[10px] leading-none text-dim enabled:hover:border-line3 enabled:hover:text-ink disabled:opacity-25"
-              >↓</button>
+                aria-label={`ลากเพื่อจัดลำดับ ${k}`}
+                onPointerDown={e => dragStart(e, i)}
+                onPointerMove={e => dragMove(e, i)}
+                onPointerUp={dragEnd}
+                onPointerCancel={dragEnd}
+                className="size-[20px] flex-none cursor-grab touch-none rounded text-[11px] leading-none text-dim2 hover:bg-panel2 hover:text-ink active:cursor-grabbing"
+              >⠿</button>
               <span className={`min-w-0 flex-1 truncate ${on ? 'text-ink' : 'text-dim2 line-through'}`}>{k}</span>
               <Switch checked={on} onChange={v => toggleRow(k, v)} />
             </div>

@@ -162,7 +162,10 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
      instead of one column whose meaning shifted per row: นัดล่าสุด is the most
      recent round already held, นัดถัดไป the next one still ahead. */
   roundLast: { label: 'นัดล่าสุด', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
-  roundNext: { label: 'นัดถัดไป', w: 210, subs: ['นัดที่', 'วันที่', 'สถานะ'], center: true },
+  /* No status sub-column on นัดถัดไป: a round that has not happened yet has only
+     LED's placeholder word for a status, and printing it 30 times down the
+     table says nothing. นัดที่ and วันที่ are the parts worth reading. */
+  roundNext: { label: 'นัดถัดไป', w: 130, subs: ['นัดที่', 'วันที่'], center: true },
 };
 export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast', 'roundNext'];
 /* The two annotation columns are visible but empty by default — a user who wants
