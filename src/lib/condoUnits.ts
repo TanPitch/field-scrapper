@@ -20,8 +20,24 @@
  * wrong rather than the data changing.
  */
 
+/** One saleable unit. Shape is deliberately loose - it is built from whatever
+ *  the API returns for a lot, not from the Parcel type, because a unit is a lot
+ *  and lots are not parcels once a building is split. */
+export interface CondoUnit {
+  id: number;
+  /** LED's ลำดับการขาย, e.g. "1 - 3". The stable tiebreak. */
+  orderLabel?: string | null;
+  parcelId?: number | null;
+  rai?: number | null;
+  ngan?: number | null;
+  wa?: number | null;
+  /** "wa" for square wa, "sqm" for square metres (condominium units). */
+  sizeUnit?: string | null;
+  startPrice?: number | null;
+}
+
 /** Total square wa for a lot. Condo lots may be in square metres. */
-function areaWa(u) {
+function areaWa(u: CondoUnit): number {
   if (u.sizeUnit === "sqm") {
     /* 1 ตร.วา is 400 ตร.ม. Mixing units would make an sqm unit compare as if
        it were tiny, so convert rather than compare raw numbers. */
@@ -35,11 +51,13 @@ function areaWa(u) {
  *               startPrice and orderLabel.
  * @returns the unit that represents the building, or null when there are none.
  */
-export function representativeUnit(units) {
+export function representativeUnit(
+  units: CondoUnit[] | null | undefined,
+): CondoUnit | null {
   if (!Array.isArray(units) || units.length === 0) return null;
   if (units.length === 1) return units[0];
 
-  const sorted = [...units].sort((a, b) => {
+  const sorted = [...units].sort((a: CondoUnit, b: CondoUnit) => {
     const area = areaWa(b) - areaWa(a); /* larger first */
     if (area !== 0) return area;
 
@@ -54,7 +72,7 @@ export function representativeUnit(units) {
   return sorted[0];
 }
 
-function naturalCompare(a, b) {
+function naturalCompare(a: string, b: string): number {
   const ax = a.match(/(\d+)|(\D+)/g) ?? [];
   const bx = b.match(/(\d+)|(\D+)/g) ?? [];
   for (let i = 0; i < Math.max(ax.length, bx.length); i++) {
@@ -73,12 +91,16 @@ function naturalCompare(a, b) {
 }
 
 /** Group lots by the parcel they sit on, so one entry can represent several. */
-export function groupUnitsByParcel(lots) {
-  const g = new Map();
+export function groupUnitsByParcel<T extends CondoUnit>(
+  lots: T[],
+): Map<number | string, T[]> {
+  const g = new Map<number | string, T[]>();
   for (const l of lots) {
-    const k = l.parcelId ?? `lot:${l.id}`;
+    const k: number | string = l.parcelId ?? `lot:${l.id}`;
     if (!g.has(k)) g.set(k, []);
-    g.get(k).push(l);
+    /* get() after set() is never undefined, but the type checker cannot see
+       that, and an optional chain here would hide a real miss later. */
+    g.get(k)?.push(l);
   }
   return g;
 }

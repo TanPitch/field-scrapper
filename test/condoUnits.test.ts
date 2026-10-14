@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { representativeUnit, groupUnitsByParcel } from "./condoUnits.ts";
+import { representativeUnit, groupUnitsByParcel } from "../src/lib/condoUnits.ts";
 
 // The real Phuket units, as they sit in the database.
 const PHUKET = [
