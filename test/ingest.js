@@ -231,7 +231,7 @@ const LOT_COLUMNS = `
     size_unit, size_rai, size_ngan, size_wa, published_date, legal_exec_dept, remark,
     start_price, start_price_src, committee_price, led_price, officer_price,
     expert_price, bid_security, status, close_code, close_reason, closed_at,
-    next_round_date, next_round_price, last_seen`;
+    next_round_date, next_round_price, deed_number, plot_no, last_seen`;
 
 /* Columns refreshed on conflict. Written out rather than derived by parsing
    LOT_COLUMNS — deriving it produced a trailing comma and a syntax error, and a
@@ -242,7 +242,8 @@ const LOT_UPSERT_COLUMNS = [
     "size_unit", "size_rai", "size_ngan", "size_wa", "published_date", "legal_exec_dept",
     "remark", "start_price", "start_price_src", "committee_price", "led_price",
     "officer_price", "expert_price", "bid_security", "status", "close_code",
-    "close_reason", "closed_at", "next_round_date", "next_round_price", "last_seen",
+    "close_reason", "closed_at", "next_round_date", "next_round_price",
+    "deed_number", "plot_no", "last_seen",
 ];
 
 async function upsertLot(client, lot, parcelId, stats) {
@@ -272,7 +273,11 @@ async function upsertLot(client, lot, parcelId, stats) {
         num(p.officer_appraisal_price), num(p.expert_appraisal_price), num(p.bid_security),
         life.status ?? "active", int(life.close_code), txt(life.close_reason),
         life.status === "closed" ? new Date().toISOString() : null,
-        isoDate(life.next_round?.date), num(life.next_round?.price), new Date(),
+        isoDate(life.next_round?.date), num(life.next_round?.price),
+        /* LED facts, stored on the lot rather than only reached through the
+           parcel. For a condominium listing the deed number is the building and
+           addr_no is the unit, so it is the pair that identifies the asset. */
+        txt(a.number ?? a.deeds?.numbers?.[0]), txt(a.addr_no), new Date(),
     ];
 
     const setClause = LOT_UPSERT_COLUMNS.map((c) => `${c} = EXCLUDED.${c}`).join(", ");
@@ -280,8 +285,16 @@ async function upsertLot(client, lot, parcelId, stats) {
     const r = await client.query(
         `INSERT INTO auction_lots (${LOT_COLUMNS})
          VALUES (${values.map((_, i) => `$${i + 1}`).join(",")})
-         ON CONFLICT (parcel_id, case_no, case_year,
-                      coalesce(order_number, -1), coalesce(order_sub, -1), first_round_date)
+         /* Must match lots_natural_key exactly. parcel_id is deliberately NOT
+            in it: it is only populated once the TD/DOL match succeeds, so for
+            an unmatched province it is NULL for every lot and the key
+            degenerates to case + order, collapsing a whole bankruptcy order
+            into one row. The deed and plot are LED facts, always present, and
+            are what actually tell two lots apart. */
+         ON CONFLICT (case_no, case_year,
+                      coalesce(order_number, -1), coalesce(order_sub, -1),
+                      coalesce(deed_number, ''), coalesce(plot_no, ''),
+                      first_round_date)
          DO UPDATE SET ${setClause}
          RETURNING id, (xmax = 0) AS inserted`,
         values,
