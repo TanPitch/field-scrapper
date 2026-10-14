@@ -84,13 +84,26 @@ const isCondo = (assetType) => /ห้องชุด/.test(txt(assetType) ?? ""
 
 /* ------------------------------------------------------------- reference */
 
+/**
+ * LED and the Treasury (กรมพัฒนาการเกษตร/กรมที่ดิน) province registries agree on
+ * every province except one: บึงกาฬ is LED 97 but TD 38. Copying `code` into
+ * `dol_code` - which is what the old ensureProvince did - silently mislabels it,
+ * so the divergence is stated here rather than inherited.
+ *
+ * TD publishes no subdistricts, which is why districts carry both a LED
+ * `code` (4-digit amphurId) and a `dol_code` (2-digit AMPH_CODE), and
+ * subdistricts carry only `code`.
+ */
+const PROVINCE_DOL_CODE = { 97: 38 };
+
 async function ensureProvince(client, code, name) {
     if (!int(code)) return null;
+    const dol = PROVINCE_DOL_CODE[int(code)] ?? int(code);
     const r = await client.query(
-        `INSERT INTO provinces (code, name, dol_code) VALUES ($1, $2, $1)
-         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+        `INSERT INTO provinces (code, name, dol_code) VALUES ($1, $2, $3)
+         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, dol_code = EXCLUDED.dol_code
          RETURNING code`,
-        [int(code), txt(name) ?? String(code)],
+        [int(code), txt(name) ?? String(code), dol],
     );
     return r.rows[0].code;
 }
@@ -111,17 +124,47 @@ async function ensureDistrict(client, provinceCode, dolCode, name) {
  * Subdistricts are discovered the same lazy way as provinces and districts:
  * LED gives us a tambon NAME, and the กรมการปกครอง code is only known after
  * the tambon has been resolved against eva_area_grade.
+ *
+ * Codes are unique WITHIN a district but repeat freely across districts
+ * (หนองไผ่=93 in ชุมแพ and บ้านค้อ=93 in เมืองขอนแก่น are different tambons), so
+ * `subdistricts_code_idx` is UNIQUE (district_id, code) for a reason.
+ *
+ * That makes the code the authority inside a district. LED's tambon name and
+ * the reference table's name for the same tambon are not always byte-identical,
+ * and a plain INSERT of a spelling variant with an already-claimed code died on
+ * `duplicate key value violates unique constraint "subdistricts_code_idx"`,
+ * taking down the whole province ingest. So: known name wins, then known code
+ * wins, and only a genuinely new pair inserts.
  */
 async function ensureSubdistrict(client, districtId, name, code) {
     if (!districtId || !txt(name)) return null;
+    const nm = txt(name);
+
+    const byName = await client.query(
+        `SELECT id FROM subdistricts WHERE district_id = $1 AND name = $2 LIMIT 1`,
+        [districtId, nm],
+    );
+    if (byName.rows[0]) return byName.rows[0].id;
+
+    if (txt(code)) {
+        const byCode = await client.query(
+            `SELECT id, name FROM subdistricts WHERE district_id = $1 AND code = $2 LIMIT 1`,
+            [districtId, txt(code)],
+        );
+        if (byCode.rows[0]) {
+            console.warn(`    [tambon] code ${code} in district ${districtId} already held by "${byCode.rows[0].name}"; reusing it for "${nm}"`);
+            return byCode.rows[0].id;
+        }
+    }
+
     const r = await client.query(
         `INSERT INTO subdistricts (district_id, name, code)
          VALUES ($1, $2, $3)
-         ON CONFLICT (district_id, name) DO UPDATE SET code = COALESCE(subdistricts.code, EXCLUDED.code)
+         ON CONFLICT (district_id, name) DO NOTHING
          RETURNING id`,
-        [districtId, txt(name), txt(code)],
+        [districtId, nm, txt(code)],
     );
-    return r.rows[0].id;
+    return r.rows[0]?.id ?? null;
 }
 
 /**
@@ -151,7 +194,11 @@ async function upsertParcels(client, lot, provinceCode, dolCode, stats, ctx) {
     /* parcels.district_dol_code is the 2-digit กรมที่ดิน code, NOT the internal
        districts.id and NOT LED's 4-digit code. The scraper carries only the
        amphur NAME, so the code must be resolved through the reference table —
-       passing the id here silently produced NULL. */
+       passing the id here silently produced NULL.
+       Note districts.province_id is an FK to provinces.**code**, not
+       provinces.id (001_core.sql). The column name is misleading: joining it to
+       provinces.id reports every district as orphaned. districts.code is the
+       4-digit LED amphurId (provinceCode + dolCode), also not the internal id. */
     const district = await client.query(
         `SELECT id, dol_code FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
         [provinceCode, txt(a.amphur)],
