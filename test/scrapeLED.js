@@ -1,4 +1,4 @@
-﻿/**
+/**
 
   PHASE 1 — DISCOVERY MODE.
 
@@ -29,7 +29,14 @@ const CONFIG = {
        but "" is falsy so `||` fell back to a district in another province and
        the server matched nothing. */
     ampur: process.env.LED_AMPUR ?? "",
-    maxPages: Number(process.env.LED_MAX_PAGES || 3),
+    /**
+     * Page cap. 0 means "every page the site reports" - the default, because a
+     * fixed cap silently truncated provinces: Phuket's พ.376/2568 alone runs to
+     * 17 lots across several pages, and a cap of 3 left us with 5 of them and
+     * no way to tell truncation from a genuinely short list.
+     * LED_MAX_PAGES still works as an escape hatch for a deliberate partial run.
+     */
+    maxPages: Number(process.env.LED_MAX_PAGES || 0),
     outDir: process.env.LED_OUT || "./out",
     dumpHtml: process.env.LED_DUMP_HTML !== "0",
     /** polite delay between page requests — the *mean*; actual waits are jittered */
@@ -262,9 +269,12 @@ export async function scrapeLED() {
     }
 
     const errors = [];
-    let total = CONFIG.maxPages;
+    /* Read from the site's own 	otalpage field on the first response; the
+       loop then runs to that rather than to a number chosen here. */
+    let total = 0;
 
-    for (let p = 1; p <= CONFIG.maxPages; p++) {
+    const cap = CONFIG.maxPages > 0 ? CONFIG.maxPages : Number.MAX_SAFE_INTEGER;
+    for (let p = 1; p <= cap; p++) {
         if (isDebug) {
             timerStart();
             console.log(`--- Fetching Page ${p}/${CONFIG.maxPages} ---`);
@@ -501,7 +511,8 @@ export async function scrapeLED() {
             }
 
             // stop at the configured cap or the site's own page count
-            if (p >= total || p >= CONFIG.maxPages) break;
+            /* Either the site's own page count or the optional caller cap. */
+      if (p >= total || p >= cap) break;
 
             // polite, jittered delay before the next page
             await politeDelay(CONFIG.delayMs);
