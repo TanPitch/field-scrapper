@@ -128,9 +128,28 @@ export class ProvenanceRecorder {
     async flush() {
         if (!this.rows.length) return 0;
         const batch = this.rows.splice(0, this.rows.length);
+
+        /* Collapse rows that share the conflict key before building the INSERT.
+           Postgres refuses an ON CONFLICT DO UPDATE whose VALUES list touches the
+           same row twice, and a batch can legitimately hold duplicates: one
+           parcel reached from several LED lots records the same field each time.
+           Phuket's five condominium units share deed 114461 and so share a
+           parcel row, which produced five identical provenance keys in one
+           statement and killed the whole ingest.
+
+           Last write wins. Within a run the later observation is the one made
+           with more context, and it matches what a re-record would have done
+           anyway had these gone in as separate statements. */
+        const latest = new Map();
+        for (const row of batch) {
+            const [et, ei, fn, sk, vt, vn] = row;
+            latest.set(`${et}|${ei}|${fn}|${sk}`, [et, ei, fn, sk, vt, vn]);
+        }
+        const deduped = [...latest.values()];
+
         const values = [];
         const params = [];
-        for (const [et, ei, fn, sk, vt, vn] of batch) {
+        for (const [et, ei, fn, sk, vt, vn] of deduped) {
             const b = params.length;
             // (entity_type, entity_id, field_name, source_key,
             //  observed_on, value_num, value_text, run_id)
@@ -151,7 +170,7 @@ export class ProvenanceRecorder {
                            run_id = EXCLUDED.run_id`,
             params,
         );
-        return batch.length;
+        return deduped.length;
     }
 
     /** Registered/refreshed sources, so last_used stays meaningful. */

@@ -1,4 +1,0 @@
-bun test v1.3.14 (0d9b296a)
-
-priceLadder.agreement.test.js:
-skip: DATABASE_URL not set
