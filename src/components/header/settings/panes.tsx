@@ -6,6 +6,7 @@ import {
 } from '../../../data/constants';
 import { resetAll } from '../../../store/actions';
 import { DETAIL_ROWS } from '../../../lib/detailRows';
+import type { CondoUnitOrder } from '../../../lib/condoUnits';
 import { showRight } from '../../../store/actions';
 import { patchApp, toast, useApp } from '../../../store/useApp';
 import { changelogVersion, parseChangelog, parseInline } from '../../../lib/changelog';
@@ -161,6 +162,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const chartForecast = useApp(s => s.chartForecast);
   const labelNextDate = useApp(s => s.labelNextDate);
   const hlSold = useApp(s => s.highlightSoldRounds);
+  const condoUnitOrder = useApp(s => s.condoUnitOrder);
   
   const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
   const detailRowHidden = useApp(s => s.detailRowHidden);
@@ -306,6 +308,23 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       </div>
       <div className={frow}><span className={fl}>เส้นวันนี้</span><Switch checked={chartTodayLine} onChange={v => patchApp({ chartTodayLine: v })} /></div>
       <div className={frow}><span className={fl}>ราคารอบถัดไป</span><Switch checked={chartForecast} onChange={v => patchApp({ chartForecast: v })} /></div>
+
+      <div className={setSec}>ห้องชุด</div>
+      <div className={frow}>
+        <span className={fl}>หน่วยที่แสดงบนจุด</span>
+        <Seg<CondoUnitOrder>
+          items={[
+            ['sizeDesc', 'ใหญ่สุด'],
+            ['sizeAsc', 'เล็กสุด'],
+            ['priceAsc', 'ราคาต่ำสุด'],
+            ['priceDesc', 'ราคาสูงสุด'],
+            ['orderLabel', 'ลำดับแรก'],
+          ]}
+          value={condoUnitOrder}
+          onChange={v => patchApp({ condoUnitOrder: v })}
+        />
+      </div>
+      <Hint>อาคารห้องชุดหนึ่งหลังคือที่ดินหนึ่งแปลง แต่ขายแยกเป็นหน่วยยอด จุดบนแผนที่จึงแสดงเพียงหน่วยเดียวแทนทั้งอาคาร และแผงรายละเอียดมีตัวเลือกสลับหน่วยยอด</Hint>
 
       <div className={setSec}>สถานะและสี</div>
       {STATUS_KEYS.map(k => (

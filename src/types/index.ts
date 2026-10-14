@@ -53,6 +53,8 @@ export interface Parcel {
   /** Lots sharing this parcel's coordinates. >1 for a condominium building,
    *  which is one cadastral parcel sold as several units. */
   lotCount?: number;
+  /** Shared by every lot on one cadastral parcel. Lets the panel find a   *  building's other units without matching on coordinates. */
+  parcelKey?: string;
   id: number;
   status: Status;
   wah: number;

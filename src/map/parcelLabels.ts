@@ -96,7 +96,7 @@ function labelHtml(p: Parcel, showDate: boolean): string {
     `<div class="w-full pt-1 text-white" style="background:${statusHex(p)}">
       <div class="flex justify-center">
         <div class="flex items-center gap-[3px]">
-          ${iconEl}<span class="whitespace-nowrap text-[12px] font-bold tracking-[0.1em]">${shortMoney(next ? next.price : p.price)}</span>
+          ${iconEl}<span class="whitespace-nowrap text-[12px] font-bold tracking-[0.1em]">${shortMoney(next ? next.price : p.price)}</span>${unitBadge(p)}
         </div>
       </div>
       ${showDate && dated?.date != null ?
@@ -110,6 +110,23 @@ function labelHtml(p: Parcel, showDate: boolean): string {
     </div>` : ``;
 
   return `<div class="flex min-w-[64px] flex-col items-center justify-center overflow-hidden rounded-[5px] shadow-[0_2px_7px_rgba(0,0,0,0.45)]" title="${esc(title)}">${top}${bottom}</div>`;
+}
+
+/**
+ * The "N ยอด" badge: how many separate assets stand behind this dot.
+ *
+ * A condominium building is one cadastral parcel sold as several units, so it
+ * draws one dot but the table lists several rows. Without this the dot looks
+ * identical to a lone unit and the reader cannot tell why the table disagrees
+ * with what they clicked.
+ *
+ * Only rendered when there really is more than one. A single-unit building and
+ * ordinary land carry no badge, so the marker's presence means "more here".
+ */
+export function unitBadge(p: { lotCount?: number | null }): string {
+  const n = p.lotCount ?? 1;
+  if (n <= 1) return '';
+  return `<span class="whitespace-nowrap rounded-[3px] bg-black/45 px-[3px] py-[1px] text-[8.5px] font-bold leading-none text-white">×${n}</span>`;
 }
 
 /**

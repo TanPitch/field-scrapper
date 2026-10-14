@@ -73,10 +73,10 @@ export type CondoUnitOrder = "orderLabel" | "priceAsc" | "priceDesc" | "sizeAsc"
  *
  * @param order which criterion leads. Defaults to largest-first.
  */
-export function representativeUnit(
-  units: CondoUnit[] | null | undefined,
+export function representativeUnit<T extends CondoUnit>(
+  units: T[] | null | undefined,
   order: CondoUnitOrder = "sizeDesc",
-): CondoUnit | null {
+): T | null {
   if (!Array.isArray(units) || units.length === 0) return null;
   if (units.length === 1) return units[0];
 
@@ -134,6 +134,40 @@ function naturalCompare(a: string, b: string): number {
   return 0;
 }
 
+/**
+ * The rows the map should draw as dots.
+ *
+ * The collection holds one entry per lot, so a condominium building arrives as
+ * N rows on the same coordinate. Drawing them all would stack N identical dots
+ * on one point — visually a single dot anyway, but N features fighting over the
+ * same pixel, N labels, and N click targets for what is one place on the map.
+ *
+ * So the map draws one row per parcel, using the representative unit chosen by
+ * the user's criterion, and carries `units` so the label and popup can say how
+ * many assets stand behind the dot. The table keeps every row; only the marker
+ * collapses.
+ *
+ * `lotCount` is trusted when present because the API computed it with the same
+ * join that produced these rows. It falls back to the group size, which is what
+ * happens with fixture data that never went through the API.
+ */
+export function markerRows<T extends CondoUnit & { id: number }>(
+  lots: T[],
+  order: CondoUnitOrder = "sizeDesc",
+): { id: number; parcelKey: number | string; unit: T; units: T[] }[] {
+  const out: { id: number; parcelKey: number | string; unit: T; units: T[] }[] = [];
+  for (const units of groupUnitsByParcel(lots).values()) {
+    if (units.length === 1) {
+      const u = units[0];
+      out.push({ id: u.id, parcelKey: u.parcelId ?? `lot:${u.id}`, unit: u, units });
+    } else {
+      const rep = representativeUnit(units, order);
+      if (!rep) continue;
+      out.push({ id: rep.id, parcelKey: rep.parcelId ?? `lot:${rep.id}`, unit: rep, units });
+    }
+  }
+  return out;
+}
 /** Group lots by the parcel they sit on, so one entry can represent several. */
 export function groupUnitsByParcel<T extends CondoUnit>(
   lots: T[],

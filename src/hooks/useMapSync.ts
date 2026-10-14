@@ -7,6 +7,7 @@ import {
 } from '../map/layers';
 import { position as positionParcelLabels, registerParcels, syncParcelLabels } from '../map/parcelLabels';
 import { subscribeParcels } from '../data/liveData';
+import { markerRows } from '../lib/condoUnits';
 import { fc, getMap, ptF, setSourceData } from '../map/mapRef';
 import { computeRows } from '../lib/visibility';
 import { syncDraws } from '../map/drawEngine';
@@ -75,7 +76,19 @@ export function useMapSync(): void {
         forceArea: s.forceArea, bounds: s.bounds, zoom: s.zoom,
         mapReady: true, sort: s.sort,
       });
-      setSourceData('parcels', fc(rows.vis.map(p => ptF([p.lng, p.lat], { id: p.id, status: p.status, resell: isResell(p) }))));
+      /* One dot per parcel, not per lot. A condominium building arrives as N
+         rows on one coordinate; drawing them all stacks identical dots and
+         gives one place N labels and N click targets. The chosen unit follows
+         the user's criterion so the dot is explainable, and `units` carries the
+         siblings so the label and popup can say how many assets are behind it.
+         The table still lists every lot. */
+      const markers = markerRows(rows.vis, s.condoUnitOrder);
+      setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng, m.unit.lat], {
+        id: m.id,
+        status: m.unit.status,
+        resell: isResell(m.unit),
+        units: m.units.length,
+      }))));
       registerParcels(rows.vis);
       syncParcelLabels(rows.vis, s.labelNextDate);
     };

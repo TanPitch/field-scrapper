@@ -1,8 +1,8 @@
 import { Calendar, ImageOff, MapPin, ScanEye } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
-import { useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { STATUS } from '../../data/constants';
-import { PARCEL_BY_ID } from '../../data/liveData';
+import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
 import { fdate, fmtRai, numDate } from '../../lib/format';
 import { popupKind } from '../../map/popups';
@@ -167,7 +167,26 @@ export function DetailView() {
   const highlightSold = useApp(s => s.highlightSoldRounds);
   const rowOrder = useApp(s => s.detailRowOrder);
   const rowHidden = useApp(s => s.detailRowHidden);
-  const p = id != null ? PARCEL_BY_ID.get(id) : undefined;
+  /* Which unit of a condominium building this panel is showing.
+     null means "whatever the map picked", which is the representative unit, so
+     opening a dot shows the same unit the user clicked rather than whichever
+     happens to sort first. Picking from the cycler overrides it. */
+  const [picked, setPicked] = useState<Parcel | null>(null);
+  const base = id != null ? PARCEL_BY_ID.get(id) : undefined;
+  const p = picked ?? base;
+
+  /* Siblings sharing this building's parcel. One cadastral parcel sold as
+     several units means the table lists each unit while the map draws one dot;
+     this is what lets the panel step between them. Grouped on the same parcel
+     key the marker layer uses, so the dot and the panel cannot disagree. */
+  const units: Parcel[] = base
+    ? ALL_PARCELS.filter((x: Parcel) =>
+        (base.parcelKey != null && x.parcelKey === base.parcelKey)
+        || (x.lng === base.lng && x.lat === base.lat))
+    : [];
+  /* Reset the override when the selection moves to another building, or a stale
+     unit from the previous dot would keep being shown. */
+  useEffect(() => { setPicked(null); }, [id]);
 
   if (!p) {
     return (
@@ -336,7 +355,40 @@ export function DetailView() {
           );
         }) : <li className="flex justify-center py-[5px] text-[11.5px] text-dim2">ไม่มีเหตุการณ์สถานะพิเศษ</li>}
       </ul>
-          <DetRows rows={orderRows(detRows, rowOrder, rowHidden)} />
+          {units.length > 1 && (
+        <div className="mb-2 flex items-center gap-1.5 rounded-[9px] border border-line2 bg-panel2 px-2 py-1.5">
+          <span className="whitespace-nowrap rounded-[4px] bg-accent/15 px-1.5 py-[2px] text-[10px] font-semibold text-accent">×{units.length} หน่วยยอด</span>
+          <select
+            aria-label="เลือกหน่วยยอด"
+            value={Math.max(0, units.findIndex(u => u.id === p.id))}
+            onChange={e => setPicked(units[Number(e.target.value)])}
+            className="min-w-0 flex-1 rounded-[6px] border border-line2 bg-bg px-1.5 py-1 text-[11px] outline-none focus:border-accent"
+          >
+            {units.map((u, i) => (
+              <option key={u.id} value={i}>
+                #{i + 1}/{units.length} · {fmtRai(u.wah)} วา · {u.price > 0 ? fmt(u.price) : '-'}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button" aria-label="หน่วยยอดก่อนหน้า" title="หน่วยยอดก่อนหน้า"
+            onClick={() => {
+              const i = Math.max(0, units.findIndex(u => u.id === p.id));
+              setPicked(units[(i - 1 + units.length) % units.length]);
+            }}
+            className="size-[22px] flex-none rounded border border-line2 text-[12px] leading-none text-dim hover:border-line3 hover:text-ink"
+          >‹</button>
+          <button
+            type="button" aria-label="หน่วยยอดถัดไป" title="หน่วยยอดถัดไป"
+            onClick={() => {
+              const i = Math.max(0, units.findIndex(u => u.id === p.id));
+              setPicked(units[(i + 1) % units.length]);
+            }}
+            className="size-[22px] flex-none rounded border border-line2 text-[12px] leading-none text-dim hover:border-line3 hover:text-ink"
+          >›</button>
+        </div>
+      )}
+      <DetRows rows={orderRows(detRows, rowOrder, rowHidden)} />
 
       <div className="mb-2 mt-4 overflow-hidden rounded-[10px] border border-line bg-bg">
         <div className="grid grid-cols-[48px_1fr_1fr] bg-panel2 text-[11px] font-semibold">

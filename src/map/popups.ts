@@ -11,6 +11,7 @@ import { parcelPopupBg } from '../lib/parcelColor';
 import { getApp } from '../store/useApp';
 import type { Parcel, PopupField, PopupKind } from '../types';
 import { requireMap } from './mapRef';
+import { unitBadge } from './parcelLabels';
 
 export const popupKind = (p: Parcel): PopupKind => (p.resell && p.status === 'sale' ? 're' : p.status);
 
@@ -87,7 +88,7 @@ function popupContent(p: Parcel, withGeoLinks = false): { html: string; bg: stri
   return {
     html: `<div class="pop-box" data-selectable>`
       + `<span class="pop-tag">${STATUS[kind].th}</span>`
-      + `<div class="pop-meta"><span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}</div>`
+      + `<div class="pop-meta"><span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}</div>`
       + priceHtmlFull(p)
       + `<div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}${geoLinks}</div>`,
     bg,

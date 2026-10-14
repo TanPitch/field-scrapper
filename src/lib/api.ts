@@ -1,4 +1,4 @@
-﻿/* api.ts — the only place the frontend talks to the server.
+/* api.ts — the only place the frontend talks to the server.
  *
  *   import { api } from '../lib/api';
  *   const rows = await api.get<FeatureCollection>('/api/parcels?province=40');
@@ -116,6 +116,8 @@ export interface ApiRound {
 export interface ApiParcelProps {
   id: number;
   lotId: number | null;
+  /** The parcels row this lot hangs off. Several lots share it when a   *  condominium building is sold unit by unit. */
+  parcelId: number | null;
     /**
      * How many lots share this parcel. A condominium building is one cadastral
      * parcel sold as N units, so >1 means the map marker stands for several
