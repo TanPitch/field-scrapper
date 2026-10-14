@@ -155,12 +155,12 @@ async function main() {
                    district), and only a genuinely new pair inserts. */
                 const known = await db.unsafe(
                     `SELECT id FROM subdistricts
-                      WHERE district_id = $1 AND (name = $2 OR code = $3) LIMIT 1`,
+                      WHERE district_id = $1 AND (name = $2 OR led_code = $3) LIMIT 1`,
                     [districtId, t.label, t.value],
                 );
                 if (known.length) continue;
                 const s = await db.unsafe(
-                    `INSERT INTO subdistricts (district_id, name, code)
+                    `INSERT INTO subdistricts (district_id, name, led_code)
                      VALUES ($1, $2, $3) RETURNING id`,
                     [districtId, t.label, t.value],
                 );
