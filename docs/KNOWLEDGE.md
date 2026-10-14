@@ -190,6 +190,17 @@ makes a working endpoint look dead. That bug cost real time here.
 
 No daily limit on LED.
 
+**Populated** by `bun ledAreaCodes.js` (no args):
+
+```
+provinces   77      (78 list entries; LED's duplicate "53" collapses to one)
+districts   1005    all with a dol_code
+subdistricts 1089   zero NULL codes
+```
+
+`บึงกาฬ` stored as LED `97` → TD `38` via `PROVINCE_DOL_CODE`. Bangkok is the
+largest at 64 districts.
+
 ### TD (assessprice.treasury.go.th)
 
 The dropdowns are dojo/AMOS-driven (`widgetid="uniqName_19_3"`, hidden inputs
@@ -226,8 +237,35 @@ LED district name  ->  TD AMPH_CODE
 ```
 
 Province codes are known (only บึงกาฬ diverges). TD has no subdistrict level.
-And because the join key is the district *name* — not its number —
+And because the join key is the district *name** — not its number —
 `areaMatch.js` already resolves it wherever TD ground truth exists.
+
+### Where the TD dropdown data actually lives — REA findings
+
+Driving the real page with a headless browser settled a question that had been
+guessing for several rounds:
+
+- Framework root:
+  `/amos/new/framework/production/library/releases/latest/library/esrith/amos/`
+- Widgets present on `/assessprice/` (`uniqName_19_*` etc.), generic: `core/
+  DropDown.js` is 5 KB with **no** service URL, `form/_SelectBase.js` 8 KB,
+  also none.
+- **The site exposes only three service methods:**
+  `DS_TRANSIT`, `DS_ENCRYPT_DATA`, `GET_IPADDRESS`.
+- **Zero `LUT_*` / `GIS_Q_*` calls happen on the search form.** Those SP names
+  belong to the post-search map/parcel page.
+
+So the province and district option lists are **server-rendered inline into the
+page**, exactly as in hand-captured HTML — not fetched. There is no hidden
+endpoint; my earlier assumption that one existed was wrong.
+
+`?PROV_CODE=22` is *not* the way to drive it: that URL renders a different form
+(`uniqName_28_*`, no populated dropdowns at all).
+
+Therefore getting the TD district dictionary means **driving the widget** —
+open the จังหวัด dropdown, pick a province, read the อำเภอ options the page
+renders — not reverse-engineering a service. That is one scripted interaction
+and needs no hidden API knowledge.
 
 ### Quotas
 
