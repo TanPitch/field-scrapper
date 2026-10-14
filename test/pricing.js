@@ -13,9 +13,11 @@ export const SELL_STATUS = {
     0: "ยังไม่มีการเปิดประมูล", // no auction held at this slot (LED shows "- คลิกเข้าร่วม")
     1: "ขายได้", // sold
     3: "งดขายไม่มีผู้สู้ราคา", // no bidder — this is what drives the discount
+    4: "งดขายส่งประกาศมิชอบ", // cancelled via an irregular announcement
     6: "ถอนการยึด", // seizure revoked
     7: "โจทก์แถลงงดขาย", // plaintiff announced cancellation
     10: "งดขาย",
+    12: "งดขาย (ป.วิ.แพ่ง มาตรา 309)", // cancelled by court order, Civil Procedure Act s.309
     13: "งดขาย",
     23: "งดขาย",
     26: "งดขายในนัดที่เหลือ", // cancelled for all remaining rounds
