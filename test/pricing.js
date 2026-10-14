@@ -19,6 +19,15 @@ export const SELL_STATUS = {
     10: "งดขาย",
     12: "งดขาย (ป.วิ.แพ่ง มาตรา 309)", // cancelled by court order, Civil Procedure Act s.309
     13: "งดขาย",
+    /* 14/15/16 are all plain "งดขาย": LED prints an unknown-code string for
+       each and the labels were confirmed by hand against the listing. They are
+       NOT code 3 and must not be treated as it - they carry no discount, so
+       priceRounds must never count them as no-bid rounds. They differ only in
+       why the round was called off, which the label records and the price
+       ladder does not read. */
+    14: "งดขาย",
+    15: "งดขาย",
+    16: "งดขาย",
     23: "งดขาย",
     26: "งดขายในนัดที่เหลือ", // cancelled for all remaining rounds
 };
@@ -26,14 +35,28 @@ export const SELL_STATUS = {
 /**
  * Codes after which the lot leaves LED and no further round will ever happen.
  * Only these three mean "this lot is done".
+ *
+ * Code 6 (seizure revoked) is not a sale outcome at all: LED drops the listing
+ * entirely. It is terminal for us - stop scheduling it, never predict a next
+ * round - but it must not read as "sold". The land went back to its owner; it
+ * did not fail to sell.
  */
 export const TERMINAL_CODES = new Set([1, 6, 26]);
 
 export const CLOSED_REASON = {
     1: "sold",
-    6: "seizure_revoked",
+    6: "withdrawn",
     26: "cancelled_remaining_rounds",
 };
+
+/**
+ * True when the lot was pulled from LED rather than completing its schedule.
+ * The UI mutes these and the scheduler stops following them, but neither hides
+ * the lot: its price history is still real and still worth showing.
+ */
+export function isWithdrawn(closeReason) {
+    return closeReason === "withdrawn";
+}
 
 /** Discount depth per consecutive no-bid round, capped at 30%. */
 export const DISCOUNT_STEP_PCT = 10;

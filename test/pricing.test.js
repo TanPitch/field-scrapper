@@ -100,7 +100,7 @@ t("round count is not hardcoded to 6", () => {
 
 console.log("lifecycle");
 t("1 / 6 / 26 close the lot", () => {
-    for (const [code, reason] of [[1, "sold"], [6, "seizure_revoked"], [26, "cancelled_remaining_rounds"]]) {
+    for (const [code, reason] of [[1, "sold"], [6, "withdrawn"], [26, "cancelled_remaining_rounds"]]) {
         const l = lotLifecycle(priceRounds(mk(code, 0, 0), 100000));
         assert.equal(l.status, "closed", `code ${code}`);
         assert.equal(l.close_reason, reason);
