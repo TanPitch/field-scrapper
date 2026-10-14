@@ -6,6 +6,37 @@ trusted without a source next to it.
 
 ---
 
+### Decision: LED is the source of truth
+
+We buy the assets **from LED**, so LED is the primary dataset. TD is a lookup
+service used only to answer "what does TD say about this parcel", and never
+overrides LED. Concretely:
+
+- The lot table, the map and all statuses come from LED.
+- TD is queried with `(province, district, deed)` taken from the LED row.
+- If TD and LED disagree, **LED wins** and the difference is recorded, not
+  resolved.
+
+#### พลอยแหวน — resolved, do not re-open
+
+Checked end to end against both sites for `ผบ.229/2567 7-1 ผบ.4663`:
+
+| source | says |
+|---|---|
+| LED | พลอยแหวน, ท่าใหม่, จันทบุรี |
+| TD | ระวาง:5434 III 7896 00, พลอยแหวน, ท่าใหม่ |
+
+**Both** list the district as ท่าใหม่. LED's dropdown has no พลอยแหวน either.
+So พลอยแหวน is a stale row in TD that no longer resolves to a district anybody
+sells from.
+
+Resolution: **keep the TD row for history, never match it, never query it.**
+Matching it would file live ท่าใหม่ parcels under a district that no longer
+exists. This was the only unmatched row in the two provinces with TD ground
+truth, so the rename case is handled.
+
+---
+
 ## 1. Round status codes
 
 `status_code` is LED's per-round outcome. Every code below was confirmed against
@@ -163,12 +194,40 @@ No daily limit on LED.
 
 The dropdowns are dojo/AMOS-driven (`widgetid="uniqName_19_3"`, hidden inputs
 named `PROV_CODE`, `DOL_CODE`, `AMPH_CODE`, `TUMB_CODE`) and the option lists
-arrive over XHR. **The endpoint is not yet identified** — `ledAreaCodes.js`
-covers LED only, and TD district codes still need a source.
+arrive over XHR.
+
+What is known so far:
+
+- `POST /assessprice/ashx/Proxy.ashx?<service-url>` authenticates with the
+  `ASP.NET_SessionId` cookie plus a `CSRF_TOKEN` taken from the page. It answers
+  `{"success":true,...}`.
+- `SP=GIS_Q_ADMINPOLY_LOCATION` returns **geometry only** — a province bounding
+  box in EPSG:32647 — not the code/name lists.
+- `SP=LUT_Q_BND` (with `LAYER=PARCEL`, `SYS_ID=GIS5`) is the parcel-bound query.
+- The **dropdown lists are a separate lookup service, still unidentified.** The
+  widget CSS class is `amos-filtering-select`; the handler is *not* in
+  `init.js` — `_hitchArgs` there is dojo's generic argument-forwarder helper and
+  is a dead end.
+
+⚠️ The root page `/assessprice/` returns a shell with no forms and no widget
+markup, so the page that actually hosts the dropdown is a different one. Guessed
+widget script paths all 404.
 
 Reference data from <https://github.com/kongvut/thai-province-data> is useful
 for **name lookup and validation only**. Its codes are *not* used anywhere: LED
 and TD publish their own, and those are authoritative.
+
+### What we still need TD for
+
+Narrower than it looks. Only one join is missing:
+
+```
+LED district name  ->  TD AMPH_CODE
+```
+
+Province codes are known (only บึงกาฬ diverges). TD has no subdistrict level.
+And because the join key is the district *name* — not its number —
+`areaMatch.js` already resolves it wherever TD ground truth exists.
 
 ### Quotas
 
