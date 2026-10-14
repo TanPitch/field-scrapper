@@ -50,6 +50,9 @@ export type DataSource = 'กรมบังคับคดี' | 'ธนาค�
 export type LandKind = 'empty' | 'building';
 
 export interface Parcel {
+  /** Lots sharing this parcel's coordinates. >1 for a condominium building,
+   *  which is one cadastral parcel sold as several units. */
+  lotCount?: number;
   id: number;
   status: Status;
   wah: number;

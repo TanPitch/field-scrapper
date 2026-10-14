@@ -280,14 +280,18 @@ app.get("/api/parcels", async (req, res) => {
                   photographs rather than placeholders. local_path is a bare
                   filename; the API serves it under /img/land/. Capped, because a
                   lot with many images would otherwise bloat every map request. */
-               (SELECT json_agg(x.local_path ORDER BY x.id)
-                  FROM (SELECT id, local_path FROM lot_images
-                         WHERE lot_id = l.id ORDER BY id LIMIT 8) x) AS img_paths
-          FROM parcels p
-          LEFT JOIN LATERAL (
-                SELECT * FROM auction_lots WHERE parcel_id = p.id
-                 ORDER BY (status='active') DESC, next_round_date ASC NULLS LAST, id
-                 LIMIT 1) l ON true
+(SELECT json_agg(x.local_path ORDER BY x.id)
+                   FROM (SELECT id, local_path FROM lot_images
+                          WHERE lot_id = l.id ORDER BY id LIMIT 8) x) AS img_paths,
+               /* How many lots sit behind this parcel. A condominium building
+                  is one cadastral parcel sold as N separate units, so the
+                  answer is the unit count and the marker needs to say so -
+                  otherwise a lone unit and a five-unit building look identical
+                  on the map. Computed rather than stored: it is a property of
+                  the join, not a fact about the land. */
+               (SELECT count(*)::int FROM auction_lots x WHERE x.parcel_id = p.id) AS lot_count
+FROM parcels p
+          LEFT JOIN auction_lots l ON l.parcel_id = p.id
          WHERE ($1::int IS NULL OR p.province_code = $1)
            AND ($2::bool IS NOT TRUE OR l.status = 'active')
          ORDER BY p.id`, [province, onlyActive]);

@@ -116,6 +116,12 @@ export interface ApiRound {
 export interface ApiParcelProps {
   id: number;
   lotId: number | null;
+    /**
+     * How many lots share this parcel. A condominium building is one cadastral
+     * parcel sold as N units, so >1 means the map marker stands for several
+     * distinct assets. 1 for ordinary land.
+     */
+    lotCount: number | null;
   deed: string;
   landTitle: string;
   tambon: string;

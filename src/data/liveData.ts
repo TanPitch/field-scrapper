@@ -165,6 +165,10 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     landKind: 'empty',
     ownerFile: p.plaintiff ?? p.owner ?? '',
     propertyType: p.assetType ?? '',
+    /* Carried straight through: the marker badge and the unit cycler both key
+       off this. Default 1 so an older server without the field behaves as one
+       lot rather than as zero. */
+    lotCount: p.lotCount ?? 1,
     /* LED's เลขที่โฉนด, not TD's landNo. Those are different fields and landNo is
        frequently a short fragment (a lot showed '94' where LED's was '72927'),
        so preferring it displayed the wrong deed. */
