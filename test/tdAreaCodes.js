@@ -21,6 +21,8 @@
  *   bun tdAreaCodes.js 83 22        # just these
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { SQL } from "bun";
 
 const DB_URL = process.env.DATABASE_URL ?? "postgres://postgres:landmap@localhost:5433/landmap";
@@ -83,28 +85,31 @@ function similarity(a, b) {
     return (2 * shared) / ((A.length - 1) + (B.length - 1));
 }
 
+/* Provinces and districts come from the researched snapshot rather than the
+ * network. It carries the same {CODE,DESCR} shape as the API and is keyed by
+ * TD's OWN province codes - บึงกาฬ is 38 there, not LED's 97 - so it removes
+ * the runtime lookup that had been silently returning zero districts for that
+ * province. The snapshot has no subdistrict level, so those still use the API. */
+const SNAPSHOT = resolve(import.meta.dir, "research", "assessprice_api_bundle", "provinces_districts.json");
+
 async function main() {
+    const snapshot = JSON.parse(readFileSync(SNAPSHOT, "utf8"));
+    const snapByCode = new Map(snapshot.provinces.map((p) => [String(p.CODE), p]));
     const wanted = process.argv.slice(2).map(Number).filter(Boolean);
     const db = new SQL(DB_URL);
 
     const ledProvinces = await db.unsafe(`SELECT code, name, dol_code FROM provinces ORDER BY code`);
     const list = wanted.length ? ledProvinces.filter((p) => wanted.includes(Number(p.code))) : ledProvinces;
 
-    /* Fetched ONCE. Calling it per-province re-downloaded the same 77-row list
-     * 77 times, which is ~76 wasted round trips to a government service. */
-    const tdProvinces = await call({});
     const stats = { districts: 0, subdistricts: 0, matched: 0, unmatchedLed: [], unmatchedTd: [] };
     const WITH_SUBDISTRICTS = process.env.TD_SUBDISTRICTS !== "0";
 
     for (const prov of list) {
         const pc = String(prov.code);
-        const tdProv = tdProvinces.find((p) => String(p.CODE) === pc);
-        if (!tdProv) console.log(`\n${prov.name} (${pc})  *** no such province in TD ***`);
-        /* Query TD with TD's OWN province code, not LED's. They agree for 76 of 77
-         * provinces; บึงกาฬ is LED 97 but TD 38, and asking TD for "97" returns
-         * zero districts - which silently left all 8 of its districts unmatched. */
         const tdProvCode = String(prov.dol_code ?? pc);
-        const tdDistricts = await call({ PROV_CODE: tdProvCode });
+        const tdProv = snapByCode.get(tdProvCode);
+        const tdDistricts = snapshot.districts_by_province[tdProvCode] ?? [];
+        if (!tdProv) console.log(`\n${prov.name} (${pc})  *** not in the TD snapshot as ${tdProvCode} ***`);
 
         console.log(`\n${prov.name} (${pc})  LED dol_code ${prov.dol_code} | TD ${tdProv ? tdProv.CODE : "?"} ${tdProv?.DESCR ?? ""}`);
 
@@ -199,7 +204,7 @@ async function main() {
                 stats.unmatchedLed.push({ province: prov.name, provCode: pc, ledName: ld.name, ledDol: ld.dol_code });
             }
         }
-        console.log(`    TD ${tdDistricts.length} districts -> matched ${stats.matched} cumulative`);
+        console.log(`    TD ${tdDistricts.length} districts`);
         await sleep(DELAY_MS);
     }
 
