@@ -19,6 +19,7 @@ import pg from "pg";
 import { LocalImageStore, planImageBudget } from "./imageStore.js";
 import { loadTambonResolver, loadAreaGrades } from "./tambonResolver.js";
 import { ProvenanceRecorder, SOURCE } from "./provenance.js";
+import { parseGroupSaleRemark } from "./groupSale.js";
 
 const { Client } = pg;
 
@@ -231,7 +232,8 @@ const LOT_COLUMNS = `
     size_unit, size_rai, size_ngan, size_wa, published_date, legal_exec_dept, remark,
     start_price, start_price_src, committee_price, led_price, officer_price,
     expert_price, bid_security, status, close_code, close_reason, closed_at,
-    next_round_date, next_round_price, deed_number, plot_no, last_seen`;
+    next_round_date, next_round_price, deed_number, plot_no,
+    group_lot_count, group_total_price, last_seen`;
 
 /* Columns refreshed on conflict. Written out rather than derived by parsing
    LOT_COLUMNS — deriving it produced a trailing comma and a syntax error, and a
@@ -243,7 +245,7 @@ const LOT_UPSERT_COLUMNS = [
     "remark", "start_price", "start_price_src", "committee_price", "led_price",
     "officer_price", "expert_price", "bid_security", "status", "close_code",
     "close_reason", "closed_at", "next_round_date", "next_round_price",
-    "deed_number", "plot_no", "last_seen",
+    "deed_number", "plot_no", "group_lot_count", "group_total_price", "last_seen",
 ];
 
 async function upsertLot(client, lot, parcelId, stats) {
@@ -260,6 +262,7 @@ async function upsertLot(client, lot, parcelId, stats) {
 
     const condo = isCondo(lot.type);
     const sz = lot.size ?? {};
+    const group = parseGroupSaleRemark(lot.remark);
 
     const values = [
         parcelId, txt(lot.case_no?.number), int(lot.case_no?.year), txt(lot.court),
@@ -277,7 +280,12 @@ async function upsertLot(client, lot, parcelId, stats) {
         /* LED facts, stored on the lot rather than only reached through the
            parcel. For a condominium listing the deed number is the building and
            addr_no is the unit, so it is the pair that identifies the asset. */
-        txt(a.number ?? a.deeds?.numbers?.[0]), txt(a.addr_no), new Date(),
+        txt(a.number ?? a.deeds?.numbers?.[0]), txt(a.addr_no),
+        /* Group-sale note, when present. Both numbers are LED's, kept so the
+           row can be checked against what actually landed — see groupSale.js.
+           Null for a lot sold on its own. */
+        group?.lotCount ?? null, group?.totalPrice ?? null,
+        new Date(),
     ];
 
     const setClause = LOT_UPSERT_COLUMNS.map((c) => `${c} = EXCLUDED.${c}`).join(", ");
