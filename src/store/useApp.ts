@@ -4,6 +4,7 @@ import {
   DEFAULT_POP_COLORS, MIN_BH,
 } from '../data/constants';
 import type { AvatarCfg } from '../components/ui/AvatarPicker';
+import type { CondoUnitOrder } from '../lib/condoUnits';
 import type {
   BasemapId, BBox, Cascade, CctvPin, ColKey, DrawDistMode, DrawMode, DrawShape, DrawTool, Filters, FilterArea,
   ChartTick, FloodConfig, GlassLevel, LightboxField, LayoutMode, LngLat, MarkerSize, Overlay, OverlayId, PopupConfig, PopupMode, RightView, SensorPin, SortState,
@@ -30,6 +31,8 @@ export interface AppState {
   chartTodayLine: boolean;
   /** Draw the dashed, semi-transparent leg to the predicted next-round price. */
   chartForecast: boolean;
+  /** Which unit stands in for a condo building on the map. */
+  condoUnitOrder: CondoUnitOrder;
   /** Restore the map to wherever it was left, rather than the default view. */
   persistMapView: boolean;
   /** Last camera position, saved so the next login resumes there. */
@@ -164,6 +167,7 @@ export const useApp = create<AppState>(set => ({
   labelNextDate: true,
   chartTodayLine: true,
   chartForecast: true,
+  condoUnitOrder: "sizeDesc",
   persistMapView: true,
   lastView: null,
   sectionsCollapsed: false,

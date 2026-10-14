@@ -51,25 +51,69 @@ function areaWa(u: CondoUnit): number {
  *               startPrice and orderLabel.
  * @returns the unit that represents the building, or null when there are none.
  */
+export type CondoUnitOrder = "orderLabel" | "priceAsc" | "priceDesc" | "sizeAsc" | "sizeDesc";
+
+/**
+ * Which unit stands in for a condominium building on the map.
+ *
+ * One primary criterion, then LED's order_label as the tiebreak - always.
+ *
+ *   orderLabel   first by ลำดับการขาย
+ *   priceAsc     cheapest first
+ *   priceDesc    dearest first
+ *   sizeAsc      smallest first
+ *   sizeDesc     largest first
+ *
+ * Every option falls through to order_label rather than to the other size or
+ * price axis. If size is what you asked to sort by, breaking a size tie on
+ * price would quietly re-introduce the criterion you did not choose - two
+ * equal-area units differing by a few thousand baht would pick whichever is
+ * dearer, which is not what "smallest first" means. order_label is stable
+ * across runs, so the marker also cannot jump when prices move.
+ *
+ * @param order which criterion leads. Defaults to largest-first.
+ */
 export function representativeUnit(
   units: CondoUnit[] | null | undefined,
+  order: CondoUnitOrder = "sizeDesc",
 ): CondoUnit | null {
   if (!Array.isArray(units) || units.length === 0) return null;
   if (units.length === 1) return units[0];
 
+  const cmp: Record<CondoUnitOrder, (a: CondoUnit, b: CondoUnit) => number> = {
+    sizeDesc: (a, b) => areaWa(b) - areaWa(a),
+    sizeAsc: (a, b) => areaWa(a) - areaWa(b),
+    priceAsc: (a, b) => byPrice(a, b, 1),
+    priceDesc: (a, b) => byPrice(a, b, -1),
+    orderLabel: () => 0,
+  };
+
+  const lead = cmp[order] ?? cmp.sizeDesc;
   const sorted = [...units].sort((a: CondoUnit, b: CondoUnit) => {
-    const area = areaWa(b) - areaWa(a); /* larger first */
-    if (area !== 0) return area;
-
-    const pa = a.startPrice ?? Number.POSITIVE_INFINITY;
-    const pb = b.startPrice ?? Number.POSITIVE_INFINITY;
-    if (pa !== pb) return pa - pb; /* cheaper first */
-
-    /* Natural-ish so 1-2 sorts before 1-10. Plain string compare would not,
-       and the order_label is what the rest of the UI shows. */
+    const d = lead(a, b);
+    if (d !== 0) return d;
     return naturalCompare(a.orderLabel ?? "", b.orderLabel ?? "");
   });
   return sorted[0];
+}
+
+/**
+ * Compare on published price, with an unpriced lot always last.
+ *
+ * `dir` is +1 for cheapest-first and -1 for dearest-first. Handling the null
+ * case explicitly rather than substituting ±Infinity is what keeps "no price
+ * published" out of both ends: Infinity would make an unpriced unit look the
+ * cheapest under one direction and the dearest under the other, so the marker
+ * would flip between them depending only on which sort the user picked. A lot
+ * LED has not priced is not an extreme, it is simply unknown.
+ */
+function byPrice(a: CondoUnit, b: CondoUnit, dir: 1 | -1): number {
+  const pa = a.startPrice;
+  const pb = b.startPrice;
+  if (pa == null && pb == null) return 0;
+  if (pa == null) return 1;
+  if (pb == null) return -1;
+  return (pa - pb) * dir;
 }
 
 function naturalCompare(a: string, b: string): number {
