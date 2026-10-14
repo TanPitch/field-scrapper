@@ -345,6 +345,11 @@ export function DetailView() {
       <ul>
         {p.events.length ? p.events.map(e => {
           const h = p.hist[e.idx];
+          /* Defensive. The event log indexes the price history, and a lot can
+             legitimately have an event with no matching point. Rendering the
+             rest of the panel matters more than one log line, so skip it rather
+             than take the whole panel down. */
+          if (!h) return null;
           return (
             <li key={e.idx} className="flex items-center gap-2 pt-[5px] pb-[16px] text-[11.5px]">
               <span className="size-[7px] flex-none rounded-sm" style={{ background: e.label.includes('นำกลับมาขายใหม่') ? reColor : e.color }} />

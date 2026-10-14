@@ -66,35 +66,59 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
  * sequence. hist[0] is therefore the cascade's opening price, which is what
  * startPriceOf() returns and what the "smart price" column shows.
  */
-function mapHist(rounds: SellRound[], startPrice: number | null, announceTs: number, now: number): HistPoint[] {
+function mapHist(rounds: SellRound[], startPrice: number | null, announceTs: number, now: number): {
+  pts: HistPoint[];
+  /** Round array index -> index into `pts`, or -1 when that round produced no
+   *  point. Without this, callers index `pts` by round position and read the
+   *  wrong point. */
+  roundToHist: number[];
+} {
   const pts: HistPoint[] = [];
+  const roundToHist: number[] = rounds.map(() => -1);
   if (startPrice != null && startPrice > 0) {
     pts.push({ d: announceTs, v: startPrice });
   }
-  for (const r of rounds) {
+  for (let i = 0; i < rounds.length; i++) {
+    const r = rounds[i];
     if (r.price == null || r.date == null) continue;
+    roundToHist[i] = pts.length;
     pts.push({ d: r.date, v: r.price });
   }
   /* Sorted ascending, because the price chart and lastDelta() both assume the
      last element is the most recent point. Without this a lot whose round
-     dates overlap its announce date would render inside out. */
+     dates overlap its announce date would render inside out.
+     Sorting moves points, so the mapping has to be rebuilt by date rather than
+     left pointing at pre-sort positions. */
   pts.sort((a, b) => a.d - b.d);
   if (!pts.length && startPrice != null && startPrice > 0) {
     pts.push({ d: now, v: startPrice });
   }
-  return pts;
+  for (let i = 0; i < roundToHist.length; i++) {
+    const k = roundToHist[i];
+    if (k < 0) continue;
+    /* pts was sorted, so re-find this round's point by identity of value. */
+    roundToHist[i] = pts.findIndex(
+      (pt) => pt.d === pts[k].d && pt.v === pts[k].v,
+    );
+  }
+  return { pts, roundToHist };
 }
 
 /** Event log. Only the two facts the UI actually asserts from live data. */
-function mapEvents(status: Status, rounds: SellRound[], announceTs: number): PriceEvent[] {
+function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], announceTs: number): PriceEvent[] {
   const out: PriceEvent[] = [];
   out.push({ idx: 0, label: 'ประกาศขาย', color: '#B8F13F', ink: '#151B06' });
   void announceTs;
   if (status === 'sold') {
     const sold = rounds.find((r) => r.statusCode === 1);
-    out.push({ idx: Math.max(0, rounds.indexOf(sold ?? rounds[0])), label: 'ขายออกแล้ว', color: '#9BA1A6', ink: '#101211' });
+    const at = roundToHist[rounds.indexOf(sold ?? rounds[0])] ?? -1;
+    if (at >= 0) out.push({ idx: at, label: 'ขายออกแล้ว', color: '#9BA1A6', ink: '#101211' });
   } else if (status === 'inactive') {
-    out.push({ idx: Math.max(0, rounds.length - 1), label: 'หมดอายุประกาศ ไม่มีผู้สู้ราคา', color: '#5C5247', ink: '#fff' });
+    /* The last round that actually produced a point. Indexing rounds.length-1
+       assumes every round made it into hist, which is false whenever one lacks a
+       price or a date - and reading past the end crashed the panel. */
+    const last = [...roundToHist].reverse().find(i => i >= 0) ?? -1;
+    if (last >= 0) out.push({ idx: last, label: 'หมดอายุประกาศ ไม่มีผู้สู้ราคา', color: '#5C5247', ink: '#fff' });
   }
   return out;
 }
@@ -128,7 +152,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   const rounds = mapRounds((p.rounds as RoundRow[]) ?? []);
   const status = mapStatus(p.status);
   const startPrice = (p.startPrice as number | null) ?? p.askingPrice;
-  const hist = mapHist(rounds, startPrice, announceTs, now);
+  const { pts: hist, roundToHist } = mapHist(rounds, startPrice, announceTs, now);
   const lastPrice = hist.length ? hist[hist.length - 1].v : (p.askingPrice ?? 0);
 
   /* ตร.ว. is null for condo lots, which LED publishes in ตร.ม. Showing them as
@@ -152,7 +176,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     announce: announceTs,
     soldTs: null,
     hist,
-    events: mapEvents(status, rounds, announceTs),
+    events: mapEvents(status, rounds, roundToHist, announceTs),
     resell: false,
     imgs: p.imageCount ?? 0,
     /* Real photographs, resolved against the API's static mount. An empty
