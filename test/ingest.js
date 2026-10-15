@@ -109,14 +109,50 @@ async function ensureProvince(client, code, name) {
     return r.rows[0].code;
 }
 
+/**
+ * Districts are not discovered lazily any more - ledAreaCodes.js loads all 1005
+ * of them straight from LED's own dropdowns, which is the authority.
+ *
+ * This used to INSERT with a synthesised code of provinceCode * 100 + dolCode,
+ * which is wrong in two ways. LED's real amphurId is not always that formula
+ * (the pre-2013 provinces carry six-digit codes such as 252505), and LED is
+ * already in the table under its true code, so the synthetic one collided on
+ * UNIQUE (province_id, dol_code) against a row that was correct.
+ *
+ * The scraped row only carries a district NAME, so that is what we match on.
+ * The synthesised code survives only as a last resort, for a name LED's own
+ * dropdown has never listed, and it is logged rather than passed off as a match.
+ */
 async function ensureDistrict(client, provinceCode, dolCode, name) {
     if (!int(provinceCode) || !int(dolCode)) return null;
+    const nm = txt(name);
+
+    if (nm) {
+        const byName = await client.query(
+            `SELECT id FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
+            [int(provinceCode), nm],
+        );
+        if (byName.rows[0]) return byName.rows[0].id;
+    }
+
+    const byDol = await client.query(
+        `SELECT id, name, code FROM districts WHERE province_id = $1 AND dol_code = $2 LIMIT 1`,
+        [int(provinceCode), int(dolCode)],
+    );
+    if (byDol.rows[0]) {
+        if (nm && byDol.rows[0].name !== nm) {
+            console.warn(`    [amphoe] LED says "${nm}" but district ${byDol.rows[0].code} is "${byDol.rows[0].name}"; using ${byDol.rows[0].code}`);
+        }
+        return byDol.rows[0].id;
+    }
+
+    console.warn(`    [amphoe] "${nm ?? dolCode}" is not in LED's district list; inserting a synthesised code`);
     const r = await client.query(
         `INSERT INTO districts (province_id, code, dol_code, name)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (province_id, dol_code) DO UPDATE SET name = EXCLUDED.name
          RETURNING id`,
-        [int(provinceCode), int(provinceCode) * 100 + int(dolCode), int(dolCode), txt(name) ?? String(dolCode)],
+        [int(provinceCode), int(provinceCode) * 100 + int(dolCode), int(dolCode), nm ?? String(dolCode)],
     );
     return r.rows[0].id;
 }
