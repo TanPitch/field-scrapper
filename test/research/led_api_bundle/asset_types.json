@@ -1,0 +1,102 @@
+[
+  {
+    "asset_type_code": "001",
+    "asset_type_name_th": "ที่ดินว่างเปล่า"
+  },
+  {
+    "asset_type_code": "0010",
+    "asset_type_name_th": "หุ้น"
+  },
+  {
+    "asset_type_code": "0011",
+    "asset_type_name_th": "หน่วยลงทุน"
+  },
+  {
+    "asset_type_code": "0012",
+    "asset_type_name_th": "พันธบัตร"
+  },
+  {
+    "asset_type_code": "0013",
+    "asset_type_name_th": "ใบสำคัญ"
+  },
+  {
+    "asset_type_code": "0014",
+    "asset_type_name_th": "สลากออมสิน"
+  },
+  {
+    "asset_type_code": "0015",
+    "asset_type_name_th": "สลากออมทรัพย์"
+  },
+  {
+    "asset_type_code": "002",
+    "asset_type_name_th": "ห้องชุด"
+  },
+  {
+    "asset_type_code": "003",
+    "asset_type_name_th": "ที่ดินพร้อมสิ่งปลูกสร้าง"
+  },
+  {
+    "asset_type_code": "004",
+    "asset_type_name_th": "กรรมสิทธิ์ห้องชุด"
+  },
+  {
+    "asset_type_code": "005",
+    "asset_type_name_th": "สิทธิการเช่า"
+  },
+  {
+    "asset_type_code": "006",
+    "asset_type_name_th": "สิทธิการเช่าอาคารพาณิชย์"
+  },
+  {
+    "asset_type_code": "007",
+    "asset_type_name_th": "สิทธิการเช่าที่ดิน"
+  },
+  {
+    "asset_type_code": "008",
+    "asset_type_name_th": "ทรัพย์สินต่างๆ"
+  },
+  {
+    "asset_type_code": "009",
+    "asset_type_name_th": "สิ่งปลูกสร้าง"
+  },
+  {
+    "asset_type_code": "010",
+    "asset_type_name_th": "สิทธิการเช่าที่ดินฯ"
+  },
+  {
+    "asset_type_code": "011",
+    "asset_type_name_th": "สิทธิการเช่าสิ่งปลูกสร้าง"
+  },
+  {
+    "asset_type_code": "012",
+    "asset_type_name_th": "บัตรธนาคาร(เป็นเงินที่ชำระหนี้ได้ตามกฎหมาย)"
+  },
+  {
+    "asset_type_code": "013",
+    "asset_type_name_th": "สิทธิการเช่าอาคารราชพัสดุ"
+  },
+  {
+    "asset_type_code": "014",
+    "asset_type_name_th": "สิทธิการเช่าอาคาร"
+  },
+  {
+    "asset_type_code": "016",
+    "asset_type_name_th": "สิทธิการไถ่คืน"
+  },
+  {
+    "asset_type_code": "017",
+    "asset_type_name_th": "สิทธิการเช่าช่วงที่ดิน"
+  },
+  {
+    "asset_type_code": "018",
+    "asset_type_name_th": "อาวุธปืน"
+  },
+  {
+    "asset_type_code": "019",
+    "asset_type_name_th": "บัตรเงินฝาก"
+  },
+  {
+    "asset_type_code": "020",
+    "asset_type_name_th": "ธนบัตร"
+  }
+]

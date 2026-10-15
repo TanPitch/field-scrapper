@@ -1,0 +1,387 @@
+[
+  {
+    "province_code": "81",
+    "province_name_th": "กระบี่",
+    "district_count": 8
+  },
+  {
+    "province_code": "10",
+    "province_name_th": "กรุงเทพมหานคร",
+    "district_count": 64
+  },
+  {
+    "province_code": "71",
+    "province_name_th": "กาญจนบุรี",
+    "district_count": 14
+  },
+  {
+    "province_code": "46",
+    "province_name_th": "กาฬสินธุ์",
+    "district_count": 18
+  },
+  {
+    "province_code": "62",
+    "province_name_th": "กำแพงเพชร",
+    "district_count": 13
+  },
+  {
+    "province_code": "40",
+    "province_name_th": "ขอนแก่น",
+    "district_count": 34
+  },
+  {
+    "province_code": "22",
+    "province_name_th": "จันทบุรี",
+    "district_count": 10
+  },
+  {
+    "province_code": "24",
+    "province_name_th": "ฉะเชิงเทรา",
+    "district_count": 13
+  },
+  {
+    "province_code": "20",
+    "province_name_th": "ชลบุรี",
+    "district_count": 14
+  },
+  {
+    "province_code": "18",
+    "province_name_th": "ชัยนาท",
+    "district_count": 8
+  },
+  {
+    "province_code": "36",
+    "province_name_th": "ชัยภูมิ",
+    "district_count": 16
+  },
+  {
+    "province_code": "86",
+    "province_name_th": "ชุมพร",
+    "district_count": 8
+  },
+  {
+    "province_code": "92",
+    "province_name_th": "ตรัง",
+    "district_count": 11
+  },
+  {
+    "province_code": "23",
+    "province_name_th": "ตราด",
+    "district_count": 8
+  },
+  {
+    "province_code": "63",
+    "province_name_th": "ตาก",
+    "district_count": 9
+  },
+  {
+    "province_code": "26",
+    "province_name_th": "นครนายก",
+    "district_count": 4
+  },
+  {
+    "province_code": "73",
+    "province_name_th": "นครปฐม",
+    "district_count": 9
+  },
+  {
+    "province_code": "48",
+    "province_name_th": "นครพนม",
+    "district_count": 12
+  },
+  {
+    "province_code": "30",
+    "province_name_th": "นครราชสีมา",
+    "district_count": 33
+  },
+  {
+    "province_code": "80",
+    "province_name_th": "นครศรีธรรมราช",
+    "district_count": 23
+  },
+  {
+    "province_code": "60",
+    "province_name_th": "นครสวรรค์",
+    "district_count": 15
+  },
+  {
+    "province_code": "12",
+    "province_name_th": "นนทบุรี",
+    "district_count": 7
+  },
+  {
+    "province_code": "96",
+    "province_name_th": "นราธิวาส",
+    "district_count": 13
+  },
+  {
+    "province_code": "55",
+    "province_name_th": "น่าน",
+    "district_count": 18
+  },
+  {
+    "province_code": "97",
+    "province_name_th": "บึงกาฬ",
+    "district_count": 8
+  },
+  {
+    "province_code": "31",
+    "province_name_th": "บุรีรัมย์",
+    "district_count": 23
+  },
+  {
+    "province_code": "13",
+    "province_name_th": "ปทุมธานี",
+    "district_count": 7
+  },
+  {
+    "province_code": "77",
+    "province_name_th": "ประจวบคีรีขันธ์",
+    "district_count": 8
+  },
+  {
+    "province_code": "25",
+    "province_name_th": "ปราจีนบุรี",
+    "district_count": 14
+  },
+  {
+    "province_code": "94",
+    "province_name_th": "ปัตตานี",
+    "district_count": 12
+  },
+  {
+    "province_code": "14",
+    "province_name_th": "พระนครศรีอยุธยา",
+    "district_count": 16
+  },
+  {
+    "province_code": "56",
+    "province_name_th": "พะเยา",
+    "district_count": 9
+  },
+  {
+    "province_code": "82",
+    "province_name_th": "พังงา",
+    "district_count": 8
+  },
+  {
+    "province_code": "93",
+    "province_name_th": "พัทลุง",
+    "district_count": 12
+  },
+  {
+    "province_code": "66",
+    "province_name_th": "พิจิตร",
+    "district_count": 12
+  },
+  {
+    "province_code": "65",
+    "province_name_th": "พิษณุโลก",
+    "district_count": 9
+  },
+  {
+    "province_code": "83",
+    "province_name_th": "ภูเก็ต",
+    "district_count": 3
+  },
+  {
+    "province_code": "44",
+    "province_name_th": "มหาสารคาม",
+    "district_count": 13
+  },
+  {
+    "province_code": "49",
+    "province_name_th": "มุกดาหาร",
+    "district_count": 7
+  },
+  {
+    "province_code": "95",
+    "province_name_th": "ยะลา",
+    "district_count": 9
+  },
+  {
+    "province_code": "35",
+    "province_name_th": "ยโสธร",
+    "district_count": 9
+  },
+  {
+    "province_code": "85",
+    "province_name_th": "ระนอง",
+    "district_count": 5
+  },
+  {
+    "province_code": "21",
+    "province_name_th": "ระยอง",
+    "district_count": 8
+  },
+  {
+    "province_code": "70",
+    "province_name_th": "ราชบุรี",
+    "district_count": 11
+  },
+  {
+    "province_code": "45",
+    "province_name_th": "ร้อยเอ็ด",
+    "district_count": 21
+  },
+  {
+    "province_code": "16",
+    "province_name_th": "ลพบุรี",
+    "district_count": 11
+  },
+  {
+    "province_code": "52",
+    "province_name_th": "ลำปาง",
+    "district_count": 14
+  },
+  {
+    "province_code": "51",
+    "province_name_th": "ลำพูน",
+    "district_count": 11
+  },
+  {
+    "province_code": "33",
+    "province_name_th": "ศรีสะเกษ",
+    "district_count": 22
+  },
+  {
+    "province_code": "47",
+    "province_name_th": "สกลนคร",
+    "district_count": 19
+  },
+  {
+    "province_code": "90",
+    "province_name_th": "สงขลา",
+    "district_count": 17
+  },
+  {
+    "province_code": "91",
+    "province_name_th": "สตูล",
+    "district_count": 7
+  },
+  {
+    "province_code": "11",
+    "province_name_th": "สมุทรปราการ",
+    "district_count": 7
+  },
+  {
+    "province_code": "75",
+    "province_name_th": "สมุทรสงคราม",
+    "district_count": 3
+  },
+  {
+    "province_code": "74",
+    "province_name_th": "สมุทรสาคร",
+    "district_count": 3
+  },
+  {
+    "province_code": "19",
+    "province_name_th": "สระบุรี",
+    "district_count": 14
+  },
+  {
+    "province_code": "27",
+    "province_name_th": "สระแก้ว",
+    "district_count": 9
+  },
+  {
+    "province_code": "17",
+    "province_name_th": "สิงห์บุรี",
+    "district_count": 6
+  },
+  {
+    "province_code": "72",
+    "province_name_th": "สุพรรณบุรี",
+    "district_count": 10
+  },
+  {
+    "province_code": "84",
+    "province_name_th": "สุราษฎร์ธานี",
+    "district_count": 19
+  },
+  {
+    "province_code": "32",
+    "province_name_th": "สุรินทร์",
+    "district_count": 17
+  },
+  {
+    "province_code": "64",
+    "province_name_th": "สุโขทัย",
+    "district_count": 9
+  },
+  {
+    "province_code": "43",
+    "province_name_th": "หนองคาย",
+    "district_count": 18
+  },
+  {
+    "province_code": "39",
+    "province_name_th": "หนองบัวลำภู",
+    "district_count": 6
+  },
+  {
+    "province_code": "37",
+    "province_name_th": "อำนาจเจริญ",
+    "district_count": 7
+  },
+  {
+    "province_code": "41",
+    "province_name_th": "อุดรธานี",
+    "district_count": 26
+  },
+  {
+    "province_code": "53",
+    "province_name_th": "อุตรดิตถ์",
+    "district_count": 9
+  },
+  {
+    "province_code": "61",
+    "province_name_th": "อุทัยธานี",
+    "district_count": 8
+  },
+  {
+    "province_code": "34",
+    "province_name_th": "อุบลราชธานี",
+    "district_count": 32
+  },
+  {
+    "province_code": "15",
+    "province_name_th": "อ่างทอง",
+    "district_count": 8
+  },
+  {
+    "province_code": "57",
+    "province_name_th": "เชียงราย",
+    "district_count": 18
+  },
+  {
+    "province_code": "50",
+    "province_name_th": "เชียงใหม่",
+    "district_count": 28
+  },
+  {
+    "province_code": "76",
+    "province_name_th": "เพชรบุรี",
+    "district_count": 8
+  },
+  {
+    "province_code": "67",
+    "province_name_th": "เพชรบูรณ์",
+    "district_count": 11
+  },
+  {
+    "province_code": "42",
+    "province_name_th": "เลย",
+    "district_count": 14
+  },
+  {
+    "province_code": "54",
+    "province_name_th": "แพร่",
+    "district_count": 8
+  },
+  {
+    "province_code": "58",
+    "province_name_th": "แม่ฮ่องสอน",
+    "district_count": 7
+  }
+]

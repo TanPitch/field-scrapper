@@ -1,0 +1,7460 @@
+[
+  {
+    "province_code": "10",
+    "province_name_th": "กรุงเทพมหานคร",
+    "districts": [
+      {
+        "district_code": "1070",
+        "district_name_th": "เขตพระโขนง(บางกะปิ)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "แขวงคลองตัน(เขตบางกะปิฝั่งใต้)",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1041",
+        "district_name_th": "คลองกุ่ม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองกุ่ม",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1047",
+        "district_name_th": "คลองตัน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองตัน",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1033",
+        "district_name_th": "คลองเตย",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองตัน",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "คลองตันเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "คลองเตย",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "คลองเตยเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "พระโขนง",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "พระโขนง",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "พระโขนงเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "ลุมพินี",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "วัฒนา",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1018",
+        "district_name_th": "คลองสาน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองต้นไทร",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "คลองสาน",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "บางลำภูล่าง",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "สมเด็จเจ้าพระยา",
+            "postcode": "10600"
+          }
+        ]
+      },
+      {
+        "district_code": "1059",
+        "district_name_th": "คลองสาน(บางลำภูล่าง)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางไส้ไก่ฝั่งเหนือ",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1052",
+        "district_name_th": "คลองสามวา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทรายกองดิน",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ทรายกองดินใต้",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางชัน",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สามวาตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สามวาตะวันออก",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1044",
+        "district_name_th": "คันนายาว",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คันนายาว",
+            "postcode": "10230"
+          },
+          {
+            "subdistrict_name_th": "รามอินทรา",
+            "postcode": "10220"
+          }
+        ]
+      },
+      {
+        "district_code": "1030",
+        "district_name_th": "จตุจักร",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จตุจักร",
+            "postcode": "10900"
+          },
+          {
+            "subdistrict_name_th": "จอมพล",
+            "postcode": "10900"
+          },
+          {
+            "subdistrict_name_th": "จันทรเกษม",
+            "postcode": "10900"
+          },
+          {
+            "subdistrict_name_th": "ลาดยาว",
+            "postcode": "10900"
+          },
+          {
+            "subdistrict_name_th": "สวนหลวง",
+            "postcode": "10900"
+          },
+          {
+            "subdistrict_name_th": "เสนานิคม",
+            "postcode": "10900"
+          }
+        ]
+      },
+      {
+        "district_code": "1042",
+        "district_name_th": "จระเข้บัว",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จระเข้บัว",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1035",
+        "district_name_th": "จอมทอง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จอมทอง",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางขุนเทียน",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางค้อ",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางมด",
+            "postcode": "10150"
+          }
+        ]
+      },
+      {
+        "district_code": "1063",
+        "district_name_th": "จักรวรรดิ (สามเพ็ง)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จักรวรรดิ",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1036",
+        "district_name_th": "ดอนเมือง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดอนเมือง",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "ตลาดบางเขน",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งสองห้อง",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งสีกัน",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "สนามบิน",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "สองห้อง",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "สีกัน",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "สีกัน(บ้านใหม่)",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "หลักสี่",
+            "postcode": "10210"
+          }
+        ]
+      },
+      {
+        "district_code": "1026",
+        "district_name_th": "ดินแดง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดินแดง",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "รัชดาภิเษก",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน",
+            "postcode": "10400"
+          }
+        ]
+      },
+      {
+        "district_code": "1002",
+        "district_name_th": "ดุสิต",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดุสิต",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "ถนนนครไชยศรี",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "นางเลิ้ง",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "บางขุนพรหม",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "บางซื่อ",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "ประแจจีน",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "พญาไท",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "มักกะสัน(พญาไท)",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "วชิรพยาบาล",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "วชิระ",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "วังจันทร์เกษม",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "วัดเบญจมบพิตร",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "สวนจิตรลดา",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "สามเสน",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "สี่แยกมหานาค",
+            "postcode": "10300"
+          }
+        ]
+      },
+      {
+        "district_code": "1054",
+        "district_name_th": "ดุสิต(บางซื่อ)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ถนนนครไชยศรี(บางกระบือ)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางซื่อ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางซื่อ(บางเขนฝั่งใต้)",
+            "postcode": "10300"
+          },
+          {
+            "subdistrict_name_th": "บางซื่อ(บางซ่อน)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน(บางซื่อฝั่งใต้)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน(สามเสนในฝั่งเหนือ)",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1019",
+        "district_name_th": "ตลิ่งชัน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองชักพระ",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "ฉิมพลี",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "ตลิ่งชัน",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "ทวีวัฒนา",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บางเชือกหนัง",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บางพรม",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บางพรมฝั่งใต้",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บางพรมฝั่งเหนือ",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บางระมาด",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "บ้านไทร",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "วัฒนา",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "ศาลาธรรมสพน์",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "สวนแดน",
+            "postcode": "10170"
+          }
+        ]
+      },
+      {
+        "district_code": "1045",
+        "district_name_th": "ทวีวัฒนา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองเตยเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "ทวีวัฒนา",
+            "postcode": "10170"
+          },
+          {
+            "subdistrict_name_th": "ศาลาธรรมสพน์",
+            "postcode": "10170"
+          }
+        ]
+      },
+      {
+        "district_code": "1060",
+        "district_name_th": "ทุ่งครุ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทุ่งครุ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางมด",
+            "postcode": "10140"
+          }
+        ]
+      },
+      {
+        "district_code": "1015",
+        "district_name_th": "ธนบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองสาน",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "ดาวคะนอง",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ตลาดพลู",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "บางยี่เรือ",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "บุคคโล",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "วัดกัลยาณ์",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "สำเหร่",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "หิรัญรูจี",
+            "postcode": "10600"
+          }
+        ]
+      },
+      {
+        "district_code": "1062",
+        "district_name_th": "ธนบุรี (บางลำภูล่าง)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางลำภูล่าง (บางไส้ไก่ ฝั่งเหนือ)",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1020",
+        "district_name_th": "บางกอกน้อย",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางขุนนนท์",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางขุนศรี",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางบำหรุ",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางพลัด",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางยี่ขัน",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางเสาธง",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางอ้อ",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บ้านช่างหล่อ",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บ้านปูน",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "ศิริราช",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "อรุณอมรินทร์",
+            "postcode": "10700"
+          }
+        ]
+      },
+      {
+        "district_code": "1016",
+        "district_name_th": "บางกอกใหญ่",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางยี่เรือ",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "บางสะแก",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "บางไส้ไก่",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "พระราชวังเดิม",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "วัดท่าพระ",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "วัดอรุณ",
+            "postcode": "10600"
+          },
+          {
+            "subdistrict_name_th": "สะพานเจริญพาศน์ (บางกอกใหญ่ฝั่งเหนือ)",
+            "postcode": "10600"
+          }
+        ]
+      },
+      {
+        "district_code": "1006",
+        "district_name_th": "บางกะปิ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองกุ่ม",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "คลองจั่น",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "คลองสามวา(คลองเกร็ด)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คันนายาว",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "คันนายาว(คลองเกร็ด)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "จรเข้บัว",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "บางกะปิ",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "บางกะปิฝั่งใต้",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ลาดพร้าว",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "ลาดพร้าว(ออเป้า)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ลาดพร้าวฝั่งเหนือ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "วังทองหลาง",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "สะพานสูง",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "สามเสนนอก",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "หัวหมาก",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "หัวหมาก(หัวหมากใต้)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "หัวหมากใต้",
+            "postcode": "10240"
+          }
+        ]
+      },
+      {
+        "district_code": "1061",
+        "district_name_th": "บางกะปิ(บึงกุ่ม)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บึงกุ่ม(คลองกุ่ม)",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1021",
+        "district_name_th": "บางขุนเทียน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จอมทอง",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "ท่าข้าม",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางขุนเทียน",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางค้อ",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางนางนอง",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางบอน",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางมด",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "แสมดำ",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "แสมดำ (บางบอน)",
+            "postcode": "10150"
+          }
+        ]
+      },
+      {
+        "district_code": "1005",
+        "district_name_th": "บางเขน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กูบแดง",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "กูบแดง (หลุ่มไผ่)",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "คลองถนน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "คลองหกวาสายล่างฝั่งใต้",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "จันทรเกษม",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ดอนมือง",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ตลาดบางเขน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ท่าแร้ง",
+            "postcode": "10230"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งสองห้อง",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "บางเขน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "บ้านใหม่",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ลาดโตนด",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ลาดยาว",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "สายไหม",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "สายไหม",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "สีกัน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "หลุมไผ่",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "อนุสาวรีย์",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "อนุสาวรีย์(คลองถนน)",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ออเงิน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ออเงินใหญ่",
+            "postcode": "10220"
+          }
+        ]
+      },
+      {
+        "district_code": "1058",
+        "district_name_th": "บางเขน(ตลาดขวัญ)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทุ่งสองห้อง",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "สีกัน",
+            "postcode": "10220"
+          }
+        ]
+      },
+      {
+        "district_code": "1031",
+        "district_name_th": "บางคอแหลม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางคอแหลม",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "บางโคล่",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "วัดพระยาไกร",
+            "postcode": "10120"
+          }
+        ]
+      },
+      {
+        "district_code": "1049",
+        "district_name_th": "บางแค",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางแค",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางแคเหนือ",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางไผ่",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางไผ่(บางเชือกหนังฝั่งใต้)",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หลักสอง",
+            "postcode": "10160"
+          }
+        ]
+      },
+      {
+        "district_code": "1029",
+        "district_name_th": "บางซื่อ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางกระบือ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางซื่อ",
+            "postcode": "10800"
+          },
+          {
+            "subdistrict_name_th": "วงศ์สว่าง",
+            "postcode": "10800"
+          },
+          {
+            "subdistrict_name_th": "สามเสนนอกฝั่งเหนือ",
+            "postcode": "10800"
+          },
+          {
+            "subdistrict_name_th": "สามเสนในฝั่งเหนือ",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1046",
+        "district_name_th": "บางนา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางนา",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "บางนาใต้",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "บางนาเหนือ",
+            "postcode": "10260"
+          }
+        ]
+      },
+      {
+        "district_code": "1050",
+        "district_name_th": "บางบอน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองบางบอน",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองบางพราน",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางบอน",
+            "postcode": "10150"
+          },
+          {
+            "subdistrict_name_th": "บางบอนใต้",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางบอนเหนือ",
+            "postcode": "10150"
+          }
+        ]
+      },
+      {
+        "district_code": "1025",
+        "district_name_th": "บางพลัด",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางบำหรุ",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางพลัด",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางพลู",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางยี่ขัน",
+            "postcode": "10700"
+          },
+          {
+            "subdistrict_name_th": "บางอ้อ",
+            "postcode": "10700"
+          }
+        ]
+      },
+      {
+        "district_code": "1004",
+        "district_name_th": "บางรัก",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางขวาง",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "บางรัก",
+            "postcode": "10500"
+          },
+          {
+            "subdistrict_name_th": "บ้านทวาย",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "มหาพฤฒาราม",
+            "postcode": "10500"
+          },
+          {
+            "subdistrict_name_th": "สาทร",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สี่พระยา",
+            "postcode": "10500"
+          },
+          {
+            "subdistrict_name_th": "สีลม",
+            "postcode": "10500"
+          },
+          {
+            "subdistrict_name_th": "สุริยวงศ์",
+            "postcode": "10500"
+          }
+        ]
+      },
+      {
+        "district_code": "1071",
+        "district_name_th": "บ้านทวาย(พระโขนง)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ช่องนนทรี(คลองเตย)",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1027",
+        "district_name_th": "บึงกุ่ม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองกุ่ม",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "คันนายาว",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "นวมินทร์",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "นวลจันทร์",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "บึงกุ่ม",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "สะพานสูง",
+            "postcode": "10240"
+          }
+        ]
+      },
+      {
+        "district_code": "1007",
+        "district_name_th": "ปทุมวัน",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ปทุมวัน",
+            "postcode": "10330"
+          },
+          {
+            "subdistrict_name_th": "รองเมือง",
+            "postcode": "10330"
+          },
+          {
+            "subdistrict_name_th": "ลุมพินี",
+            "postcode": "10330"
+          },
+          {
+            "subdistrict_name_th": "วังใหม่",
+            "postcode": "10330"
+          }
+        ]
+      },
+      {
+        "district_code": "1032",
+        "district_name_th": "ประเวศ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดอกไม้",
+            "postcode": "10250"
+          },
+          {
+            "subdistrict_name_th": "ประเวศ",
+            "postcode": "10250"
+          },
+          {
+            "subdistrict_name_th": "สวนหลวง",
+            "postcode": "10250"
+          },
+          {
+            "subdistrict_name_th": "หนองบอน",
+            "postcode": "10250"
+          }
+        ]
+      },
+      {
+        "district_code": "1008",
+        "district_name_th": "ป้อมปราบศัตรูพ่าย",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองมหานาค",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "บ้านบาตร",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "ป้อมปราบ",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "มหานาค",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "วัดเทพศิรินทร์",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "วัดโสมนัส",
+            "postcode": "10100"
+          }
+        ]
+      },
+      {
+        "district_code": "1014",
+        "district_name_th": "พญาไท",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ถนนพญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ถนนเพชรบุรี",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งพญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งพญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "พญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "มักกะสัน",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "สามเสนนอก",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ห้วยขวาง",
+            "postcode": "10400"
+          }
+        ]
+      },
+      {
+        "district_code": "1009",
+        "district_name_th": "พระโขนง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "แขวงดอกไม้(ราชาเทวะ)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน (ที่ 11 พระโขนง)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน (ที่ 8 พระโขนงฝั่งเหนือ)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน (บางกะปิฝั่งใต้)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองตัน(ที่ 11 พระโขนงฝั่งเหนือ)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองเตย",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "คลองเตย",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "ช่องนนทรี",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "ดอกไม้",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "บางจาก",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "บางนา",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "ประเวศ",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "พระโขนง",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "พระโขนง(ที่ 11 พระโขนงฝั่งเหนือ)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "พระโขนง(บางจาก)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "พระโขนงใต้",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "สวนหลวง",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "สวนหลวง(ที่ 8 พระโขนงฝั่งเหนือ)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "หนองบอน",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "หนองบอน (พระโขนงฝั่งใต้)",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "หนองบอน(สำโรงฝั่งเหนือ)",
+            "postcode": "10260"
+          }
+        ]
+      },
+      {
+        "district_code": "1001",
+        "district_name_th": "พระนคร",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ชนะสงคราม",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "ตลาดยอด",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "บวรนิเวศ",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "บางขุนพรหม",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "บ้านพานถม",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "พระบรมมหาราชวัง",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "พระราชวัง",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "วังบูรพาภิรมย์",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "วัดราชบพิธ",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "วัดสามพระยา",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "ศาลเจ้าพ่อเสือ",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "สำราญราษฎร์",
+            "postcode": "10200"
+          },
+          {
+            "subdistrict_name_th": "เสาชิงช้า",
+            "postcode": "10200"
+          }
+        ]
+      },
+      {
+        "district_code": "1022",
+        "district_name_th": "ภาษีเจริญ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองขวาง",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "คูหาสวรรค์",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางแค",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางแคเหนือ",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางจาก",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางเชือกหนังฝั่งใต้",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางด้วน",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางไผ่",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางแวก",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "บางหว้า",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "ปากคลองภาษีเจริญ",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หนองแขม",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หนองค้างพลู",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หลักสอง",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1010",
+        "district_name_th": "มีนบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทรายกองดิน",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "ทรายกองดินใต้",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "บางชัน",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "มีนบุรี",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "สามวาตะวันตก",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "สามวาตะวันออก",
+            "postcode": "10510"
+          },
+          {
+            "subdistrict_name_th": "แสนแสบ",
+            "postcode": "10510"
+          }
+        ]
+      },
+      {
+        "district_code": "1012",
+        "district_name_th": "ยานนาวา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ช่องนนทรี",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งมหาเมฆ",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งวัดดอน",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "บางคอแหลม",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "บางโคล่",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "บางโพงพาง",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "ยานนาวา",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "วัดพระยาไกร",
+            "postcode": "10120"
+          }
+        ]
+      },
+      {
+        "district_code": "1037",
+        "district_name_th": "ราชเทวี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ถนนพญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ถนนเพชรบุรี",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "ถนนศรีอยุธยา",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ทุ่งพญาไท",
+            "postcode": "10400"
+          },
+          {
+            "subdistrict_name_th": "พญาไท",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "มักกะสัน",
+            "postcode": "10400"
+          }
+        ]
+      },
+      {
+        "district_code": "1024",
+        "district_name_th": "ราษฎร์บูรณะ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทุ่งครุ",
+            "postcode": "10140"
+          },
+          {
+            "subdistrict_name_th": "บางปะกอก",
+            "postcode": "10140"
+          },
+          {
+            "subdistrict_name_th": "บางมด",
+            "postcode": "10140"
+          },
+          {
+            "subdistrict_name_th": "ราษฎร์บูรณะ",
+            "postcode": "10140"
+          }
+        ]
+      },
+      {
+        "district_code": "1011",
+        "district_name_th": "ลาดกระบัง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ขุมทอง",
+            "postcode": "10520"
+          },
+          {
+            "subdistrict_name_th": "คลองสองต้นนุ่น",
+            "postcode": "10520"
+          },
+          {
+            "subdistrict_name_th": "คลองสาม",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองสามประเวศ",
+            "postcode": "10520"
+          },
+          {
+            "subdistrict_name_th": "ทับยาว",
+            "postcode": "10520"
+          },
+          {
+            "subdistrict_name_th": "ลาดกระบัง",
+            "postcode": "10520"
+          },
+          {
+            "subdistrict_name_th": "ลำปลาทิว",
+            "postcode": "10520"
+          }
+        ]
+      },
+      {
+        "district_code": "1038",
+        "district_name_th": "ลาดพร้าว",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จรเข้บัว",
+            "postcode": "10230"
+          },
+          {
+            "subdistrict_name_th": "ลาดพร้าว",
+            "postcode": "10230"
+          }
+        ]
+      },
+      {
+        "district_code": "1048",
+        "district_name_th": "วังทองหลาง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองเจ้าคุณสิงห์",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "พลับพลา",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "วังทองหลาง",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "สะพานสอง",
+            "postcode": "10310"
+          }
+        ]
+      },
+      {
+        "district_code": "1039",
+        "district_name_th": "วัฒนา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองตันเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "คลองเตยเหนือ",
+            "postcode": "10110"
+          },
+          {
+            "subdistrict_name_th": "พระโขนงเหนือ",
+            "postcode": "10260"
+          },
+          {
+            "subdistrict_name_th": "วัฒนา",
+            "postcode": "10110"
+          }
+        ]
+      },
+      {
+        "district_code": "1034",
+        "district_name_th": "สวนหลวง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "พัฒนาการ",
+            "postcode": "10250"
+          },
+          {
+            "subdistrict_name_th": "สวนหลวง",
+            "postcode": "10250"
+          },
+          {
+            "subdistrict_name_th": "อ่อนนุช",
+            "postcode": "10250"
+          }
+        ]
+      },
+      {
+        "district_code": "1043",
+        "district_name_th": "สะพานสูง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทับช้าง",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "ราษฎร์พัฒนา",
+            "postcode": "10240"
+          },
+          {
+            "subdistrict_name_th": "สะพานสูง",
+            "postcode": "10240"
+          }
+        ]
+      },
+      {
+        "district_code": "1013",
+        "district_name_th": "สัมพันธวงศ์",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จักรวรรดิ",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "ตลาดน้อย",
+            "postcode": "10100"
+          },
+          {
+            "subdistrict_name_th": "สัมพันธวงศ์",
+            "postcode": "10100"
+          }
+        ]
+      },
+      {
+        "district_code": "1028",
+        "district_name_th": "สาทร",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ทุ่งมหาเมฆ",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งวัดดอน",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "ยานนาวา",
+            "postcode": "10120"
+          },
+          {
+            "subdistrict_name_th": "สาทร",
+            "postcode": "10120"
+          }
+        ]
+      },
+      {
+        "district_code": "1040",
+        "district_name_th": "สายไหม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองถนน",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "สายไหม",
+            "postcode": "10220"
+          },
+          {
+            "subdistrict_name_th": "ออเงิน",
+            "postcode": "10220"
+          }
+        ]
+      },
+      {
+        "district_code": "1055",
+        "district_name_th": "สำเพ็ง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จักรวรรดิ์",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1053",
+        "district_name_th": "แสนแสบ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองสอง",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1023",
+        "district_name_th": "หนองแขม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "หนองแขม",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หนองค้างพลู",
+            "postcode": "10160"
+          },
+          {
+            "subdistrict_name_th": "หลักสอง",
+            "postcode": "10160"
+          }
+        ]
+      },
+      {
+        "district_code": "1003",
+        "district_name_th": "หนองจอก",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กระทุ่มราย",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 10 ฝั่งตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 10 ฝั่งตะวันออก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 11 ฝั่งตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 11 ฝั่งตะวันออก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 12 ฝั่งตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 12 ฝั่งตะวันออก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 13 ฝั่งตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 14 ฝั่งตะวันตก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองซอยที่ 9 ฝั่งตะวันออก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คลองสิบ",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "คลองสิบสอง",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "คลองสิบสาม",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "คู้ฝั่งเหนือ",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "โคกแฝด",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "เจียระดับ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ลำต้อยติ่ง",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "ลำผักชี",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "หนองจอก",
+            "postcode": "10530"
+          },
+          {
+            "subdistrict_name_th": "หนองจอกฝั่งเหนือ",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1056",
+        "district_name_th": "หนองจอก(เจียระดับ)",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กระทุ่มราย(เจียระดับ)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ทับยาว",
+            "postcode": ""
+          }
+        ]
+      },
+      {
+        "district_code": "1051",
+        "district_name_th": "หลักสี่",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ตลาดบางเขน",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งสองห้อง",
+            "postcode": "10210"
+          },
+          {
+            "subdistrict_name_th": "บางเขน",
+            "postcode": "10210"
+          }
+        ]
+      },
+      {
+        "district_code": "1017",
+        "district_name_th": "ห้วยขวาง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดินแดง",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "บางกะปิ",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "สามเสนนอก",
+            "postcode": "10310"
+          },
+          {
+            "subdistrict_name_th": "สามเสนใน",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ห้วยขวาง",
+            "postcode": "10310"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "province_code": "11",
+    "province_name_th": "สมุทรปราการ",
+    "districts": [
+      {
+        "district_code": "1102",
+        "district_name_th": "บางบ่อ"
+      },
+      {
+        "district_code": "1103",
+        "district_name_th": "บางพลี"
+      },
+      {
+        "district_code": "1106",
+        "district_name_th": "บางเสาธง"
+      },
+      {
+        "district_code": "1106",
+        "district_name_th": "บางเสาธง"
+      },
+      {
+        "district_code": "1104",
+        "district_name_th": "พระประแดง"
+      },
+      {
+        "district_code": "1105",
+        "district_name_th": "พระสมุทรเจดีย์"
+      },
+      {
+        "district_code": "1101",
+        "district_name_th": "เมืองสมุทรปราการ",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองสาขลา(สาขลา)",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "ท้ายบ้าน",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "ท้ายบ้านใหม่",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "เทพารักษ์",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "นาเกลือ",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "นาเกลือ",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "ในคลองบางปลากด",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "ในคลองบางปลากด",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "บางด้วน",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "บางปู",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "บางปูเก่า",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "บางปูใหม่",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "บางโปรง",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "บางเมือง",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "บางเมืองใหม่",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "บ้านคลองสวน",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "ปากคลองบางปลากด",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "ปากคลองบางปลากด",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "ปากน้ำ",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "แพรกษา",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "แพรกษาใหม่",
+            "postcode": "10280"
+          },
+          {
+            "subdistrict_name_th": "สำโรงเหนือ",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "แหลมฟ้าผ่า",
+            "postcode": "10270"
+          },
+          {
+            "subdistrict_name_th": "แหลมฟ้าผ่า",
+            "postcode": "10270"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "province_code": "12",
+    "province_name_th": "นนทบุรี",
+    "districts": [
+      {
+        "district_code": "1207",
+        "district_name_th": "ตลาดขวัญ"
+      },
+      {
+        "district_code": "1205",
+        "district_name_th": "ไทรน้อย"
+      },
+      {
+        "district_code": "1202",
+        "district_name_th": "บางกรวย"
+      },
+      {
+        "district_code": "1204",
+        "district_name_th": "บางบัวทอง"
+      },
+      {
+        "district_code": "1203",
+        "district_name_th": "บางใหญ่"
+      },
+      {
+        "district_code": "1206",
+        "district_name_th": "ปากเกร็ด"
+      },
+      {
+        "district_code": "1201",
+        "district_name_th": "เมืองนนทบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ตลาดขวัญ",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "ท่าทราย",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "ไทรม้า",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางกระสอ",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางกร่าง",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางเขน",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางประดู่",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางไผ่",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางรักน้อย",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางศรีเมือง",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "บางสีเมือง",
+            "postcode": "11000"
+          },
+          {
+            "subdistrict_name_th": "สวนใหญ่",
+            "postcode": "11000"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "province_code": "13",
+    "province_name_th": "ปทุมธานี",
+    "districts": [
+      {
+        "district_code": "1302",
+        "district_name_th": "คลองหลวง"
+      },
+      {
+        "district_code": "1303",
+        "district_name_th": "ธัญบุรี"
+      },
+      {
+        "district_code": "1301",
+        "district_name_th": "เมืองปทุมธานี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "บางกะดี",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางขะแยง",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางคูวัด",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางเดื่อ",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางปรอก",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางพูด",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางพูน",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บางหลวง",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บ้านกระแชง",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บ้านกลาง",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บ้านฉาง",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "บ้านใหม่",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "ประชาธิปัตย์",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สวนพริกไทย",
+            "postcode": "12000"
+          },
+          {
+            "subdistrict_name_th": "หลักหก",
+            "postcode": "12000"
+          }
+        ]
+      },
+      {
+        "district_code": "1305",
+        "district_name_th": "ลาดหลุมแก้ว"
+      },
+      {
+        "district_code": "1306",
+        "district_name_th": "ลำลูกกา"
+      },
+      {
+        "district_code": "1307",
+        "district_name_th": "สามโคก"
+      },
+      {
+        "district_code": "1304",
+        "district_name_th": "หนองเสือ"
+      }
+    ]
+  },
+  {
+    "province_code": "14",
+    "province_name_th": "พระนครศรีอยุธยา",
+    "districts": [
+      {
+        "district_code": "1402",
+        "district_name_th": "ท่าเรือ"
+      },
+      {
+        "district_code": "1403",
+        "district_name_th": "นครหลวง"
+      },
+      {
+        "district_code": "1413",
+        "district_name_th": "บางซ้าย"
+      },
+      {
+        "district_code": "1404",
+        "district_name_th": "บางไทร"
+      },
+      {
+        "district_code": "1405",
+        "district_name_th": "บางบาล"
+      },
+      {
+        "district_code": "1407",
+        "district_name_th": "บางปะหัน"
+      },
+      {
+        "district_code": "1406",
+        "district_name_th": "บางปะอิน"
+      },
+      {
+        "district_code": "1416",
+        "district_name_th": "บ้านแพรก"
+      },
+      {
+        "district_code": "1408",
+        "district_name_th": "ผักไห่"
+      },
+      {
+        "district_code": "1401",
+        "district_name_th": "พระนครศรีอยุธยา"
+      },
+      {
+        "district_code": "1409",
+        "district_name_th": "ภาชี"
+      },
+      {
+        "district_code": "1415",
+        "district_name_th": "มหาราช"
+      },
+      {
+        "district_code": "1410",
+        "district_name_th": "ลาดบัวหลวง"
+      },
+      {
+        "district_code": "1411",
+        "district_name_th": "วังน้อย"
+      },
+      {
+        "district_code": "1412",
+        "district_name_th": "เสนา"
+      },
+      {
+        "district_code": "1414",
+        "district_name_th": "อุทัย"
+      }
+    ]
+  },
+  {
+    "province_code": "15",
+    "province_name_th": "อ่างทอง",
+    "districts": [
+      {
+        "district_code": "1502",
+        "district_name_th": "ไชโย"
+      },
+      {
+        "district_code": "1503",
+        "district_name_th": "ป่าโมก"
+      },
+      {
+        "district_code": "1504",
+        "district_name_th": "โพธิ์ทอง"
+      },
+      {
+        "district_code": "1509",
+        "district_name_th": "โพเรียบ"
+      },
+      {
+        "district_code": "1501",
+        "district_name_th": "เมืองอ่างทอง"
+      },
+      {
+        "district_code": "1506",
+        "district_name_th": "วิเศษชัยชาญ"
+      },
+      {
+        "district_code": "1507",
+        "district_name_th": "สามโก้"
+      },
+      {
+        "district_code": "1505",
+        "district_name_th": "แสวงหา"
+      }
+    ]
+  },
+  {
+    "province_code": "16",
+    "province_name_th": "ลพบุรี",
+    "districts": [
+      {
+        "district_code": "1609",
+        "district_name_th": "โคกเจริญ"
+      },
+      {
+        "district_code": "1603",
+        "district_name_th": "โคกสำโรง"
+      },
+      {
+        "district_code": "1604",
+        "district_name_th": "ชัยบาดาล"
+      },
+      {
+        "district_code": "1605",
+        "district_name_th": "ท่าวุ้ง"
+      },
+      {
+        "district_code": "1607",
+        "district_name_th": "ท่าหลวง"
+      },
+      {
+        "district_code": "1606",
+        "district_name_th": "บ้านหมี่"
+      },
+      {
+        "district_code": "1602",
+        "district_name_th": "พัฒนานิคม"
+      },
+      {
+        "district_code": "1601",
+        "district_name_th": "เมืองลพบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กกโก",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "โก่งธนู",
+            "postcode": "13240"
+          },
+          {
+            "subdistrict_name_th": "เขาพระงาม",
+            "postcode": "15160"
+          },
+          {
+            "subdistrict_name_th": "เขาสามยอด",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "โคกกะเทียม",
+            "postcode": "15160"
+          },
+          {
+            "subdistrict_name_th": "โคกตูม",
+            "postcode": "15210"
+          },
+          {
+            "subdistrict_name_th": "โคกลำพาน",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "งิ้วราย",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ดอนโพธิ์",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ตะลุง",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ถนนใหญ่",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ทะเลชุบศร",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ทะเลชุบศร",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ท่าแค",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ท้ายตลาด",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ท่าศาลา",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ท่าหิน",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "นิคมสร้างตนเอง",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "บางขันหมาก",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "บ้านข่อย",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "ป่าตาล",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "พรหมมาสตร์",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "โพธิ์เก้าต้น",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "โพธิ์ตรุ",
+            "postcode": "15000"
+          },
+          {
+            "subdistrict_name_th": "สี่คลอง",
+            "postcode": "15000"
+          }
+        ]
+      },
+      {
+        "district_code": "1610",
+        "district_name_th": "ลำสนธิ"
+      },
+      {
+        "district_code": "1608",
+        "district_name_th": "สระโบสถ์"
+      },
+      {
+        "district_code": "1611",
+        "district_name_th": "หนองม่วง"
+      }
+    ]
+  },
+  {
+    "province_code": "17",
+    "province_name_th": "สิงห์บุรี",
+    "districts": [
+      {
+        "district_code": "1703",
+        "district_name_th": "ค่ายบางระจัน"
+      },
+      {
+        "district_code": "1705",
+        "district_name_th": "ท่าช้าง"
+      },
+      {
+        "district_code": "1702",
+        "district_name_th": "บางระจัน"
+      },
+      {
+        "district_code": "1704",
+        "district_name_th": "พรหมบุรี"
+      },
+      {
+        "district_code": "1701",
+        "district_name_th": "เมืองสิงห์บุรี"
+      },
+      {
+        "district_code": "1706",
+        "district_name_th": "อินทร์บุรี"
+      }
+    ]
+  },
+  {
+    "province_code": "18",
+    "province_name_th": "ชัยนาท",
+    "districts": [
+      {
+        "district_code": "1808",
+        "district_name_th": "เนินขาม"
+      },
+      {
+        "district_code": "1802",
+        "district_name_th": "มโนรมย์"
+      },
+      {
+        "district_code": "1801",
+        "district_name_th": "เมืองชัยนาท"
+      },
+      {
+        "district_code": "1803",
+        "district_name_th": "วัดสิงห์"
+      },
+      {
+        "district_code": "1805",
+        "district_name_th": "สรรคบุรี"
+      },
+      {
+        "district_code": "1804",
+        "district_name_th": "สรรพยา"
+      },
+      {
+        "district_code": "1807",
+        "district_name_th": "หนองมะโมง"
+      },
+      {
+        "district_code": "1806",
+        "district_name_th": "หันคา"
+      }
+    ]
+  },
+  {
+    "province_code": "19",
+    "province_name_th": "สระบุรี",
+    "districts": [
+      {
+        "district_code": "1912",
+        "district_name_th": "กิ่งอำเภอวังม่วง"
+      },
+      {
+        "district_code": "1902",
+        "district_name_th": "แก่งคอย"
+      },
+      {
+        "district_code": "1913",
+        "district_name_th": "เฉลิมพระเกียรติ"
+      },
+      {
+        "district_code": "1907",
+        "district_name_th": "ดอนพุด"
+      },
+      {
+        "district_code": "1906",
+        "district_name_th": "บ้านหมอ"
+      },
+      {
+        "district_code": "1909",
+        "district_name_th": "พระพุทธบาท"
+      },
+      {
+        "district_code": "1911",
+        "district_name_th": "มวกเหล็ก"
+      },
+      {
+        "district_code": "1901",
+        "district_name_th": "เมืองสระบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กุดนกเปล้า",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "แก่งขนุน",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "เขาดินพัฒนา",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "โคกสว่าง",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ดาวเรือง",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ตลิ่งชัน",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ตะกุด",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "นาโฉง",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "บ้านแก้ง",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "บ้านภู่",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ปากข้าวสาร",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ปากเพรียว",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ผึ้งรวง",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "พุแค",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "หนองโน",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "หนองปลาไหล",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "หนองยาว",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "หน้าพระลาน",
+            "postcode": "18000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยบง",
+            "postcode": "18000"
+          }
+        ]
+      },
+      {
+        "district_code": "1914",
+        "district_name_th": "วังม่วง"
+      },
+      {
+        "district_code": "1904",
+        "district_name_th": "วิหารแดง"
+      },
+      {
+        "district_code": "1910",
+        "district_name_th": "เสาไห้"
+      },
+      {
+        "district_code": "1903",
+        "district_name_th": "หนองแค"
+      },
+      {
+        "district_code": "1905",
+        "district_name_th": "หนองแซง"
+      },
+      {
+        "district_code": "1908",
+        "district_name_th": "หนองโดน"
+      }
+    ]
+  },
+  {
+    "province_code": "20",
+    "province_name_th": "ชลบุรี",
+    "districts": [
+      {
+        "district_code": "2011",
+        "district_name_th": "เกาะจันทร์"
+      },
+      {
+        "district_code": "2006",
+        "district_name_th": "เกาะจันทร์"
+      },
+      {
+        "district_code": "2008",
+        "district_name_th": "เกาะสีชัง"
+      },
+      {
+        "district_code": "2013",
+        "district_name_th": "ท่าตะกูต"
+      },
+      {
+        "district_code": "2010",
+        "district_name_th": "บ่อทอง"
+      },
+      {
+        "district_code": "2004",
+        "district_name_th": "บางละมุง"
+      },
+      {
+        "district_code": "2002",
+        "district_name_th": "บ้านบึง"
+      },
+      {
+        "district_code": "2012",
+        "district_name_th": "พนัศ"
+      },
+      {
+        "district_code": "2006",
+        "district_name_th": "พนัสนิคม"
+      },
+      {
+        "district_code": "2005",
+        "district_name_th": "พานทอง"
+      },
+      {
+        "district_code": "2001",
+        "district_name_th": "เมืองชลบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "คลองตำหรุ",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "ดอนหัวฬ่อ",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "นาป่า",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บางทราย",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บางปลาสร้อย",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บ้านโขด",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บ้านปึก",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บ้านสวน",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "บ้านเสม็ด",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "มะขามหย่ง",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "มาบไผ่",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สำนักกระบก",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "สำนักบก",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "เสม็ด",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "แสนสุข",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "หนองข้างคอก",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "หนองค่างคอก",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "หนองไม้แดง",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "หนองรี",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยกะปิ",
+            "postcode": "20000"
+          },
+          {
+            "subdistrict_name_th": "เหมือง",
+            "postcode": "20130"
+          },
+          {
+            "subdistrict_name_th": "อ่างศิลา",
+            "postcode": "20000"
+          }
+        ]
+      },
+      {
+        "district_code": "2007",
+        "district_name_th": "ศรีราชา"
+      },
+      {
+        "district_code": "2009",
+        "district_name_th": "สัตหีบ"
+      },
+      {
+        "district_code": "2003",
+        "district_name_th": "หนองใหญ่"
+      }
+    ]
+  },
+  {
+    "province_code": "21",
+    "province_name_th": "ระยอง",
+    "districts": [
+      {
+        "district_code": "2103",
+        "district_name_th": "แกลง"
+      },
+      {
+        "district_code": "2107",
+        "district_name_th": "เขาชะเมา"
+      },
+      {
+        "district_code": "2108",
+        "district_name_th": "นิคมพัฒนา"
+      },
+      {
+        "district_code": "2105",
+        "district_name_th": "บ้านค่าย"
+      },
+      {
+        "district_code": "2102",
+        "district_name_th": "บ้านฉาง"
+      },
+      {
+        "district_code": "2106",
+        "district_name_th": "ปลวกแดง"
+      },
+      {
+        "district_code": "2101",
+        "district_name_th": "เมืองระยอง"
+      },
+      {
+        "district_code": "2104",
+        "district_name_th": "วังจันทร์"
+      }
+    ]
+  },
+  {
+    "province_code": "22",
+    "province_name_th": "จันทบุรี",
+    "districts": [
+      {
+        "district_code": "2208",
+        "district_name_th": "แก่งหางแมว"
+      },
+      {
+        "district_code": "2202",
+        "district_name_th": "ขลุง"
+      },
+      {
+        "district_code": "2210",
+        "district_name_th": "เขาคิชฌกูฏ"
+      },
+      {
+        "district_code": "2203",
+        "district_name_th": "ท่าใหม่"
+      },
+      {
+        "district_code": "2209",
+        "district_name_th": "นายายอาม"
+      },
+      {
+        "district_code": "2204",
+        "district_name_th": "โป่งน้ำร้อน"
+      },
+      {
+        "district_code": "2205",
+        "district_name_th": "มะขาม"
+      },
+      {
+        "district_code": "2201",
+        "district_name_th": "เมืองจันทบุรี"
+      },
+      {
+        "district_code": "2207",
+        "district_name_th": "สอยดาว"
+      },
+      {
+        "district_code": "2206",
+        "district_name_th": "แหลมสิงห์"
+      }
+    ]
+  },
+  {
+    "province_code": "23",
+    "province_name_th": "ตราด",
+    "districts": [
+      {
+        "district_code": "2306",
+        "district_name_th": "เกาะกูด"
+      },
+      {
+        "district_code": "2307",
+        "district_name_th": "เกาะช้าง"
+      },
+      {
+        "district_code": "2303",
+        "district_name_th": "เขาสมิง"
+      },
+      {
+        "district_code": "2302",
+        "district_name_th": "คลองใหญ่"
+      },
+      {
+        "district_code": "2304",
+        "district_name_th": "บ่อไร่"
+      },
+      {
+        "district_code": "2301",
+        "district_name_th": "เมืองตราด"
+      },
+      {
+        "district_code": "2305",
+        "district_name_th": "แหลมงอบ"
+      },
+      {
+        "district_code": "2306",
+        "district_name_th": "อำเภอเกาะกูด"
+      }
+    ]
+  },
+  {
+    "province_code": "24",
+    "province_name_th": "ฉะเชิงเทรา",
+    "districts": [
+      {
+        "district_code": "2411",
+        "district_name_th": "คลองเขื่อน"
+      },
+      {
+        "district_code": "2410",
+        "district_name_th": "ท่าตะเกียบ"
+      },
+      {
+        "district_code": "2402",
+        "district_name_th": "บางคล้า"
+      },
+      {
+        "district_code": "2403",
+        "district_name_th": "บางน้ำเปรี้ยว"
+      },
+      {
+        "district_code": "2404",
+        "district_name_th": "บางปะกง"
+      },
+      {
+        "district_code": "2405",
+        "district_name_th": "บ้านโพธิ์"
+      },
+      {
+        "district_code": "2409",
+        "district_name_th": "แปลงยาว"
+      },
+      {
+        "district_code": "2406",
+        "district_name_th": "พนมสารคาม"
+      },
+      {
+        "district_code": "2412",
+        "district_name_th": "พนมสารคาม (กิ่งอำเภอราชสาส์น)"
+      },
+      {
+        "district_code": "2401",
+        "district_name_th": "เมืองฉะเชิงเทรา"
+      },
+      {
+        "district_code": "2407",
+        "district_name_th": "ราชสาส์น"
+      },
+      {
+        "district_code": "2413",
+        "district_name_th": "สนามจันทร์"
+      },
+      {
+        "district_code": "2408",
+        "district_name_th": "สนามชัยเขต"
+      }
+    ]
+  },
+  {
+    "province_code": "25",
+    "province_name_th": "ปราจีนบุรี",
+    "districts": [
+      {
+        "district_code": "2502",
+        "district_name_th": "กบินทร์บุรี"
+      },
+      {
+        "district_code": "2513",
+        "district_name_th": "คลองหาด"
+      },
+      {
+        "district_code": "2514",
+        "district_name_th": "โคกปีบ"
+      },
+      {
+        "district_code": "2511",
+        "district_name_th": "ตาพระยา"
+      },
+      {
+        "district_code": "2503",
+        "district_name_th": "นาดี"
+      },
+      {
+        "district_code": "2506",
+        "district_name_th": "บ้านสร้าง"
+      },
+      {
+        "district_code": "2507",
+        "district_name_th": "ประจันตคาม"
+      },
+      {
+        "district_code": "2501",
+        "district_name_th": "เมืองปราจีนบุรี"
+      },
+      {
+        "district_code": "2505",
+        "district_name_th": "วังน้ำเย็น"
+      },
+      {
+        "district_code": "2512",
+        "district_name_th": "วัฒนานคร"
+      },
+      {
+        "district_code": "2508",
+        "district_name_th": "ศรีมหาโพธิ"
+      },
+      {
+        "district_code": "2509",
+        "district_name_th": "ศรีมโหสถ"
+      },
+      {
+        "district_code": "2504",
+        "district_name_th": "สระแก้ว"
+      },
+      {
+        "district_code": "2510",
+        "district_name_th": "อรัญประเทศ"
+      }
+    ]
+  },
+  {
+    "province_code": "26",
+    "province_name_th": "นครนายก",
+    "districts": [
+      {
+        "district_code": "2603",
+        "district_name_th": "บ้านนา"
+      },
+      {
+        "district_code": "2602",
+        "district_name_th": "ปากพลี"
+      },
+      {
+        "district_code": "2601",
+        "district_name_th": "เมืองนครนายก"
+      },
+      {
+        "district_code": "2604",
+        "district_name_th": "องครักษ์"
+      }
+    ]
+  },
+  {
+    "province_code": "27",
+    "province_name_th": "สระแก้ว",
+    "districts": [
+      {
+        "district_code": "2707",
+        "district_name_th": "เขาฉกรรจ์"
+      },
+      {
+        "district_code": "2702",
+        "district_name_th": "คลองหาด"
+      },
+      {
+        "district_code": "2709",
+        "district_name_th": "โคกสูง"
+      },
+      {
+        "district_code": "2703",
+        "district_name_th": "ตาพระยา"
+      },
+      {
+        "district_code": "2701",
+        "district_name_th": "เมืองสระแก้ว",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "เขาสามสิบ",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "โคกปี่ฆ้อง",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "โคกอีหลง",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "ท่าเกษม",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "ท่าแยก",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "บ้านแก้ง",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "พระเพลิง",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "ศาลาลำดวน",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "สระแก้ว",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "สระขวัญ",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "สระขวัญ",
+            "postcode": "27000"
+          },
+          {
+            "subdistrict_name_th": "หนองบอน",
+            "postcode": "27000"
+          }
+        ]
+      },
+      {
+        "district_code": "2704",
+        "district_name_th": "วังน้ำเย็น"
+      },
+      {
+        "district_code": "2708",
+        "district_name_th": "วังสมบูรณ์"
+      },
+      {
+        "district_code": "2705",
+        "district_name_th": "วัฒนานคร"
+      },
+      {
+        "district_code": "2706",
+        "district_name_th": "อรัญประเทศ"
+      }
+    ]
+  },
+  {
+    "province_code": "30",
+    "province_name_th": "นครราชสีมา",
+    "districts": [
+      {
+        "district_code": "3023",
+        "district_name_th": "แก้งสนามนาง"
+      },
+      {
+        "district_code": "3019",
+        "district_name_th": "ขามทะเลสอ"
+      },
+      {
+        "district_code": "3011",
+        "district_name_th": "ขามสะแกแสง"
+      },
+      {
+        "district_code": "3004",
+        "district_name_th": "คง"
+      },
+      {
+        "district_code": "3002",
+        "district_name_th": "ครบุรี"
+      },
+      {
+        "district_code": "3006",
+        "district_name_th": "จักราช"
+      },
+      {
+        "district_code": "3028",
+        "district_name_th": "เฉลิมพระเกียรติ"
+      },
+      {
+        "district_code": "3017",
+        "district_name_th": "ชุมพวง"
+      },
+      {
+        "district_code": "3007",
+        "district_name_th": "โชคชัย"
+      },
+      {
+        "district_code": "3008",
+        "district_name_th": "ด่านขุนทด"
+      },
+      {
+        "district_code": "3032",
+        "district_name_th": "เทพารักษ์"
+      },
+      {
+        "district_code": "3024",
+        "district_name_th": "โนนแดง"
+      },
+      {
+        "district_code": "3009",
+        "district_name_th": "โนนไทย"
+      },
+      {
+        "district_code": "3010",
+        "district_name_th": "โนนสูง"
+      },
+      {
+        "district_code": "3030",
+        "district_name_th": "บัวลาย"
+      },
+      {
+        "district_code": "3012",
+        "district_name_th": "บัวใหญ่"
+      },
+      {
+        "district_code": "3005",
+        "district_name_th": "บ้านเหลื่อม"
+      },
+      {
+        "district_code": "3013",
+        "district_name_th": "ประทาย"
+      },
+      {
+        "district_code": "3014",
+        "district_name_th": "ปักธงชัย"
+      },
+      {
+        "district_code": "3021",
+        "district_name_th": "ปากช่อง"
+      },
+      {
+        "district_code": "3027",
+        "district_name_th": "พระทองคำ"
+      },
+      {
+        "district_code": "3015",
+        "district_name_th": "พิมาย"
+      },
+      {
+        "district_code": "3001",
+        "district_name_th": "เมืองนครราชสีมา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "โคกกรวด",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "โคกสูง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "จอหอ",
+            "postcode": "30310"
+          },
+          {
+            "subdistrict_name_th": "ไชยมงคล",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "ตลาด",
+            "postcode": "30310"
+          },
+          {
+            "subdistrict_name_th": "ในเมือง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "บ้านเกาะ",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "บ้านโพธิ์",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "บ้านใหม่",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "ปรุใหญ่",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "พลกรัง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "พะเนา",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "พุดซา",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "โพธิ์กลาง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "มะเริง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "สีมุม",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "สุรนารี",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หนองกระทุ่ม",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หนองไข่น้ำ",
+            "postcode": ""
+          },
+          {
+            "subdistrict_name_th": "หนองจะบก",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หนองบัวศาลา",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หนองไผ่ล้อม",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หนองระเวียง",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หมื่นไวย",
+            "postcode": "30000"
+          },
+          {
+            "subdistrict_name_th": "หัวทะเล",
+            "postcode": "30000"
+          }
+        ]
+      },
+      {
+        "district_code": "3026",
+        "district_name_th": "เมืองยาง"
+      },
+      {
+        "district_code": "3029",
+        "district_name_th": "ลำทะเมนชัย"
+      },
+      {
+        "district_code": "3025",
+        "district_name_th": "วังน้ำเขียว"
+      },
+      {
+        "district_code": "3020",
+        "district_name_th": "สีคิ้ว"
+      },
+      {
+        "district_code": "3031",
+        "district_name_th": "สีดา"
+      },
+      {
+        "district_code": "3018",
+        "district_name_th": "สูงเนิน"
+      },
+      {
+        "district_code": "3003",
+        "district_name_th": "เสิงสาง"
+      },
+      {
+        "district_code": "3033",
+        "district_name_th": "หนองบุญมาก"
+      },
+      {
+        "district_code": "3022",
+        "district_name_th": "หนองบุญมาก"
+      },
+      {
+        "district_code": "3016",
+        "district_name_th": "ห้วยแถลง"
+      }
+    ]
+  },
+  {
+    "province_code": "31",
+    "province_name_th": "บุรีรัมย์",
+    "districts": [
+      {
+        "district_code": "3103",
+        "district_name_th": "กระสัง"
+      },
+      {
+        "district_code": "3102",
+        "district_name_th": "คูเมือง"
+      },
+      {
+        "district_code": "3123",
+        "district_name_th": "แคนดง"
+      },
+      {
+        "district_code": "3121",
+        "district_name_th": "เฉลิมพระเกียรติ"
+      },
+      {
+        "district_code": "3118",
+        "district_name_th": "ชำนิ"
+      },
+      {
+        "district_code": "3104",
+        "district_name_th": "นางรอง"
+      },
+      {
+        "district_code": "3113",
+        "district_name_th": "นาโพธิ์"
+      },
+      {
+        "district_code": "3120",
+        "district_name_th": "โนนดินแดง"
+      },
+      {
+        "district_code": "3117",
+        "district_name_th": "โนนสุวรรณ"
+      },
+      {
+        "district_code": "3108",
+        "district_name_th": "บ้านกรวด"
+      },
+      {
+        "district_code": "3122",
+        "district_name_th": "บ้านด่าน"
+      },
+      {
+        "district_code": "3119",
+        "district_name_th": "บ้านใหม่ไชยพจน์"
+      },
+      {
+        "district_code": "3107",
+        "district_name_th": "ประโคนชัย"
+      },
+      {
+        "district_code": "3112",
+        "district_name_th": "ปะคำ"
+      },
+      {
+        "district_code": "3115",
+        "district_name_th": "พลับพลาชัย"
+      },
+      {
+        "district_code": "3109",
+        "district_name_th": "พุทไธสง"
+      },
+      {
+        "district_code": "3101",
+        "district_name_th": "เมืองบุรีรัมย์"
+      },
+      {
+        "district_code": "3106",
+        "district_name_th": "ละหานทราย"
+      },
+      {
+        "district_code": "3110",
+        "district_name_th": "ลำปลายมาศ"
+      },
+      {
+        "district_code": "3111",
+        "district_name_th": "สตึก"
+      },
+      {
+        "district_code": "3105",
+        "district_name_th": "หนองกี่"
+      },
+      {
+        "district_code": "3114",
+        "district_name_th": "หนองหงส์"
+      },
+      {
+        "district_code": "3116",
+        "district_name_th": "ห้วยราช"
+      }
+    ]
+  },
+  {
+    "province_code": "32",
+    "province_name_th": "สุรินทร์",
+    "districts": [
+      {
+        "district_code": "3206",
+        "district_name_th": "กาบเชิง"
+      },
+      {
+        "district_code": "3217",
+        "district_name_th": "เขวาสินรินทร์"
+      },
+      {
+        "district_code": "3204",
+        "district_name_th": "จอมพระ"
+      },
+      {
+        "district_code": "3202",
+        "district_name_th": "ชุมพลบุรี"
+      },
+      {
+        "district_code": "3203",
+        "district_name_th": "ท่าตูม"
+      },
+      {
+        "district_code": "3216",
+        "district_name_th": "โนนนารายณ์"
+      },
+      {
+        "district_code": "3213",
+        "district_name_th": "บัวเชด"
+      },
+      {
+        "district_code": "3205",
+        "district_name_th": "ปราสาท"
+      },
+      {
+        "district_code": "3214",
+        "district_name_th": "พนมดงรัก"
+      },
+      {
+        "district_code": "3201",
+        "district_name_th": "เมืองสุรินทร์"
+      },
+      {
+        "district_code": "3207",
+        "district_name_th": "รัตนบุรี"
+      },
+      {
+        "district_code": "3211",
+        "district_name_th": "ลำดวน"
+      },
+      {
+        "district_code": "3215",
+        "district_name_th": "ศรีณรงค์"
+      },
+      {
+        "district_code": "3209",
+        "district_name_th": "ศีขรภูมิ"
+      },
+      {
+        "district_code": "3208",
+        "district_name_th": "สนม"
+      },
+      {
+        "district_code": "3210",
+        "district_name_th": "สังขะ"
+      },
+      {
+        "district_code": "3212",
+        "district_name_th": "สำโรงทาบ"
+      }
+    ]
+  },
+  {
+    "province_code": "33",
+    "province_name_th": "ศรีสะเกษ",
+    "districts": [
+      {
+        "district_code": "3304",
+        "district_name_th": "กันทรลักษ์"
+      },
+      {
+        "district_code": "3303",
+        "district_name_th": "กันทรารมย์"
+      },
+      {
+        "district_code": "3305",
+        "district_name_th": "ขุขันธ์"
+      },
+      {
+        "district_code": "3308",
+        "district_name_th": "ขุนหาญ"
+      },
+      {
+        "district_code": "3315",
+        "district_name_th": "น้ำเกลี้ยง"
+      },
+      {
+        "district_code": "3313",
+        "district_name_th": "โนนคูณ"
+      },
+      {
+        "district_code": "3311",
+        "district_name_th": "บึงบูรพ์"
+      },
+      {
+        "district_code": "3319",
+        "district_name_th": "เบญจลักษ์"
+      },
+      {
+        "district_code": "3307",
+        "district_name_th": "ปรางค์กู่"
+      },
+      {
+        "district_code": "3320",
+        "district_name_th": "พยุห์"
+      },
+      {
+        "district_code": "3321",
+        "district_name_th": "โพธิ์ศรีสุวรรณ"
+      },
+      {
+        "district_code": "3306",
+        "district_name_th": "ไพรบึง"
+      },
+      {
+        "district_code": "3317",
+        "district_name_th": "ภูสิงห์"
+      },
+      {
+        "district_code": "3318",
+        "district_name_th": "เมืองจันทร์"
+      },
+      {
+        "district_code": "3301",
+        "district_name_th": "เมืองศรีสะเกษ"
+      },
+      {
+        "district_code": "3302",
+        "district_name_th": "ยางชุมน้อย"
+      },
+      {
+        "district_code": "3309",
+        "district_name_th": "ราษีไศล"
+      },
+      {
+        "district_code": "3316",
+        "district_name_th": "วังหิน"
+      },
+      {
+        "district_code": "3314",
+        "district_name_th": "ศรีรัตนะ"
+      },
+      {
+        "district_code": "3322",
+        "district_name_th": "ศิลาลาด"
+      },
+      {
+        "district_code": "3312",
+        "district_name_th": "ห้วยทับทัน"
+      },
+      {
+        "district_code": "3310",
+        "district_name_th": "อุทุมพรพิสัย"
+      }
+    ]
+  },
+  {
+    "province_code": "34",
+    "province_name_th": "อุบลราชธานี",
+    "districts": [
+      {
+        "district_code": "3412",
+        "district_name_th": "กุดข้าวปุ้น"
+      },
+      {
+        "district_code": "3405",
+        "district_name_th": "เขมราฐ"
+      },
+      {
+        "district_code": "3404",
+        "district_name_th": "เขื่องใน"
+      },
+      {
+        "district_code": "3403",
+        "district_name_th": "โขงเจียม"
+      },
+      {
+        "district_code": "3406",
+        "district_name_th": "ชานุมาน"
+      },
+      {
+        "district_code": "3424",
+        "district_name_th": "ดอนมดแดง"
+      },
+      {
+        "district_code": "3407",
+        "district_name_th": "เดชอุดม"
+      },
+      {
+        "district_code": "3411",
+        "district_name_th": "ตระการพืชผล"
+      },
+      {
+        "district_code": "3420",
+        "district_name_th": "ตาลสุม"
+      },
+      {
+        "district_code": "3426",
+        "district_name_th": "ทุ่งศรีอุดม"
+      },
+      {
+        "district_code": "3408",
+        "district_name_th": "นาจะหลวย"
+      },
+      {
+        "district_code": "3430",
+        "district_name_th": "นาตาล"
+      },
+      {
+        "district_code": "3429",
+        "district_name_th": "นาเยีย"
+      },
+      {
+        "district_code": "3432",
+        "district_name_th": "น้ำขุ่น"
+      },
+      {
+        "district_code": "3409",
+        "district_name_th": "น้ำยืน"
+      },
+      {
+        "district_code": "3410",
+        "district_name_th": "บุณฑริก"
+      },
+      {
+        "district_code": "3427",
+        "district_name_th": "ปทุมราชวงศา"
+      },
+      {
+        "district_code": "3413",
+        "district_name_th": "พนา"
+      },
+      {
+        "district_code": "3419",
+        "district_name_th": "พิบูลมังสาหาร"
+      },
+      {
+        "district_code": "3421",
+        "district_name_th": "โพธิ์ไทร"
+      },
+      {
+        "district_code": "3414",
+        "district_name_th": "ม่วงสามสิบ"
+      },
+      {
+        "district_code": "3401",
+        "district_name_th": "เมืองอุบลราชธานี"
+      },
+      {
+        "district_code": "3423",
+        "district_name_th": "ลืออำนาจ"
+      },
+      {
+        "district_code": "3415",
+        "district_name_th": "วารินชำราบ"
+      },
+      {
+        "district_code": "3402",
+        "district_name_th": "ศรีเมืองใหม่"
+      },
+      {
+        "district_code": "3433",
+        "district_name_th": "สว่างวีระวงศ์"
+      },
+      {
+        "district_code": "3422",
+        "district_name_th": "สำโรง"
+      },
+      {
+        "district_code": "3425",
+        "district_name_th": "สิรินธร"
+      },
+      {
+        "district_code": "3417",
+        "district_name_th": "เสนางคนิคม"
+      },
+      {
+        "district_code": "3418",
+        "district_name_th": "หัวตะพาน"
+      },
+      {
+        "district_code": "3431",
+        "district_name_th": "เหล่าเสือโก้ก"
+      },
+      {
+        "district_code": "3416",
+        "district_name_th": "อำนาจเจริญ"
+      }
+    ]
+  },
+  {
+    "province_code": "35",
+    "province_name_th": "ยโสธร",
+    "districts": [
+      {
+        "district_code": "3503",
+        "district_name_th": "กุดชุม"
+      },
+      {
+        "district_code": "3507",
+        "district_name_th": "ค้อวัง"
+      },
+      {
+        "district_code": "3504",
+        "district_name_th": "คำเขื่อนแก้ว"
+      },
+      {
+        "district_code": "3502",
+        "district_name_th": "ทรายมูล"
+      },
+      {
+        "district_code": "3509",
+        "district_name_th": "ไทยเจริญ"
+      },
+      {
+        "district_code": "3505",
+        "district_name_th": "ป่าติ้ว"
+      },
+      {
+        "district_code": "3506",
+        "district_name_th": "มหาชนะชัย"
+      },
+      {
+        "district_code": "3501",
+        "district_name_th": "เมืองยโสธร"
+      },
+      {
+        "district_code": "3508",
+        "district_name_th": "เลิงนกทา"
+      }
+    ]
+  },
+  {
+    "province_code": "36",
+    "province_name_th": "ชัยภูมิ",
+    "districts": [
+      {
+        "district_code": "3604",
+        "district_name_th": "เกษตรสมบูรณ์"
+      },
+      {
+        "district_code": "3612",
+        "district_name_th": "แก้งคร้อ"
+      },
+      {
+        "district_code": "3603",
+        "district_name_th": "คอนสวรรค์"
+      },
+      {
+        "district_code": "3613",
+        "district_name_th": "คอนสาร"
+      },
+      {
+        "district_code": "3606",
+        "district_name_th": "จัตุรัส"
+      },
+      {
+        "district_code": "3616",
+        "district_name_th": "ซับใหญ่"
+      },
+      {
+        "district_code": "3609",
+        "district_name_th": "เทพสถิต"
+      },
+      {
+        "district_code": "3615",
+        "district_name_th": "เนินสง่า"
+      },
+      {
+        "district_code": "3602",
+        "district_name_th": "บ้านเขว้า"
+      },
+      {
+        "district_code": "3611",
+        "district_name_th": "บ้านแท่น"
+      },
+      {
+        "district_code": "3607",
+        "district_name_th": "บำเหน็จณรงค์"
+      },
+      {
+        "district_code": "3614",
+        "district_name_th": "ภักดีชุมพล"
+      },
+      {
+        "district_code": "3610",
+        "district_name_th": "ภูเขียว"
+      },
+      {
+        "district_code": "3601",
+        "district_name_th": "เมืองชัยภูมิ"
+      },
+      {
+        "district_code": "3605",
+        "district_name_th": "หนองบัวแดง"
+      },
+      {
+        "district_code": "3608",
+        "district_name_th": "หนองบัวระเหว"
+      }
+    ]
+  },
+  {
+    "province_code": "37",
+    "province_name_th": "อำนาจเจริญ",
+    "districts": [
+      {
+        "district_code": "3702",
+        "district_name_th": "ชานุมาน"
+      },
+      {
+        "district_code": "3703",
+        "district_name_th": "ปทุมราชวงศา"
+      },
+      {
+        "district_code": "3704",
+        "district_name_th": "พนา"
+      },
+      {
+        "district_code": "3701",
+        "district_name_th": "เมืองอำนาจเจริญ"
+      },
+      {
+        "district_code": "3707",
+        "district_name_th": "ลืออำนาจ"
+      },
+      {
+        "district_code": "3705",
+        "district_name_th": "เสนางคนิคม"
+      },
+      {
+        "district_code": "3706",
+        "district_name_th": "หัวตะพาน"
+      }
+    ]
+  },
+  {
+    "province_code": "39",
+    "province_name_th": "หนองบัวลำภู",
+    "districts": [
+      {
+        "district_code": "3902",
+        "district_name_th": "นากลาง"
+      },
+      {
+        "district_code": "3906",
+        "district_name_th": "นาวัง"
+      },
+      {
+        "district_code": "3903",
+        "district_name_th": "โนนสัง"
+      },
+      {
+        "district_code": "3901",
+        "district_name_th": "เมืองหนองบัวลำภู"
+      },
+      {
+        "district_code": "3904",
+        "district_name_th": "ศรีบุญเรือง"
+      },
+      {
+        "district_code": "3905",
+        "district_name_th": "สุวรรณคูหา"
+      }
+    ]
+  },
+  {
+    "province_code": "40",
+    "province_name_th": "ขอนแก่น",
+    "districts": [
+      {
+        "district_code": "4009",
+        "district_name_th": "กระนวน"
+      },
+      {
+        "district_code": "4022",
+        "district_name_th": "กิ่งอำเภอโคกโพธิ์ไชย"
+      },
+      {
+        "district_code": "4021",
+        "district_name_th": "กิ่งอำเภอซำสูง"
+      },
+      {
+        "district_code": "4028",
+        "district_name_th": "กิ่งอำเภอเฝ้าไร่"
+      },
+      {
+        "district_code": "4029",
+        "district_name_th": "กิ่งอำเภอโพธิ์ตาก"
+      },
+      {
+        "district_code": "4027",
+        "district_name_th": "กิ่งอำเภอรัตนวาปี"
+      },
+      {
+        "district_code": "4023",
+        "district_name_th": "กิ่งอำเภอหนองนาคำ"
+      },
+      {
+        "district_code": "4019",
+        "district_name_th": "เขาสวนกวาง"
+      },
+      {
+        "district_code": "4030",
+        "district_name_th": "โคกโพธิ์ไชย"
+      },
+      {
+        "district_code": "4018",
+        "district_name_th": "ชนบท"
+      },
+      {
+        "district_code": "4005",
+        "district_name_th": "ชุมแพ"
+      },
+      {
+        "district_code": "4021",
+        "district_name_th": "ซำสูง"
+      },
+      {
+        "district_code": "4031",
+        "district_name_th": "ซำสูง"
+      },
+      {
+        "district_code": "4007",
+        "district_name_th": "น้ำพอง"
+      },
+      {
+        "district_code": "4026",
+        "district_name_th": "โนนศิลา"
+      },
+      {
+        "district_code": "4010",
+        "district_name_th": "บ้านไผ่"
+      },
+      {
+        "district_code": "4002",
+        "district_name_th": "บ้านฝาง"
+      },
+      {
+        "district_code": "4024",
+        "district_name_th": "บ้านแฮด"
+      },
+      {
+        "district_code": "4011",
+        "district_name_th": "เปือยน้อย"
+      },
+      {
+        "district_code": "4003",
+        "district_name_th": "พระยืน"
+      },
+      {
+        "district_code": "4012",
+        "district_name_th": "พล"
+      },
+      {
+        "district_code": "4020",
+        "district_name_th": "ภูผาม่าน"
+      },
+      {
+        "district_code": "4016",
+        "district_name_th": "ภูเวียง"
+      },
+      {
+        "district_code": "4017",
+        "district_name_th": "มัญจาคีรี"
+      },
+      {
+        "district_code": "4001",
+        "district_name_th": "เมืองขอนแก่น",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "โคกสี",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "ดอนช้าง",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "ดอนหัน",
+            "postcode": "40260"
+          },
+          {
+            "subdistrict_name_th": "แดงใหญ่",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "ท่าพระ",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "โนนท่อน",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "ในเมือง",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บ้านค้อ",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บ้านโต้น",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บ้านทุ่ม",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บ้านเป็ด",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บ้านหว้า",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "บึงเนียม",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "พระลับ",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "เมืองเก่า",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "ศิลา",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "สาวะถี",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "สำราญ",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "หนองตูม",
+            "postcode": "40000"
+          },
+          {
+            "subdistrict_name_th": "หนองบัว",
+            "postcode": "40000"
+          }
+        ]
+      },
+      {
+        "district_code": "4025",
+        "district_name_th": "เวียงเก่า"
+      },
+      {
+        "district_code": "4014",
+        "district_name_th": "แวงน้อย"
+      },
+      {
+        "district_code": "4013",
+        "district_name_th": "แวงใหญ่"
+      },
+      {
+        "district_code": "4006",
+        "district_name_th": "สีชมพู"
+      },
+      {
+        "district_code": "4023",
+        "district_name_th": "หนองนาคำ"
+      },
+      {
+        "district_code": "4004",
+        "district_name_th": "หนองเรือ"
+      },
+      {
+        "district_code": "4015",
+        "district_name_th": "หนองสองห้อง"
+      },
+      {
+        "district_code": "4031",
+        "district_name_th": "อำเภอซำสูง"
+      },
+      {
+        "district_code": "4008",
+        "district_name_th": "อุบลรัตน์"
+      }
+    ]
+  },
+  {
+    "province_code": "41",
+    "province_name_th": "อุดรธานี",
+    "districts": [
+      {
+        "district_code": "4102",
+        "district_name_th": "กุดจับ"
+      },
+      {
+        "district_code": "4104",
+        "district_name_th": "กุมภวาปี"
+      },
+      {
+        "district_code": "4124",
+        "district_name_th": "กู่แก้ว"
+      },
+      {
+        "district_code": "4108",
+        "district_name_th": "ไชยวาน"
+      },
+      {
+        "district_code": "4107",
+        "district_name_th": "ทุ่งฝน"
+      },
+      {
+        "district_code": "4114",
+        "district_name_th": "นากลาง"
+      },
+      {
+        "district_code": "4122",
+        "district_name_th": "นายูง"
+      },
+      {
+        "district_code": "4118",
+        "district_name_th": "น้ำโสม"
+      },
+      {
+        "district_code": "4105",
+        "district_name_th": "โนนสะอาด"
+      },
+      {
+        "district_code": "4116",
+        "district_name_th": "โนนสัง"
+      },
+      {
+        "district_code": "4111",
+        "district_name_th": "บ้านดุง"
+      },
+      {
+        "district_code": "4117",
+        "district_name_th": "บ้านผือ"
+      },
+      {
+        "district_code": "4125",
+        "district_name_th": "ประจักษ์ศิลปาคม"
+      },
+      {
+        "district_code": "4123",
+        "district_name_th": "พิบูลย์รักษ์"
+      },
+      {
+        "district_code": "4119",
+        "district_name_th": "เพ็ญ"
+      },
+      {
+        "district_code": "4101",
+        "district_name_th": "เมืองอุดรธานี"
+      },
+      {
+        "district_code": "4126",
+        "district_name_th": "เมืองอุดรธานี"
+      },
+      {
+        "district_code": "4110",
+        "district_name_th": "วังสามหมอ"
+      },
+      {
+        "district_code": "4109",
+        "district_name_th": "ศรีธาตุ"
+      },
+      {
+        "district_code": "4113",
+        "district_name_th": "ศรีบุญเรือง"
+      },
+      {
+        "district_code": "4120",
+        "district_name_th": "สร้างคอม"
+      },
+      {
+        "district_code": "4115",
+        "district_name_th": "สุวรรณคูหา"
+      },
+      {
+        "district_code": "4112",
+        "district_name_th": "หนองบัวลำภู"
+      },
+      {
+        "district_code": "4103",
+        "district_name_th": "หนองวัวซอ"
+      },
+      {
+        "district_code": "4121",
+        "district_name_th": "หนองแสง"
+      },
+      {
+        "district_code": "4106",
+        "district_name_th": "หนองหาน"
+      }
+    ]
+  },
+  {
+    "province_code": "42",
+    "province_name_th": "เลย",
+    "districts": [
+      {
+        "district_code": "4203",
+        "district_name_th": "เชียงคาน"
+      },
+      {
+        "district_code": "4205",
+        "district_name_th": "ด่านซ้าย"
+      },
+      {
+        "district_code": "4208",
+        "district_name_th": "ท่าลี่"
+      },
+      {
+        "district_code": "4202",
+        "district_name_th": "นาด้วง"
+      },
+      {
+        "district_code": "4206",
+        "district_name_th": "นาแห้ว"
+      },
+      {
+        "district_code": "4204",
+        "district_name_th": "ปากชม"
+      },
+      {
+        "district_code": "4212",
+        "district_name_th": "ผาขาว"
+      },
+      {
+        "district_code": "4210",
+        "district_name_th": "ภูกระดึง"
+      },
+      {
+        "district_code": "4207",
+        "district_name_th": "ภูเรือ"
+      },
+      {
+        "district_code": "4211",
+        "district_name_th": "ภูหลวง"
+      },
+      {
+        "district_code": "4201",
+        "district_name_th": "เมืองเลย"
+      },
+      {
+        "district_code": "4209",
+        "district_name_th": "วังสะพุง"
+      },
+      {
+        "district_code": "4214",
+        "district_name_th": "หนองหิน"
+      },
+      {
+        "district_code": "4215",
+        "district_name_th": "เอราวัณ"
+      }
+    ]
+  },
+  {
+    "province_code": "43",
+    "province_name_th": "หนองคาย",
+    "districts": [
+      {
+        "district_code": "4313",
+        "district_name_th": "กิ่งอำเภอบุ่งคล้า"
+      },
+      {
+        "district_code": "4314",
+        "district_name_th": "กิ่งอำเภอสระใคร"
+      },
+      {
+        "district_code": "4309",
+        "district_name_th": "เซกา"
+      },
+      {
+        "district_code": "4306",
+        "district_name_th": "โซ่พิสัย"
+      },
+      {
+        "district_code": "4302",
+        "district_name_th": "ท่าบ่อ"
+      },
+      {
+        "district_code": "4303",
+        "district_name_th": "บึงกาฬ"
+      },
+      {
+        "district_code": "4311",
+        "district_name_th": "บึงโขงหลง"
+      },
+      {
+        "district_code": "4310",
+        "district_name_th": "ปากคาด"
+      },
+      {
+        "district_code": "4315",
+        "district_name_th": "เฝ้าไร่"
+      },
+      {
+        "district_code": "4304",
+        "district_name_th": "พรเจริญ"
+      },
+      {
+        "district_code": "4316",
+        "district_name_th": "โพธิ์ตาก"
+      },
+      {
+        "district_code": "4305",
+        "district_name_th": "โพนพิสัย"
+      },
+      {
+        "district_code": "4301",
+        "district_name_th": "เมืองหนองคาย"
+      },
+      {
+        "district_code": "4317",
+        "district_name_th": "รัตนวาปี"
+      },
+      {
+        "district_code": "4307",
+        "district_name_th": "ศรีเชียงใหม่"
+      },
+      {
+        "district_code": "4312",
+        "district_name_th": "ศรีวิไล"
+      },
+      {
+        "district_code": "4318",
+        "district_name_th": "สระใคร"
+      },
+      {
+        "district_code": "4308",
+        "district_name_th": "สังคม"
+      }
+    ]
+  },
+  {
+    "province_code": "44",
+    "province_name_th": "มหาสารคาม",
+    "districts": [
+      {
+        "district_code": "4404",
+        "district_name_th": "กันทรวิชัย"
+      },
+      {
+        "district_code": "4412",
+        "district_name_th": "กุดรัง"
+      },
+      {
+        "district_code": "4402",
+        "district_name_th": "แกดำ"
+      },
+      {
+        "district_code": "4403",
+        "district_name_th": "โกสุมพิสัย"
+      },
+      {
+        "district_code": "4413",
+        "district_name_th": "ชื่นชม"
+      },
+      {
+        "district_code": "4405",
+        "district_name_th": "เชียงยืน"
+      },
+      {
+        "district_code": "4407",
+        "district_name_th": "นาเชือก"
+      },
+      {
+        "district_code": "4410",
+        "district_name_th": "นาดูน"
+      },
+      {
+        "district_code": "4406",
+        "district_name_th": "บรบือ"
+      },
+      {
+        "district_code": "4408",
+        "district_name_th": "พยัคฆภูมิพิสัย"
+      },
+      {
+        "district_code": "4401",
+        "district_name_th": "เมืองมหาสารคาม"
+      },
+      {
+        "district_code": "4411",
+        "district_name_th": "ยางสีสุราช"
+      },
+      {
+        "district_code": "4409",
+        "district_name_th": "วาปีปทุม"
+      }
+    ]
+  },
+  {
+    "province_code": "45",
+    "province_name_th": "ร้อยเอ็ด",
+    "districts": [
+      {
+        "district_code": "4502",
+        "district_name_th": "เกษตรวิสัย"
+      },
+      {
+        "district_code": "4504",
+        "district_name_th": "จตุรพักตรพิมาน"
+      },
+      {
+        "district_code": "4517",
+        "district_name_th": "จังหาร"
+      },
+      {
+        "district_code": "4518",
+        "district_name_th": "เชียงขวัญ"
+      },
+      {
+        "district_code": "4520",
+        "district_name_th": "ทุ่งเขาหลวง"
+      },
+      {
+        "district_code": "4505",
+        "district_name_th": "ธวัชบุรี"
+      },
+      {
+        "district_code": "4521",
+        "district_name_th": "ปทุมรัต์"
+      },
+      {
+        "district_code": "4503",
+        "district_name_th": "ปทุมรัตต์"
+      },
+      {
+        "district_code": "4506",
+        "district_name_th": "พนมไพร"
+      },
+      {
+        "district_code": "4508",
+        "district_name_th": "โพธิ์ชัย"
+      },
+      {
+        "district_code": "4513",
+        "district_name_th": "โพนทราย"
+      },
+      {
+        "district_code": "4507",
+        "district_name_th": "โพนทอง"
+      },
+      {
+        "district_code": "4515",
+        "district_name_th": "เมยวดี"
+      },
+      {
+        "district_code": "4501",
+        "district_name_th": "เมืองร้อยเอ็ด"
+      },
+      {
+        "district_code": "4512",
+        "district_name_th": "เมืองสรวง"
+      },
+      {
+        "district_code": "4516",
+        "district_name_th": "ศรีสมเด็จ"
+      },
+      {
+        "district_code": "4511",
+        "district_name_th": "สุวรรณภูมิ"
+      },
+      {
+        "district_code": "4510",
+        "district_name_th": "เสลภูมิ"
+      },
+      {
+        "district_code": "4509",
+        "district_name_th": "หนองพอก"
+      },
+      {
+        "district_code": "4519",
+        "district_name_th": "หนองฮี"
+      },
+      {
+        "district_code": "4514",
+        "district_name_th": "อาจสามารถ"
+      }
+    ]
+  },
+  {
+    "province_code": "46",
+    "province_name_th": "กาฬสินธุ์",
+    "districts": [
+      {
+        "district_code": "4603",
+        "district_name_th": "กมลาไสย"
+      },
+      {
+        "district_code": "4605",
+        "district_name_th": "กุฉินารายณ์"
+      },
+      {
+        "district_code": "4606",
+        "district_name_th": "เขาวง"
+      },
+      {
+        "district_code": "4610",
+        "district_name_th": "คำม่วง"
+      },
+      {
+        "district_code": "4618",
+        "district_name_th": "ฆ้องชัย"
+      },
+      {
+        "district_code": "4617",
+        "district_name_th": "ดอนจาน"
+      },
+      {
+        "district_code": "4611",
+        "district_name_th": "ท่าคันโท"
+      },
+      {
+        "district_code": "4615",
+        "district_name_th": "นาคู"
+      },
+      {
+        "district_code": "4602",
+        "district_name_th": "นามน"
+      },
+      {
+        "district_code": "4601",
+        "district_name_th": "เมืองกาฬสินธุ์"
+      },
+      {
+        "district_code": "4607",
+        "district_name_th": "ยางตลาด"
+      },
+      {
+        "district_code": "4604",
+        "district_name_th": "ร่องคำ"
+      },
+      {
+        "district_code": "4613",
+        "district_name_th": "สมเด็จ"
+      },
+      {
+        "district_code": "4609",
+        "district_name_th": "สหัสขันธ์"
+      },
+      {
+        "district_code": "4616",
+        "district_name_th": "สามชัย"
+      },
+      {
+        "district_code": "4612",
+        "district_name_th": "หนองกุงศรี"
+      },
+      {
+        "district_code": "4614",
+        "district_name_th": "ห้วยผึ้ง"
+      },
+      {
+        "district_code": "4608",
+        "district_name_th": "ห้วยเม็ก"
+      }
+    ]
+  },
+  {
+    "province_code": "47",
+    "province_name_th": "สกลนคร",
+    "districts": [
+      {
+        "district_code": "4718",
+        "district_name_th": "กิ่งอำเภอภูพาน"
+      },
+      {
+        "district_code": "4703",
+        "district_name_th": "กุดบาก"
+      },
+      {
+        "district_code": "4702",
+        "district_name_th": "กุสุมาลย์"
+      },
+      {
+        "district_code": "4709",
+        "district_name_th": "คำตากล้า"
+      },
+      {
+        "district_code": "4715",
+        "district_name_th": "โคกศรีสุพรรณ"
+      },
+      {
+        "district_code": "4716",
+        "district_name_th": "เจริญศิลป์"
+      },
+      {
+        "district_code": "4714",
+        "district_name_th": "เต่างอย"
+      },
+      {
+        "district_code": "4707",
+        "district_name_th": "นิคมน้ำอูน"
+      },
+      {
+        "district_code": "4710",
+        "district_name_th": "บ้านม่วง"
+      },
+      {
+        "district_code": "4704",
+        "district_name_th": "พรรณานิคม"
+      },
+      {
+        "district_code": "4705",
+        "district_name_th": "พังโคน"
+      },
+      {
+        "district_code": "4717",
+        "district_name_th": "โพนนาแก้ว"
+      },
+      {
+        "district_code": "4719",
+        "district_name_th": "ภูพาน"
+      },
+      {
+        "district_code": "4701",
+        "district_name_th": "เมืองสกลนคร"
+      },
+      {
+        "district_code": "4708",
+        "district_name_th": "วานรนิวาส"
+      },
+      {
+        "district_code": "4706",
+        "district_name_th": "วาริชภูมิ"
+      },
+      {
+        "district_code": "4712",
+        "district_name_th": "สว่างแดนดิน"
+      },
+      {
+        "district_code": "4713",
+        "district_name_th": "ส่องดาว"
+      },
+      {
+        "district_code": "4711",
+        "district_name_th": "อากาศอำนวย"
+      }
+    ]
+  },
+  {
+    "province_code": "48",
+    "province_name_th": "นครพนม",
+    "districts": [
+      {
+        "district_code": "4803",
+        "district_name_th": "ท่าอุเทน"
+      },
+      {
+        "district_code": "4805",
+        "district_name_th": "ธาตุพนม"
+      },
+      {
+        "district_code": "4807",
+        "district_name_th": "นาแก"
+      },
+      {
+        "district_code": "4811",
+        "district_name_th": "นาทม"
+      },
+      {
+        "district_code": "4809",
+        "district_name_th": "นาหว้า"
+      },
+      {
+        "district_code": "4804",
+        "district_name_th": "บ้านแพง"
+      },
+      {
+        "district_code": "4802",
+        "district_name_th": "ปลาปาก"
+      },
+      {
+        "district_code": "4810",
+        "district_name_th": "โพนสวรรค์"
+      },
+      {
+        "district_code": "4801",
+        "district_name_th": "เมืองนครพนม"
+      },
+      {
+        "district_code": "4806",
+        "district_name_th": "เรณูนคร"
+      },
+      {
+        "district_code": "4812",
+        "district_name_th": "วังยาง"
+      },
+      {
+        "district_code": "4808",
+        "district_name_th": "ศรีสงคราม"
+      }
+    ]
+  },
+  {
+    "province_code": "49",
+    "province_name_th": "มุกดาหาร",
+    "districts": [
+      {
+        "district_code": "4905",
+        "district_name_th": "คำชะอี"
+      },
+      {
+        "district_code": "4904",
+        "district_name_th": "ดงหลวง"
+      },
+      {
+        "district_code": "4903",
+        "district_name_th": "ดอนตาล"
+      },
+      {
+        "district_code": "4902",
+        "district_name_th": "นิคมคำสร้อย"
+      },
+      {
+        "district_code": "4901",
+        "district_name_th": "เมืองมุกดาหาร"
+      },
+      {
+        "district_code": "4907",
+        "district_name_th": "หนองสูง"
+      },
+      {
+        "district_code": "4906",
+        "district_name_th": "หว้านใหญ่"
+      }
+    ]
+  },
+  {
+    "province_code": "50",
+    "province_name_th": "เชียงใหม่",
+    "districts": [
+      {
+        "district_code": "5025",
+        "district_name_th": "กัลยาณิวัฒนา"
+      },
+      {
+        "district_code": "5028",
+        "district_name_th": "กิ่งอำเภอแม่ออน"
+      },
+      {
+        "district_code": "5002",
+        "district_name_th": "จอมทอง"
+      },
+      {
+        "district_code": "5004",
+        "district_name_th": "เชียงดาว"
+      },
+      {
+        "district_code": "5021",
+        "district_name_th": "ไชยปราการ"
+      },
+      {
+        "district_code": "5017",
+        "district_name_th": "ดอยเต่า"
+      },
+      {
+        "district_code": "5005",
+        "district_name_th": "ดอยสะเก็ด"
+      },
+      {
+        "district_code": "5024",
+        "district_name_th": "ดอยหล่อ"
+      },
+      {
+        "district_code": "5026",
+        "district_name_th": "ดอยหล่อ"
+      },
+      {
+        "district_code": "5009",
+        "district_name_th": "ฝาง"
+      },
+      {
+        "district_code": "5011",
+        "district_name_th": "พร้าว"
+      },
+      {
+        "district_code": "5001",
+        "district_name_th": "เมืองเชียงใหม่",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ช้างคลาน",
+            "postcode": "50100"
+          },
+          {
+            "subdistrict_name_th": "ช้างเผือก",
+            "postcode": "50300"
+          },
+          {
+            "subdistrict_name_th": "ช้างม่อย",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "ท่าศาลา",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "ป่าแดด",
+            "postcode": "50100"
+          },
+          {
+            "subdistrict_name_th": "ป่าตัน",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "พระสิงห์",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "ฟ้าฮ่าม",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "แม่เหียะ",
+            "postcode": "50100"
+          },
+          {
+            "subdistrict_name_th": "วัดเกต",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "ศรีภูมิ",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "สันผีเสื้อ",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "สุเทพ",
+            "postcode": "50200"
+          },
+          {
+            "subdistrict_name_th": "หนองป่าครั่ง",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "หนองหอย",
+            "postcode": "50000"
+          },
+          {
+            "subdistrict_name_th": "หายยา",
+            "postcode": "50000"
+          }
+        ]
+      },
+      {
+        "district_code": "5003",
+        "district_name_th": "แม่แจ่ม"
+      },
+      {
+        "district_code": "5006",
+        "district_name_th": "แม่แตง"
+      },
+      {
+        "district_code": "5007",
+        "district_name_th": "แม่ริม"
+      },
+      {
+        "district_code": "5022",
+        "district_name_th": "แม่วาง"
+      },
+      {
+        "district_code": "5027",
+        "district_name_th": "แม่ออน"
+      },
+      {
+        "district_code": "5023",
+        "district_name_th": "แม่ออน"
+      },
+      {
+        "district_code": "5010",
+        "district_name_th": "แม่อาย"
+      },
+      {
+        "district_code": "5020",
+        "district_name_th": "เวียงแหง"
+      },
+      {
+        "district_code": "5008",
+        "district_name_th": "สะเมิง"
+      },
+      {
+        "district_code": "5013",
+        "district_name_th": "สันกำแพง"
+      },
+      {
+        "district_code": "5014",
+        "district_name_th": "สันทราย"
+      },
+      {
+        "district_code": "5012",
+        "district_name_th": "สันป่าตอง"
+      },
+      {
+        "district_code": "5019",
+        "district_name_th": "สารภี"
+      },
+      {
+        "district_code": "5015",
+        "district_name_th": "หางดง"
+      },
+      {
+        "district_code": "5018",
+        "district_name_th": "อมก๋อย"
+      },
+      {
+        "district_code": "5016",
+        "district_name_th": "ฮอด"
+      }
+    ]
+  },
+  {
+    "province_code": "51",
+    "province_name_th": "ลำพูน",
+    "districts": [
+      {
+        "district_code": "5111",
+        "district_name_th": "กิ่งอำเภอทุ่งหัวช้าง"
+      },
+      {
+        "district_code": "5107",
+        "district_name_th": "กิ่งอำเภอบ้านธิ"
+      },
+      {
+        "district_code": "5110",
+        "district_name_th": "กิ่งอำเภอเวียงหนองล่อง"
+      },
+      {
+        "district_code": "5105",
+        "district_name_th": "ทุ่งหัวช้าง"
+      },
+      {
+        "district_code": "5109",
+        "district_name_th": "บ้านธิ"
+      },
+      {
+        "district_code": "5103",
+        "district_name_th": "บ้านโฮ่ง"
+      },
+      {
+        "district_code": "5106",
+        "district_name_th": "ป่าซาง"
+      },
+      {
+        "district_code": "5101",
+        "district_name_th": "เมืองลำพูน"
+      },
+      {
+        "district_code": "5102",
+        "district_name_th": "แม่ทา"
+      },
+      {
+        "district_code": "5104",
+        "district_name_th": "ลี้"
+      },
+      {
+        "district_code": "5108",
+        "district_name_th": "เวียงหนองล่อง"
+      }
+    ]
+  },
+  {
+    "province_code": "52",
+    "province_name_th": "ลำปาง",
+    "districts": [
+      {
+        "district_code": "5214",
+        "district_name_th": "กิ่งอำเภอเมืองปาน"
+      },
+      {
+        "district_code": "5203",
+        "district_name_th": "เกาะคา"
+      },
+      {
+        "district_code": "5205",
+        "district_name_th": "งาว"
+      },
+      {
+        "district_code": "5206",
+        "district_name_th": "แจ้ห่ม"
+      },
+      {
+        "district_code": "5208",
+        "district_name_th": "เถิน"
+      },
+      {
+        "district_code": "5213",
+        "district_name_th": "เมืองปาน"
+      },
+      {
+        "district_code": "5201",
+        "district_name_th": "เมืองลำปาง"
+      },
+      {
+        "district_code": "5210",
+        "district_name_th": "แม่ทะ"
+      },
+      {
+        "district_code": "5209",
+        "district_name_th": "แม่พริก"
+      },
+      {
+        "district_code": "5202",
+        "district_name_th": "แม่เมาะ"
+      },
+      {
+        "district_code": "5207",
+        "district_name_th": "วังเหนือ"
+      },
+      {
+        "district_code": "5211",
+        "district_name_th": "สบปราบ"
+      },
+      {
+        "district_code": "5204",
+        "district_name_th": "เสริมงาม"
+      },
+      {
+        "district_code": "5212",
+        "district_name_th": "ห้างฉัตร"
+      }
+    ]
+  },
+  {
+    "province_code": "53",
+    "province_name_th": "อุตรดิตถ์",
+    "districts": [
+      {
+        "district_code": "5302",
+        "district_name_th": "ตรอน"
+      },
+      {
+        "district_code": "5309",
+        "district_name_th": "ทองแสนขัน"
+      },
+      {
+        "district_code": "5303",
+        "district_name_th": "ท่าปลา"
+      },
+      {
+        "district_code": "5304",
+        "district_name_th": "น้ำปาด"
+      },
+      {
+        "district_code": "5306",
+        "district_name_th": "บ้านโคก"
+      },
+      {
+        "district_code": "5307",
+        "district_name_th": "พิชัย"
+      },
+      {
+        "district_code": "5305",
+        "district_name_th": "ฟากท่า"
+      },
+      {
+        "district_code": "5301",
+        "district_name_th": "เมืองอุตรดิตถ์"
+      },
+      {
+        "district_code": "5308",
+        "district_name_th": "ลับแล"
+      }
+    ]
+  },
+  {
+    "province_code": "54",
+    "province_name_th": "แพร่",
+    "districts": [
+      {
+        "district_code": "5405",
+        "district_name_th": "เด่นชัย"
+      },
+      {
+        "district_code": "5401",
+        "district_name_th": "เมืองแพร่"
+      },
+      {
+        "district_code": "5402",
+        "district_name_th": "ร้องกวาง"
+      },
+      {
+        "district_code": "5403",
+        "district_name_th": "ลอง"
+      },
+      {
+        "district_code": "5407",
+        "district_name_th": "วังชิ้น"
+      },
+      {
+        "district_code": "5406",
+        "district_name_th": "สอง"
+      },
+      {
+        "district_code": "5404",
+        "district_name_th": "สูงเม่น"
+      },
+      {
+        "district_code": "5408",
+        "district_name_th": "หนองม่วงไข่"
+      }
+    ]
+  },
+  {
+    "province_code": "55",
+    "province_name_th": "น่าน",
+    "districts": [
+      {
+        "district_code": "5512",
+        "district_name_th": "กิ่งอำเภอบ่อเกลือ"
+      },
+      {
+        "district_code": "5516",
+        "district_name_th": "กิ่งอำเภอภูเพียง"
+      },
+      {
+        "district_code": "5513",
+        "district_name_th": "กิ่งอำเภอสองแคว"
+      },
+      {
+        "district_code": "5517",
+        "district_name_th": "เฉลิมพระเกียรติ"
+      },
+      {
+        "district_code": "5509",
+        "district_name_th": "เชียงกลาง"
+      },
+      {
+        "district_code": "5506",
+        "district_name_th": "ท่าวังผา"
+      },
+      {
+        "district_code": "5508",
+        "district_name_th": "ทุ่งช้าง"
+      },
+      {
+        "district_code": "5504",
+        "district_name_th": "นาน้อย"
+      },
+      {
+        "district_code": "5510",
+        "district_name_th": "นาหมื่น"
+      },
+      {
+        "district_code": "5514",
+        "district_name_th": "บ่อเกลือ"
+      },
+      {
+        "district_code": "5503",
+        "district_name_th": "บ้านหลวง"
+      },
+      {
+        "district_code": "5505",
+        "district_name_th": "ปัว"
+      },
+      {
+        "district_code": "5518",
+        "district_name_th": "ภูเพียง"
+      },
+      {
+        "district_code": "5501",
+        "district_name_th": "เมืองน่าน"
+      },
+      {
+        "district_code": "5502",
+        "district_name_th": "แม่จริม"
+      },
+      {
+        "district_code": "5507",
+        "district_name_th": "เวียงสา"
+      },
+      {
+        "district_code": "5515",
+        "district_name_th": "สองแคว"
+      },
+      {
+        "district_code": "5511",
+        "district_name_th": "สันติสุข"
+      }
+    ]
+  },
+  {
+    "province_code": "56",
+    "province_name_th": "พะเยา",
+    "districts": [
+      {
+        "district_code": "5602",
+        "district_name_th": "จุน"
+      },
+      {
+        "district_code": "5603",
+        "district_name_th": "เชียงคำ"
+      },
+      {
+        "district_code": "5604",
+        "district_name_th": "เชียงม่วน"
+      },
+      {
+        "district_code": "5605",
+        "district_name_th": "ดอกคำใต้"
+      },
+      {
+        "district_code": "5606",
+        "district_name_th": "ปง"
+      },
+      {
+        "district_code": "5608",
+        "district_name_th": "ภูกามยาว"
+      },
+      {
+        "district_code": "5609",
+        "district_name_th": "ภูซาง"
+      },
+      {
+        "district_code": "5601",
+        "district_name_th": "เมืองพะเยา"
+      },
+      {
+        "district_code": "5607",
+        "district_name_th": "แม่ใจ"
+      }
+    ]
+  },
+  {
+    "province_code": "57",
+    "province_name_th": "เชียงราย",
+    "districts": [
+      {
+        "district_code": "5714",
+        "district_name_th": "ขุนตาล"
+      },
+      {
+        "district_code": "5703",
+        "district_name_th": "เชียงของ"
+      },
+      {
+        "district_code": "5708",
+        "district_name_th": "เชียงแสน"
+      },
+      {
+        "district_code": "5718",
+        "district_name_th": "ดอยหลวง"
+      },
+      {
+        "district_code": "5704",
+        "district_name_th": "เทิง"
+      },
+      {
+        "district_code": "5706",
+        "district_name_th": "ป่าแดด"
+      },
+      {
+        "district_code": "5712",
+        "district_name_th": "พญาเม็งราย"
+      },
+      {
+        "district_code": "5705",
+        "district_name_th": "พาน"
+      },
+      {
+        "district_code": "5701",
+        "district_name_th": "เมืองเชียงราย",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "จอมหมอกแก้ว",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ดงมะดะ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ดงมะดะ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ดอยลาน",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ดอยฮาง",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ท่าสาย",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ท่าสุด",
+            "postcode": "57100"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งก่อ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "นางแล",
+            "postcode": "57100"
+          },
+          {
+            "subdistrict_name_th": "บัวสลี",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "บัวสลี",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "บ้านดู่",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ป่าก่อดำ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ป่ากอดำ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ป่าอ้อดอนชัย",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "โป่งแพร่",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ผางาม",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "แม่กรณ์",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "แม่ข้าวต้ม",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "แม่ยาว",
+            "postcode": "57100"
+          },
+          {
+            "subdistrict_name_th": "รอบเวียง",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ริมกก",
+            "postcode": "57100"
+          },
+          {
+            "subdistrict_name_th": "เวียง",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "เวียงชัย",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "เวียงเหนือ",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "สันทราย",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยชมภู",
+            "postcode": "57000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยสัก",
+            "postcode": "57000"
+          }
+        ]
+      },
+      {
+        "district_code": "5707",
+        "district_name_th": "แม่จัน"
+      },
+      {
+        "district_code": "5715",
+        "district_name_th": "แม่ฟ้าหลวง"
+      },
+      {
+        "district_code": "5716",
+        "district_name_th": "แม่ลาว"
+      },
+      {
+        "district_code": "5710",
+        "district_name_th": "แม่สรวย"
+      },
+      {
+        "district_code": "5709",
+        "district_name_th": "แม่สาย"
+      },
+      {
+        "district_code": "5713",
+        "district_name_th": "เวียงแก่น"
+      },
+      {
+        "district_code": "5702",
+        "district_name_th": "เวียงชัย"
+      },
+      {
+        "district_code": "5717",
+        "district_name_th": "เวียงเชียงรุ้ง"
+      },
+      {
+        "district_code": "5711",
+        "district_name_th": "เวียงป่าเป้า"
+      }
+    ]
+  },
+  {
+    "province_code": "58",
+    "province_name_th": "แม่ฮ่องสอน",
+    "districts": [
+      {
+        "district_code": "5802",
+        "district_name_th": "ขุนยวม"
+      },
+      {
+        "district_code": "5807",
+        "district_name_th": "ปางมะผ้า"
+      },
+      {
+        "district_code": "5803",
+        "district_name_th": "ปาย"
+      },
+      {
+        "district_code": "5801",
+        "district_name_th": "เมืองแม่ฮ่องสอน"
+      },
+      {
+        "district_code": "5805",
+        "district_name_th": "แม่ลาน้อย"
+      },
+      {
+        "district_code": "5804",
+        "district_name_th": "แม่สะเรียง"
+      },
+      {
+        "district_code": "5806",
+        "district_name_th": "สบเมย"
+      }
+    ]
+  },
+  {
+    "province_code": "60",
+    "province_name_th": "นครสวรรค์",
+    "districts": [
+      {
+        "district_code": "6006",
+        "district_name_th": "เก้าเลี้ยว"
+      },
+      {
+        "district_code": "6002",
+        "district_name_th": "โกรกพระ"
+      },
+      {
+        "district_code": "6015",
+        "district_name_th": "ชุมตาบง"
+      },
+      {
+        "district_code": "6003",
+        "district_name_th": "ชุมแสง"
+      },
+      {
+        "district_code": "6012",
+        "district_name_th": "ตากฟ้า"
+      },
+      {
+        "district_code": "6007",
+        "district_name_th": "ตาคลี"
+      },
+      {
+        "district_code": "6008",
+        "district_name_th": "ท่าตะโก"
+      },
+      {
+        "district_code": "6005",
+        "district_name_th": "บรรพตพิสัย"
+      },
+      {
+        "district_code": "6010",
+        "district_name_th": "พยุหะคีรี"
+      },
+      {
+        "district_code": "6009",
+        "district_name_th": "ไพศาลี"
+      },
+      {
+        "district_code": "6001",
+        "district_name_th": "เมืองนครสวรรค์"
+      },
+      {
+        "district_code": "6014",
+        "district_name_th": "แม่เปิน"
+      },
+      {
+        "district_code": "6013",
+        "district_name_th": "แม่วงก์"
+      },
+      {
+        "district_code": "6011",
+        "district_name_th": "ลาดยาว"
+      },
+      {
+        "district_code": "6004",
+        "district_name_th": "หนองบัว"
+      }
+    ]
+  },
+  {
+    "province_code": "61",
+    "province_name_th": "อุทัยธานี",
+    "districts": [
+      {
+        "district_code": "6102",
+        "district_name_th": "ทัพทัน"
+      },
+      {
+        "district_code": "6106",
+        "district_name_th": "บ้านไร่"
+      },
+      {
+        "district_code": "6101",
+        "district_name_th": "เมืองอุทัยธานี"
+      },
+      {
+        "district_code": "6107",
+        "district_name_th": "ลานสัก"
+      },
+      {
+        "district_code": "6103",
+        "district_name_th": "สว่างอารมณ์"
+      },
+      {
+        "district_code": "6105",
+        "district_name_th": "หนองขาหย่าง"
+      },
+      {
+        "district_code": "6104",
+        "district_name_th": "หนองฉาง"
+      },
+      {
+        "district_code": "6108",
+        "district_name_th": "ห้วยคต"
+      }
+    ]
+  },
+  {
+    "province_code": "62",
+    "province_name_th": "กำแพงเพชร",
+    "districts": [
+      {
+        "district_code": "6208",
+        "district_name_th": "กิ่งอำเภอทุ่งทราย"
+      },
+      {
+        "district_code": "6209",
+        "district_name_th": "กิ่งอำเภอปางศิลาทอง"
+      },
+      {
+        "district_code": "6212",
+        "district_name_th": "โกสัมพีนคร"
+      },
+      {
+        "district_code": "6204",
+        "district_name_th": "ขาณุวรลักษบุรี"
+      },
+      {
+        "district_code": "6205",
+        "district_name_th": "คลองขลุง"
+      },
+      {
+        "district_code": "6203",
+        "district_name_th": "คลองลาน"
+      },
+      {
+        "district_code": "6211",
+        "district_name_th": "ทรายทองวัฒนา"
+      },
+      {
+        "district_code": "6202",
+        "district_name_th": "ไทรงาม"
+      },
+      {
+        "district_code": "6210",
+        "district_name_th": "บึงสามัคคี"
+      },
+      {
+        "district_code": "6213",
+        "district_name_th": "ปางศิลาทอง"
+      },
+      {
+        "district_code": "6206",
+        "district_name_th": "พรานกระต่าย"
+      },
+      {
+        "district_code": "6201",
+        "district_name_th": "เมืองกำแพงเพชร"
+      },
+      {
+        "district_code": "6207",
+        "district_name_th": "ลานกระบือ"
+      }
+    ]
+  },
+  {
+    "province_code": "63",
+    "province_name_th": "ตาก",
+    "districts": [
+      {
+        "district_code": "6305",
+        "district_name_th": "ท่าสองยาง"
+      },
+      {
+        "district_code": "6302",
+        "district_name_th": "บ้านตาก"
+      },
+      {
+        "district_code": "6307",
+        "district_name_th": "พบพระ"
+      },
+      {
+        "district_code": "6301",
+        "district_name_th": "เมืองตาก"
+      },
+      {
+        "district_code": "6304",
+        "district_name_th": "แม่ระมาด"
+      },
+      {
+        "district_code": "6306",
+        "district_name_th": "แม่สอด"
+      },
+      {
+        "district_code": "6309",
+        "district_name_th": "วังเจ้า"
+      },
+      {
+        "district_code": "6303",
+        "district_name_th": "สามเงา"
+      },
+      {
+        "district_code": "6308",
+        "district_name_th": "อุ้มผาง"
+      }
+    ]
+  },
+  {
+    "province_code": "64",
+    "province_name_th": "สุโขทัย",
+    "districts": [
+      {
+        "district_code": "6404",
+        "district_name_th": "กงไกรลาศ"
+      },
+      {
+        "district_code": "6403",
+        "district_name_th": "คีรีมาศ"
+      },
+      {
+        "district_code": "6409",
+        "district_name_th": "ทุ่งเสลี่ยม"
+      },
+      {
+        "district_code": "6402",
+        "district_name_th": "บ้านด่านลานหอย"
+      },
+      {
+        "district_code": "6401",
+        "district_name_th": "เมืองสุโขทัย"
+      },
+      {
+        "district_code": "6408",
+        "district_name_th": "ศรีนคร"
+      },
+      {
+        "district_code": "6405",
+        "district_name_th": "ศรีสัชนาลัย"
+      },
+      {
+        "district_code": "6406",
+        "district_name_th": "ศรีสำโรง"
+      },
+      {
+        "district_code": "6407",
+        "district_name_th": "สวรรคโลก"
+      }
+    ]
+  },
+  {
+    "province_code": "65",
+    "province_name_th": "พิษณุโลก",
+    "districts": [
+      {
+        "district_code": "6503",
+        "district_name_th": "ชาติตระการ"
+      },
+      {
+        "district_code": "6502",
+        "district_name_th": "นครไทย"
+      },
+      {
+        "district_code": "6509",
+        "district_name_th": "เนินมะปราง"
+      },
+      {
+        "district_code": "6505",
+        "district_name_th": "บางกระทุ่ม"
+      },
+      {
+        "district_code": "6504",
+        "district_name_th": "บางระกำ"
+      },
+      {
+        "district_code": "6506",
+        "district_name_th": "พรหมพิราม"
+      },
+      {
+        "district_code": "6501",
+        "district_name_th": "เมืองพิษณุโลก"
+      },
+      {
+        "district_code": "6508",
+        "district_name_th": "วังทอง"
+      },
+      {
+        "district_code": "6507",
+        "district_name_th": "วัดโบสถ์"
+      }
+    ]
+  },
+  {
+    "province_code": "66",
+    "province_name_th": "พิจิตร",
+    "districts": [
+      {
+        "district_code": "6611",
+        "district_name_th": "ดงเจริญ"
+      },
+      {
+        "district_code": "6604",
+        "district_name_th": "ตะพานหิน"
+      },
+      {
+        "district_code": "6608",
+        "district_name_th": "ทับคล้อ"
+      },
+      {
+        "district_code": "6605",
+        "district_name_th": "บางมูลนาก"
+      },
+      {
+        "district_code": "6609",
+        "district_name_th": "บึงนาราง"
+      },
+      {
+        "district_code": "6606",
+        "district_name_th": "โพทะเล"
+      },
+      {
+        "district_code": "6603",
+        "district_name_th": "โพธิ์ประทับช้าง"
+      },
+      {
+        "district_code": "6601",
+        "district_name_th": "เมืองพิจิตร"
+      },
+      {
+        "district_code": "6612",
+        "district_name_th": "วชิรบารมี"
+      },
+      {
+        "district_code": "6602",
+        "district_name_th": "วังทรายพูน"
+      },
+      {
+        "district_code": "6610",
+        "district_name_th": "สากเหล็ก"
+      },
+      {
+        "district_code": "6607",
+        "district_name_th": "สามง่าม"
+      }
+    ]
+  },
+  {
+    "province_code": "67",
+    "province_name_th": "เพชรบูรณ์",
+    "districts": [
+      {
+        "district_code": "6711",
+        "district_name_th": "เขาค้อ"
+      },
+      {
+        "district_code": "6702",
+        "district_name_th": "ชนแดน"
+      },
+      {
+        "district_code": "6709",
+        "district_name_th": "น้ำหนาว"
+      },
+      {
+        "district_code": "6708",
+        "district_name_th": "บึงสามพัน"
+      },
+      {
+        "district_code": "6701",
+        "district_name_th": "เมืองเพชรบูรณ์"
+      },
+      {
+        "district_code": "6710",
+        "district_name_th": "วังโป่ง"
+      },
+      {
+        "district_code": "6705",
+        "district_name_th": "วิเชียรบุรี"
+      },
+      {
+        "district_code": "6706",
+        "district_name_th": "ศรีเทพ"
+      },
+      {
+        "district_code": "6707",
+        "district_name_th": "หนองไผ่"
+      },
+      {
+        "district_code": "6704",
+        "district_name_th": "หล่มเก่า"
+      },
+      {
+        "district_code": "6703",
+        "district_name_th": "หล่มสัก"
+      }
+    ]
+  },
+  {
+    "province_code": "70",
+    "province_name_th": "ราชบุรี",
+    "districts": [
+      {
+        "district_code": "7002",
+        "district_name_th": "จอมบึง"
+      },
+      {
+        "district_code": "7004",
+        "district_name_th": "ดำเนินสะดวก"
+      },
+      {
+        "district_code": "7006",
+        "district_name_th": "บางแพ"
+      },
+      {
+        "district_code": "7010",
+        "district_name_th": "บ้านคา"
+      },
+      {
+        "district_code": "7005",
+        "district_name_th": "บ้านโป่ง"
+      },
+      {
+        "district_code": "7008",
+        "district_name_th": "ปากท่อ"
+      },
+      {
+        "district_code": "7007",
+        "district_name_th": "โพธาราม"
+      },
+      {
+        "district_code": "7001",
+        "district_name_th": "เมืองราชบุรี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "เกาะพลับพลา",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "เขาแร้ง",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "คุ้งกระถิน",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "คุ้งน้ำวน",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "คูบัว",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "โคกหม้อ",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "เจดีย์หัก",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "ดอนตะโก",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "ดอนแร่",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "ท่าราบ",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "น้ำพุ",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "บางป่า",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "บ้านไร่",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "พงสวาย",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "พิกุลทอง",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "สามเรือน",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "หนองกลางนา",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "หน้าเมือง",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "หลุมดิน",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยไผ่",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "หินกอง",
+            "postcode": "70000"
+          },
+          {
+            "subdistrict_name_th": "อ่างทอง",
+            "postcode": "70000"
+          }
+        ]
+      },
+      {
+        "district_code": "7009",
+        "district_name_th": "วัดเพลง"
+      },
+      {
+        "district_code": "7003",
+        "district_name_th": "สวนผึ้ง"
+      },
+      {
+        "district_code": "7011",
+        "district_name_th": "หัวโพ"
+      }
+    ]
+  },
+  {
+    "province_code": "71",
+    "province_name_th": "กาญจนบุรี",
+    "districts": [
+      {
+        "district_code": "7114",
+        "district_name_th": "กิ่งอำเภอบ้านคา"
+      },
+      {
+        "district_code": "7111",
+        "district_name_th": "ด่านมะขามเตี้ย"
+      },
+      {
+        "district_code": "7107",
+        "district_name_th": "ทองผาภูมิ"
+      },
+      {
+        "district_code": "7106",
+        "district_name_th": "ท่าม่วง"
+      },
+      {
+        "district_code": "7105",
+        "district_name_th": "ท่ามะกา"
+      },
+      {
+        "district_code": "7102",
+        "district_name_th": "ไทรโยค"
+      },
+      {
+        "district_code": "7103",
+        "district_name_th": "บ่อพลอย"
+      },
+      {
+        "district_code": "7109",
+        "district_name_th": "พนมทวน"
+      },
+      {
+        "district_code": "7101",
+        "district_name_th": "เมืองกาญจนบุรี"
+      },
+      {
+        "district_code": "7110",
+        "district_name_th": "เลาขวัญ"
+      },
+      {
+        "district_code": "7104",
+        "district_name_th": "ศรีสวัสดิ์"
+      },
+      {
+        "district_code": "7108",
+        "district_name_th": "สังขละบุรี"
+      },
+      {
+        "district_code": "7112",
+        "district_name_th": "หนองปรือ"
+      },
+      {
+        "district_code": "7113",
+        "district_name_th": "ห้วยกระเจา"
+      }
+    ]
+  },
+  {
+    "province_code": "72",
+    "province_name_th": "สุพรรณบุรี",
+    "districts": [
+      {
+        "district_code": "7206",
+        "district_name_th": "ดอนเจดีย์"
+      },
+      {
+        "district_code": "7203",
+        "district_name_th": "ด่านช้าง"
+      },
+      {
+        "district_code": "7202",
+        "district_name_th": "เดิมบางนางบวช"
+      },
+      {
+        "district_code": "7204",
+        "district_name_th": "บางปลาม้า"
+      },
+      {
+        "district_code": "7201",
+        "district_name_th": "เมืองสุพรรณบุรี"
+      },
+      {
+        "district_code": "7205",
+        "district_name_th": "ศรีประจันต์"
+      },
+      {
+        "district_code": "7207",
+        "district_name_th": "สองพี่น้อง"
+      },
+      {
+        "district_code": "7208",
+        "district_name_th": "สามชุก"
+      },
+      {
+        "district_code": "7210",
+        "district_name_th": "หนองหญ้าไซ"
+      },
+      {
+        "district_code": "7209",
+        "district_name_th": "อู่ทอง"
+      }
+    ]
+  },
+  {
+    "province_code": "73",
+    "province_name_th": "นครปฐม",
+    "districts": [
+      {
+        "district_code": "7302",
+        "district_name_th": "กำแพงแสน"
+      },
+      {
+        "district_code": "7304",
+        "district_name_th": "ดอนตูม"
+      },
+      {
+        "district_code": "7303",
+        "district_name_th": "นครชัยศรี"
+      },
+      {
+        "district_code": "7308",
+        "district_name_th": "บางปลา"
+      },
+      {
+        "district_code": "7305",
+        "district_name_th": "บางเลน"
+      },
+      {
+        "district_code": "7309",
+        "district_name_th": "บางเลน(บางปลา)"
+      },
+      {
+        "district_code": "7307",
+        "district_name_th": "พุทธมณฑล"
+      },
+      {
+        "district_code": "7301",
+        "district_name_th": "เมืองนครปฐม",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ดอนยายหอม",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ตาก้อง",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ถนนขาด",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ทัพหลวง",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งน้อย",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ธรรมศาลา",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "นครปฐม",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "บ่อพลับ",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "บางแขม",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "บ้านยาง",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "พระปฐมเจดีย์",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "พระประโทน",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "โพรงมะเดื่อ",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "มาบแค",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ลำพยา",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "วังตะกู",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "วังเย็น",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "สนามจันทร์",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "สระกะเทียม",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "สวนป่าน",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "สามควายเผือก",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "หนองงูเหลือม",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "หนองดินแดง",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "หนองปากโลง",
+            "postcode": "73000"
+          },
+          {
+            "subdistrict_name_th": "ห้วยจรเข้",
+            "postcode": "73000"
+          }
+        ]
+      },
+      {
+        "district_code": "7306",
+        "district_name_th": "สามพราน"
+      }
+    ]
+  },
+  {
+    "province_code": "74",
+    "province_name_th": "สมุทรสาคร",
+    "districts": [
+      {
+        "district_code": "7402",
+        "district_name_th": "กระทุ่มแบน"
+      },
+      {
+        "district_code": "7403",
+        "district_name_th": "บ้านแพ้ว"
+      },
+      {
+        "district_code": "7401",
+        "district_name_th": "เมืองสมุทรสาคร"
+      }
+    ]
+  },
+  {
+    "province_code": "75",
+    "province_name_th": "สมุทรสงคราม",
+    "districts": [
+      {
+        "district_code": "7502",
+        "district_name_th": "บางคนที"
+      },
+      {
+        "district_code": "7501",
+        "district_name_th": "เมืองสมุทรสงคราม"
+      },
+      {
+        "district_code": "7503",
+        "district_name_th": "อัมพวา"
+      }
+    ]
+  },
+  {
+    "province_code": "76",
+    "province_name_th": "เพชรบุรี",
+    "districts": [
+      {
+        "district_code": "7608",
+        "district_name_th": "แก่งกระจาน"
+      },
+      {
+        "district_code": "7602",
+        "district_name_th": "เขาย้อย"
+      },
+      {
+        "district_code": "7604",
+        "district_name_th": "ชะอำ"
+      },
+      {
+        "district_code": "7605",
+        "district_name_th": "ท่ายาง"
+      },
+      {
+        "district_code": "7606",
+        "district_name_th": "บ้านลาด"
+      },
+      {
+        "district_code": "7607",
+        "district_name_th": "บ้านแหลม"
+      },
+      {
+        "district_code": "7601",
+        "district_name_th": "เมืองเพชรบุรี"
+      },
+      {
+        "district_code": "7603",
+        "district_name_th": "หนองหญ้าปล้อง"
+      }
+    ]
+  },
+  {
+    "province_code": "77",
+    "province_name_th": "ประจวบคีรีขันธ์",
+    "districts": [
+      {
+        "district_code": "7702",
+        "district_name_th": "กุยบุรี"
+      },
+      {
+        "district_code": "7703",
+        "district_name_th": "ทับสะแก"
+      },
+      {
+        "district_code": "7704",
+        "district_name_th": "บางสะพาน"
+      },
+      {
+        "district_code": "7705",
+        "district_name_th": "บางสะพานน้อย"
+      },
+      {
+        "district_code": "7706",
+        "district_name_th": "ปราณบุรี"
+      },
+      {
+        "district_code": "7701",
+        "district_name_th": "เมืองประจวบคีรีขันธ์"
+      },
+      {
+        "district_code": "7708",
+        "district_name_th": "สามร้อยยอด"
+      },
+      {
+        "district_code": "7707",
+        "district_name_th": "หัวหิน"
+      }
+    ]
+  },
+  {
+    "province_code": "80",
+    "province_name_th": "นครศรีธรรมราช",
+    "districts": [
+      {
+        "district_code": "8015",
+        "district_name_th": "ขนอม"
+      },
+      {
+        "district_code": "8019",
+        "district_name_th": "จุฬาภรณ์"
+      },
+      {
+        "district_code": "8004",
+        "district_name_th": "ฉวาง"
+      },
+      {
+        "district_code": "8021",
+        "district_name_th": "เฉลิมพระเกียรติ"
+      },
+      {
+        "district_code": "8007",
+        "district_name_th": "ชะอวด"
+      },
+      {
+        "district_code": "8022",
+        "district_name_th": "ช้างกลาง"
+      },
+      {
+        "district_code": "8006",
+        "district_name_th": "เชียรใหญ่"
+      },
+      {
+        "district_code": "8018",
+        "district_name_th": "ถ้ำพรรณรา"
+      },
+      {
+        "district_code": "8008",
+        "district_name_th": "ท่าศาลา"
+      },
+      {
+        "district_code": "8009",
+        "district_name_th": "ทุ่งสง"
+      },
+      {
+        "district_code": "8011",
+        "district_name_th": "ทุ่งใหญ่"
+      },
+      {
+        "district_code": "8023",
+        "district_name_th": "นบพิตำ"
+      },
+      {
+        "district_code": "8010",
+        "district_name_th": "นาบอน"
+      },
+      {
+        "district_code": "8017",
+        "district_name_th": "บางขัน"
+      },
+      {
+        "district_code": "8012",
+        "district_name_th": "ปากพนัง"
+      },
+      {
+        "district_code": "8002",
+        "district_name_th": "พรหมคีรี"
+      },
+      {
+        "district_code": "8020",
+        "district_name_th": "พระพรหม"
+      },
+      {
+        "district_code": "8005",
+        "district_name_th": "พิปูน"
+      },
+      {
+        "district_code": "8001",
+        "district_name_th": "เมืองนครศรีธรรมราช"
+      },
+      {
+        "district_code": "8013",
+        "district_name_th": "ร่อนพิบูลย์"
+      },
+      {
+        "district_code": "8003",
+        "district_name_th": "ลานสกา"
+      },
+      {
+        "district_code": "8014",
+        "district_name_th": "สิชล"
+      },
+      {
+        "district_code": "8016",
+        "district_name_th": "หัวไทร"
+      }
+    ]
+  },
+  {
+    "province_code": "81",
+    "province_name_th": "กระบี่",
+    "districts": [
+      {
+        "district_code": "8103",
+        "district_name_th": "เกาะลันตา"
+      },
+      {
+        "district_code": "8102",
+        "district_name_th": "เขาพนม"
+      },
+      {
+        "district_code": "8104",
+        "district_name_th": "คลองท่อม"
+      },
+      {
+        "district_code": "8106",
+        "district_name_th": "ปลายพระยา"
+      },
+      {
+        "district_code": "8101",
+        "district_name_th": "เมืองกระบี่"
+      },
+      {
+        "district_code": "8107",
+        "district_name_th": "ลำทับ"
+      },
+      {
+        "district_code": "8108",
+        "district_name_th": "เหนือคลอง"
+      },
+      {
+        "district_code": "8105",
+        "district_name_th": "อ่าวลึก"
+      }
+    ]
+  },
+  {
+    "province_code": "82",
+    "province_name_th": "พังงา",
+    "districts": [
+      {
+        "district_code": "8203",
+        "district_name_th": "กะปง"
+      },
+      {
+        "district_code": "8202",
+        "district_name_th": "เกาะยาว"
+      },
+      {
+        "district_code": "8206",
+        "district_name_th": "คุระบุรี"
+      },
+      {
+        "district_code": "8204",
+        "district_name_th": "ตะกั่วทุ่ง"
+      },
+      {
+        "district_code": "8205",
+        "district_name_th": "ตะกั่วป่า"
+      },
+      {
+        "district_code": "8207",
+        "district_name_th": "ทับปุด"
+      },
+      {
+        "district_code": "8208",
+        "district_name_th": "ท้ายเหมือง"
+      },
+      {
+        "district_code": "8201",
+        "district_name_th": "เมืองพังงา"
+      }
+    ]
+  },
+  {
+    "province_code": "83",
+    "province_name_th": "ภูเก็ต",
+    "districts": [
+      {
+        "district_code": "8302",
+        "district_name_th": "กะทู้",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กมลา",
+            "postcode": "83150"
+          },
+          {
+            "subdistrict_name_th": "กะทู้",
+            "postcode": "83120"
+          },
+          {
+            "subdistrict_name_th": "ป่าตอง",
+            "postcode": "83150"
+          }
+        ]
+      },
+      {
+        "district_code": "8303",
+        "district_name_th": "ถลาง",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "เชิงทะเล",
+            "postcode": "83110"
+          },
+          {
+            "subdistrict_name_th": "เทพกระษัตรี",
+            "postcode": "83110"
+          },
+          {
+            "subdistrict_name_th": "ป่าคลอก",
+            "postcode": "83110"
+          },
+          {
+            "subdistrict_name_th": "ไม้ขาว",
+            "postcode": "83110"
+          },
+          {
+            "subdistrict_name_th": "ศรีสุนทร",
+            "postcode": "83110"
+          },
+          {
+            "subdistrict_name_th": "สาคู",
+            "postcode": "83110"
+          }
+        ]
+      },
+      {
+        "district_code": "8301",
+        "district_name_th": "เมืองภูเก็ต",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "กะรน",
+            "postcode": "83100"
+          },
+          {
+            "subdistrict_name_th": "เกาะแก้ว",
+            "postcode": "83000"
+          },
+          {
+            "subdistrict_name_th": "ฉลอง",
+            "postcode": "83000"
+          },
+          {
+            "subdistrict_name_th": "ตลาดเหนือ",
+            "postcode": "83000"
+          },
+          {
+            "subdistrict_name_th": "ตลาดใหญ่",
+            "postcode": "83000"
+          },
+          {
+            "subdistrict_name_th": "รัษฎา",
+            "postcode": "83000"
+          },
+          {
+            "subdistrict_name_th": "ราไวย์",
+            "postcode": "83130"
+          },
+          {
+            "subdistrict_name_th": "วิชิต",
+            "postcode": "83000"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "province_code": "84",
+    "province_name_th": "สุราษฎร์ธานี",
+    "districts": [
+      {
+        "district_code": "8402",
+        "district_name_th": "กาญจนดิษฐ์"
+      },
+      {
+        "district_code": "8405",
+        "district_name_th": "เกาะพะงัน"
+      },
+      {
+        "district_code": "8404",
+        "district_name_th": "เกาะสมุย"
+      },
+      {
+        "district_code": "8408",
+        "district_name_th": "คีรีรัฐนิคม"
+      },
+      {
+        "district_code": "8414",
+        "district_name_th": "เคียนซา"
+      },
+      {
+        "district_code": "8418",
+        "district_name_th": "ชัยบุรี"
+      },
+      {
+        "district_code": "8406",
+        "district_name_th": "ไชยา"
+      },
+      {
+        "district_code": "8403",
+        "district_name_th": "ดอนสัก"
+      },
+      {
+        "district_code": "8411",
+        "district_name_th": "ท่าฉาง"
+      },
+      {
+        "district_code": "8407",
+        "district_name_th": "ท่าชนะ"
+      },
+      {
+        "district_code": "8409",
+        "district_name_th": "บ้านตาขุน"
+      },
+      {
+        "district_code": "8413",
+        "district_name_th": "บ้านนาเดิม"
+      },
+      {
+        "district_code": "8412",
+        "district_name_th": "บ้านนาสาร"
+      },
+      {
+        "district_code": "8410",
+        "district_name_th": "พนม"
+      },
+      {
+        "district_code": "8416",
+        "district_name_th": "พระแสง"
+      },
+      {
+        "district_code": "8417",
+        "district_name_th": "พุนพิน"
+      },
+      {
+        "district_code": "8401",
+        "district_name_th": "เมืองสุราษฎร์ธานี",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "ขุนทะเล",
+            "postcode": "84100"
+          },
+          {
+            "subdistrict_name_th": "คลองฉนาก",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "คลองน้อย",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "ตลาด",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "บางกุ้ง",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "บางชนะ",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "บางไทร",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "บางใบไม้",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "บางโพธิ์",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "มะขามเตี้ย",
+            "postcode": "84000"
+          },
+          {
+            "subdistrict_name_th": "วัดประดู่",
+            "postcode": "84000"
+          }
+        ]
+      },
+      {
+        "district_code": "8419",
+        "district_name_th": "วิภาวดี"
+      },
+      {
+        "district_code": "8415",
+        "district_name_th": "เวียงสระ"
+      }
+    ]
+  },
+  {
+    "province_code": "85",
+    "province_name_th": "ระนอง",
+    "districts": [
+      {
+        "district_code": "8504",
+        "district_name_th": "กระบุรี"
+      },
+      {
+        "district_code": "8503",
+        "district_name_th": "กะเปอร์"
+      },
+      {
+        "district_code": "8501",
+        "district_name_th": "เมืองระนอง"
+      },
+      {
+        "district_code": "8502",
+        "district_name_th": "ละอุ่น"
+      },
+      {
+        "district_code": "8505",
+        "district_name_th": "สุขสำราญ"
+      }
+    ]
+  },
+  {
+    "province_code": "86",
+    "province_name_th": "ชุมพร",
+    "districts": [
+      {
+        "district_code": "8602",
+        "district_name_th": "ท่าแซะ"
+      },
+      {
+        "district_code": "8608",
+        "district_name_th": "ทุ่งตะโก"
+      },
+      {
+        "district_code": "8603",
+        "district_name_th": "ปะทิว"
+      },
+      {
+        "district_code": "8606",
+        "district_name_th": "พะโต๊ะ"
+      },
+      {
+        "district_code": "8601",
+        "district_name_th": "เมืองชุมพร"
+      },
+      {
+        "district_code": "8605",
+        "district_name_th": "ละแม"
+      },
+      {
+        "district_code": "8607",
+        "district_name_th": "สวี"
+      },
+      {
+        "district_code": "8604",
+        "district_name_th": "หลังสวน"
+      }
+    ]
+  },
+  {
+    "province_code": "90",
+    "province_name_th": "สงขลา",
+    "districts": [
+      {
+        "district_code": "9008",
+        "district_name_th": "กระแสสินธุ์"
+      },
+      {
+        "district_code": "9017",
+        "district_name_th": "เขารูปช้าง"
+      },
+      {
+        "district_code": "9016",
+        "district_name_th": "คลองหอยโข่ง"
+      },
+      {
+        "district_code": "9013",
+        "district_name_th": "ควนเนียง"
+      },
+      {
+        "district_code": "9003",
+        "district_name_th": "จะนะ"
+      },
+      {
+        "district_code": "9005",
+        "district_name_th": "เทพา"
+      },
+      {
+        "district_code": "9004",
+        "district_name_th": "นาทวี"
+      },
+      {
+        "district_code": "9012",
+        "district_name_th": "นาหม่อม"
+      },
+      {
+        "district_code": "9014",
+        "district_name_th": "บางกล่ำ"
+      },
+      {
+        "district_code": "9001",
+        "district_name_th": "เมืองสงขลา",
+        "subdistricts": [
+          {
+            "subdistrict_name_th": "เกาะแต้ว",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "เกาะยอ",
+            "postcode": "90100"
+          },
+          {
+            "subdistrict_name_th": "เขารูปช้าง",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ชลเจริญ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ชะแล้",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ชะแล้",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ชิงโค",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ชิงโค",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ทำนบ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ทำนบ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ทุ่งหวัง",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "บ่อยาง",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "บางเขียด",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "บางเขียด",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ปากรอ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ปากรอ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ป่าขาด",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ป่าขาด",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "พะวง",
+            "postcode": "90100"
+          },
+          {
+            "subdistrict_name_th": "ม่วงงาม",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "ม่วงงาม",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "รำแดง",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "รำแดง",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "วัดขนุน",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "วัดขนุน",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "สทิงหม้อ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "สทิงหม้อ",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "หัวเขา",
+            "postcode": "90000"
+          },
+          {
+            "subdistrict_name_th": "หัวเขา",
+            "postcode": "90000"
+          }
+        ]
+      },
+      {
+        "district_code": "9007",
+        "district_name_th": "ระโนด"
+      },
+      {
+        "district_code": "9009",
+        "district_name_th": "รัตภูมิ"
+      },
+      {
+        "district_code": "9002",
+        "district_name_th": "สทิงพระ"
+      },
+      {
+        "district_code": "9010",
+        "district_name_th": "สะเดา"
+      },
+      {
+        "district_code": "9006",
+        "district_name_th": "สะบ้าย้อย"
+      },
+      {
+        "district_code": "9015",
+        "district_name_th": "สิงหนคร"
+      },
+      {
+        "district_code": "9011",
+        "district_name_th": "หาดใหญ่"
+      }
+    ]
+  },
+  {
+    "province_code": "91",
+    "province_name_th": "สตูล",
+    "districts": [
+      {
+        "district_code": "9103",
+        "district_name_th": "ควนกาหลง"
+      },
+      {
+        "district_code": "9102",
+        "district_name_th": "ควนโดน"
+      },
+      {
+        "district_code": "9104",
+        "district_name_th": "ท่าแพ"
+      },
+      {
+        "district_code": "9106",
+        "district_name_th": "ทุ่งหว้า"
+      },
+      {
+        "district_code": "9107",
+        "district_name_th": "มะนัง"
+      },
+      {
+        "district_code": "9101",
+        "district_name_th": "เมืองสตูล"
+      },
+      {
+        "district_code": "9105",
+        "district_name_th": "ละงู"
+      }
+    ]
+  },
+  {
+    "province_code": "92",
+    "province_name_th": "ตรัง",
+    "districts": [
+      {
+        "district_code": "9202",
+        "district_name_th": "กันตัง"
+      },
+      {
+        "district_code": "9208",
+        "district_name_th": "นาโยง"
+      },
+      {
+        "district_code": "9204",
+        "district_name_th": "ปะเหลียน"
+      },
+      {
+        "district_code": "9201",
+        "district_name_th": "เมืองตรัง"
+      },
+      {
+        "district_code": "9203",
+        "district_name_th": "ย่านตาขาว"
+      },
+      {
+        "district_code": "9209",
+        "district_name_th": "รัษฎา"
+      },
+      {
+        "district_code": "9209",
+        "district_name_th": "รัษฏา"
+      },
+      {
+        "district_code": "9207",
+        "district_name_th": "วังวิเศษ"
+      },
+      {
+        "district_code": "9205",
+        "district_name_th": "สิเกา"
+      },
+      {
+        "district_code": "9206",
+        "district_name_th": "ห้วยยอด"
+      },
+      {
+        "district_code": "9210",
+        "district_name_th": "หาดสำราญ"
+      }
+    ]
+  },
+  {
+    "province_code": "93",
+    "province_name_th": "พัทลุง",
+    "districts": [
+      {
+        "district_code": "9302",
+        "district_name_th": "กงหรา"
+      },
+      {
+        "district_code": "9303",
+        "district_name_th": "เขาชัยสน"
+      },
+      {
+        "district_code": "9305",
+        "district_name_th": "ควนขนุน"
+      },
+      {
+        "district_code": "9312",
+        "district_name_th": "ตะโหนด"
+      },
+      {
+        "district_code": "9304",
+        "district_name_th": "ตะโหมด"
+      },
+      {
+        "district_code": "9309",
+        "district_name_th": "บางแก้ว"
+      },
+      {
+        "district_code": "9306",
+        "district_name_th": "ปากพะยูน"
+      },
+      {
+        "district_code": "9308",
+        "district_name_th": "ป่าบอน"
+      },
+      {
+        "district_code": "9310",
+        "district_name_th": "ป่าพะยอม"
+      },
+      {
+        "district_code": "9301",
+        "district_name_th": "เมืองพัทลุง"
+      },
+      {
+        "district_code": "9311",
+        "district_name_th": "ศรีนครินทร์"
+      },
+      {
+        "district_code": "9307",
+        "district_name_th": "ศรีบรรพต"
+      }
+    ]
+  },
+  {
+    "province_code": "94",
+    "province_name_th": "ปัตตานี",
+    "districts": [
+      {
+        "district_code": "9411",
+        "district_name_th": "กะพ้อ"
+      },
+      {
+        "district_code": "9402",
+        "district_name_th": "โคกโพธิ์"
+      },
+      {
+        "district_code": "9406",
+        "district_name_th": "ทุ่งยางแดง"
+      },
+      {
+        "district_code": "9404",
+        "district_name_th": "ปะนาเระ"
+      },
+      {
+        "district_code": "9405",
+        "district_name_th": "มายอ"
+      },
+      {
+        "district_code": "9401",
+        "district_name_th": "เมืองปัตตานี"
+      },
+      {
+        "district_code": "9412",
+        "district_name_th": "แม่ลาน"
+      },
+      {
+        "district_code": "9408",
+        "district_name_th": "ไม้แก่น"
+      },
+      {
+        "district_code": "9410",
+        "district_name_th": "ยะรัง"
+      },
+      {
+        "district_code": "9409",
+        "district_name_th": "ยะหริ่ง"
+      },
+      {
+        "district_code": "9407",
+        "district_name_th": "สายบุรี"
+      },
+      {
+        "district_code": "9403",
+        "district_name_th": "หนองจิก"
+      }
+    ]
+  },
+  {
+    "province_code": "95",
+    "province_name_th": "ยะลา",
+    "districts": [
+      {
+        "district_code": "9508",
+        "district_name_th": "กรงปินัง"
+      },
+      {
+        "district_code": "9507",
+        "district_name_th": "กาบัง"
+      },
+      {
+        "district_code": "9504",
+        "district_name_th": "ธารโต"
+      },
+      {
+        "district_code": "9503",
+        "district_name_th": "บันนังสตา"
+      },
+      {
+        "district_code": "9502",
+        "district_name_th": "เบตง"
+      },
+      {
+        "district_code": "9501",
+        "district_name_th": "เมืองยะลา"
+      },
+      {
+        "district_code": "9509",
+        "district_name_th": "ยะรัง"
+      },
+      {
+        "district_code": "9505",
+        "district_name_th": "ยะหา"
+      },
+      {
+        "district_code": "9506",
+        "district_name_th": "รามัน"
+      }
+    ]
+  },
+  {
+    "province_code": "96",
+    "province_name_th": "นราธิวาส",
+    "districts": [
+      {
+        "district_code": "9612",
+        "district_name_th": "จะแนะ"
+      },
+      {
+        "district_code": "9613",
+        "district_name_th": "เจาะไอร้อง"
+      },
+      {
+        "district_code": "9602",
+        "district_name_th": "ตากใบ"
+      },
+      {
+        "district_code": "9603",
+        "district_name_th": "บาเจาะ"
+      },
+      {
+        "district_code": "9601",
+        "district_name_th": "เมืองนราธิวาส"
+      },
+      {
+        "district_code": "9604",
+        "district_name_th": "ยี่งอ"
+      },
+      {
+        "district_code": "9605",
+        "district_name_th": "ระแงะ"
+      },
+      {
+        "district_code": "9606",
+        "district_name_th": "รือเสาะ"
+      },
+      {
+        "district_code": "9608",
+        "district_name_th": "แว้ง"
+      },
+      {
+        "district_code": "9607",
+        "district_name_th": "ศรีสาคร"
+      },
+      {
+        "district_code": "9609",
+        "district_name_th": "สุคิริน"
+      },
+      {
+        "district_code": "9610",
+        "district_name_th": "สุไหงโก-ลก"
+      },
+      {
+        "district_code": "9611",
+        "district_name_th": "สุไหงปาดี"
+      }
+    ]
+  },
+  {
+    "province_code": "97",
+    "province_name_th": "บึงกาฬ",
+    "districts": [
+      {
+        "district_code": "9706",
+        "district_name_th": "เซกา"
+      },
+      {
+        "district_code": "9707",
+        "district_name_th": "โซ่พิสัย"
+      },
+      {
+        "district_code": "9708",
+        "district_name_th": "บึงโขงหลง"
+      },
+      {
+        "district_code": "9709",
+        "district_name_th": "บุ่งคล้า"
+      },
+      {
+        "district_code": "9702",
+        "district_name_th": "ปากคาด"
+      },
+      {
+        "district_code": "9703",
+        "district_name_th": "พรเจริญ"
+      },
+      {
+        "district_code": "9705",
+        "district_name_th": "เมืองบึงกาฬ"
+      },
+      {
+        "district_code": "9704",
+        "district_name_th": "ศรีวิไล"
+      }
+    ]
+  }
+]
