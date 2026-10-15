@@ -1,4 +1,4 @@
-﻿/* server/index.js — read API over the scraped estate data.
+/* server/index.js — read API over the scraped estate data.
  *
  * Read-only by design. The scrapers own writes; this only serves what they
  * produced, so there is one writer and no chance of the API mutating data the
@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
-import { router as usersRouter, SESSION_COOKIE } from "./users.js";
+import { router as usersRouter, requireAdmin, SESSION_COOKIE } from "./users.js";
 
 const { Pool } = pg;
 
@@ -482,8 +482,112 @@ function mapStatus(status, closeReason, closeCode) {
 }
 
 /* 404 for unknown API routes, rather than Express's HTML default. */
-app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
+/* ------------------------------------------------------- admin: data quality
+ *
+ * The resolve cascade is LED -> TD -> DOL. TD resolves most parcels; DOL fills
+ * the rest but has a hard 20 calls/day quota enforced server-side, so the
+ * backlog is real. This lists what is still missing or looks wrong, so an admin
+ * can see the shape of the problem and correct rows by hand instead of waiting
+ * for a crawl to stumble onto them again.
+ *
+ * The reason a parcel is in this list is derived, not stored: td_status and
+ * dol_status only ever say "resolved", so anything absent has to be inferred
+ * from which columns are null. That is enough to triage, but it means a row
+ * resolved but wrong does not appear here - only unresolved ones do.
+ */
+app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => {
+    const province = Number(req.query.province) || null;
+    const kind = String(req.query.kind ?? "");
+    const limit = Math.min(Number(req.query.limit) || 200, 1000);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+    const where = [
+        `(p.td_status IS DISTINCT FROM 'resolved' AND p.dol_status IS DISTINCT FROM 'resolved')`,
+        `OR (p.td_lat IS NULL AND p.dol_lat IS NULL)`,
+        `OR (p.deed_number IS NULL OR p.deed_number = '')`,
+    ];
+    if (province) where.push(`p.province_code = $1`);
+    const params = province ? [province] : [];
+
+    const { rows: gaps } = await pool.query(`
+        SELECT p.id, p.province_code, p.province_name, p.district_name, p.district_dol_code,
+               p.tumbol, p.deed_number, p.land_title, p.td_status, p.dol_status,
+               p.td_rawang, p.td_lat, p.td_lon, p.dol_lat, p.dol_lon,
+               p.td_object_id, p.td_eva_price, p.dol_office, p.dol_land_type,
+               p.geo_status, p.tambon_match,
+               l.size_rai, l.size_ngan, l.size_wa, l.start_price, l.case_no, l.case_year,
+               d.name AS district_ref, d.td_code, d.td_province_code, d.td_match_method, d.td_note
+          FROM parcels p
+          LEFT JOIN districts d
+                 ON d.province_id = p.province_code AND d.dol_code = p.district_dol_code
+          LEFT JOIN LATERAL (
+                 SELECT * FROM auction_lots WHERE parcel_id = p.id ORDER BY id LIMIT 1
+               ) l ON true
+         WHERE (${where.join(" OR ")})
+           AND ($1::int IS NULL OR p.province_code = $1)
+         ORDER BY p.province_code, p.district_dol_code, p.deed_number NULLS FIRST
+         LIMIT $2 OFFSET $3`,
+        [params[0] ?? null, limit, offset]);
+
+    const { rows: summary } = await pool.query(`
+        SELECT
+          count(*) FILTER (WHERE td_status='resolved')                        AS td_resolved,
+          count(*) FILTER (WHERE dol_status='resolved')                       AS dol_resolved,
+          count(*) FILTER (WHERE td_status IS DISTINCT FROM 'resolved'
+                              AND dol_status IS DISTINCT FROM 'resolved')      AS unresolved,
+          count(*) FILTER (WHERE td_lat IS NULL AND dol_lat IS NULL)          AS no_coords,
+          count(*) FILTER (WHERE deed_number IS NULL OR deed_number = '')      AS no_deed,
+          count(*)                                                          AS total
+        FROM parcels`);
+
+    res.json({ gaps, summary: summary[0], limit, offset });
+});
+
+/** One row's manual correction. Narrow on purpose: an admin is fixing the
+ * resolver's misses, not rewriting parcel records. Every field is written
+ * through COALESCE so a partial body never blanks a column. */
+app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "id must be an integer" });
+
+    const lat = req.body?.td_lat ?? req.body?.dol_lat ?? null;
+    const lng = req.body?.td_lon ?? req.body?.dol_lon ?? null;
+    if (lat != null && (Number(lat) < -90 || Number(lat) > 90))
+        return res.status(400).json({ error: "latitude out of range" });
+    if (lng != null && (Number(lng) < -180 || Number(lng) > 180))
+        return res.status(400).json({ error: "longitude out of range" });
+
+    const { rows } = await pool.query(`
+        UPDATE parcels
+           SET td_status   = COALESCE($2, td_status),
+               dol_status  = COALESCE($3, dol_status),
+               td_rawang   = COALESCE($4, td_rawang),
+               td_lat      = COALESCE($5, td_lat),
+               td_lon      = COALESCE($6, td_lon),
+               dol_lat     = COALESCE($7, dol_lat),
+               dol_lon     = COALESCE($8, dol_lon),
+               dol_office  = COALESCE($9, dol_office),
+               geo_status  = COALESCE($10, geo_status),
+               geo_note    = COALESCE($11, geo_note)
+         WHERE id = $1
+      RETURNING id, td_status, dol_status, td_lat, td_lon, dol_lat, dol_lon, geo_note`,
+        [id,
+         req.body?.td_status ?? null,
+         req.body?.dol_status ?? null,
+         req.body?.td_rawang ?? null,
+         lat, lng,
+         req.body?.dol_lat ?? null,
+         req.body?.dol_lon ?? null,
+         req.body?.dol_office ?? null,
+         req.body?.geo_status ?? "manual",
+         req.body?.geo_note ?? `set by admin ${req.session?.userId ?? "?"}`,
+        ]);
+    if (!rows.length) return res.status(404).json({ error: "no such parcel" });
+    res.json(rows[0]);
+});
+
 const PORT = Number(process.env.PORT || 8787);
+
 app.listen(PORT, () => {
     console.log(`api listening on http://localhost:${PORT}`);
     console.log(`  images served from ${IMAGE_ROOT} at /img/land/`);
@@ -494,6 +598,8 @@ app.listen(PORT, () => {
     console.log(`  GET /api/parcels?province=40`);
     console.log(`  GET /api/parcels/:id`);
 });
+
+  app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
 
 process.on("SIGTERM", () => pool.end().then(() => process.exit(0)));
 process.on("SIGINT", () => pool.end().then(() => process.exit(0)));

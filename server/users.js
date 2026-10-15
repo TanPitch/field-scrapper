@@ -55,6 +55,25 @@ function requireUser(req, res, next) {
     next();
 }
 
+/**
+ * Admin gate. Separate from requireUser rather than a flag on it, so a route
+ * that means "signed in" can never quietly become "signed in as admin".
+ *
+ * Reads is_admin on every request instead of trusting a role copied into the
+ * session at sign-in: a demoted admin should stop seeing these pages on their
+ * next request, not whenever their cookie happens to expire.
+ */
+async function requireAdmin(req, res, next) {
+    if (!req.session?.userId) return res.status(401).json({ error: "not signed in" });
+    const { rows } = await req.db.query(`SELECT is_admin FROM app_users WHERE id = $1`, [req.session.userId]);
+    if (!rows.length) return res.status(401).json({ error: "not signed in" });
+    if (!rows[0].is_admin) return res.status(403).json({ error: "admin only" });
+    req.userId = req.session.userId;
+    next();
+}
+
+export { requireUser, requireAdmin };
+
 /** Argon2id via Bun's native implementation. No native module to build. */
 async function hashPassword(pw) {
     return Bun.password.hash(pw, { algorithm: "argon2id", memoryCost: 65536, timeCost: 3 });
@@ -323,4 +342,4 @@ router.delete("/me/layers/:layerId", requireUser, async (req, res) => {
     res.json({ ok: true });
 });
 
-export { normStyle, requireUser, SESSION_COOKIE, hashPassword, verifyPassword };
+export { normStyle, SESSION_COOKIE, hashPassword, verifyPassword };

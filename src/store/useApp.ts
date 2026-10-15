@@ -17,7 +17,7 @@ export const EMPTY_FILTERS: Filters = {
 };
 
 export interface Toast { id: number; msg: string; warn: boolean; out: boolean }
-export type SetTab = 'map' | 'popup' | 'search' | 'look' | 'about' | 'draw' | 'server' | 'user' | 'users';
+export type SetTab = 'map' | 'popup' | 'search' | 'look' | 'about' | 'draw' | 'server' | 'user' | 'users' | 'gaps';
 
 export interface AppState {
   /* ----- settings ----- */

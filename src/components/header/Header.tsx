@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, PanelRight, PenTool, Search, Settings2, X, type LucideIcon } from 'lucide-react';
+import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, AlertTriangle, PanelRight, PenTool, Search, Settings2, X, type LucideIcon } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useRef } from 'react';
 import { setLeft, setRight } from '../../store/actions';
@@ -7,6 +7,7 @@ import { patchApp, toast, useApp, type SetTab } from '../../store/useApp';
 import { useOutsideClose } from '../../hooks/useOutsideClose';
 import { iconBtn } from '../ui/styles';
 import { SearchBox } from './SearchBox';
+import { CoordGapsPane } from './settings/CoordGapsPane';
 import { AboutPane, DrawSettingsPane, LookPane, MapPane, PopupPane, SearchApiPane } from './settings/panes';
 import { ServerPane } from './settings/ServerPane';
 import { UserPane } from './settings/UserPane';
@@ -20,6 +21,7 @@ const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
   { id: 'draw', label: 'รูปวาด', Icon: PenTool },
   { id: 'search', label: 'ค้นหา & API', Icon: Search },
   { id: 'server', label: 'เซิร์ฟเวอร์', Icon: Server },
+  { id: 'gaps', label: 'ข้อมูลตกหล่น', Icon: AlertTriangle },
   { id: 'users', label: 'จัดการผู้ใช้', Icon: Users },
   { id: 'about', label: 'เกี่ยวกับ', Icon: Info },
 ];
@@ -30,7 +32,7 @@ const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
  *  A code typed into the app is not access control: it ships in the bundle and
  *  anyone can read it out of the JavaScript. Role is the only thing here that is
  *  actually enforced somewhere else. */
-const ADMIN_ONLY: SetTab[] = ['users'];
+const ADMIN_ONLY: SetTab[] = ['users', 'gaps'];
 
 /* Search index for the settings. Filtering the tab list alone would not be much
    use: nine tabs hold a couple of hundred controls, so the jump worth having is
@@ -160,6 +162,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           {tab === 'look' && <LookPane />}
           {tab === 'draw' && <DrawSettingsPane />}
           {tab === 'server' && <ServerPane />}
+      {tab === 'gaps' && <CoordGapsPane />}
           {tab === 'user' && <UserPane />}
           {tab === 'users' && <UserManagePane />}
           {tab === 'about' && <AboutPane />}
