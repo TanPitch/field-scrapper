@@ -90,9 +90,10 @@ const isCondo = (assetType) => /ห้องชุด/.test(txt(assetType) ?? ""
  * `dol_code` - which is what the old ensureProvince did - silently mislabels it,
  * so the divergence is stated here rather than inherited.
  *
- * TD publishes no subdistricts, which is why districts carry both a LED
- * `code` (4-digit amphurId) and a `dol_code` (2-digit AMPH_CODE), and
- * subdistricts carry only `code`.
+ * TD does publish subdistricts, but LED does not: get_tambon.asp returns a
+ * postcode rather than a numeric tambon id, and that postcode repeats. So a
+ * district carries LED's 4-digit `code` and `dol_code` (its 2-digit suffix),
+ * while a subdistrict carries three columns, one per numbering system.
  */
 const PROVINCE_DOL_CODE = { 97: 38 };
 
@@ -125,16 +126,22 @@ async function ensureDistrict(client, provinceCode, dolCode, name) {
  * LED gives us a tambon NAME, and the กรมการปกครอง code is only known after
  * the tambon has been resolved against eva_area_grade.
  *
- * Codes are unique WITHIN a district but repeat freely across districts
+ * That eva code lands in `eva_code`, not `code`. `code` used to hold it, but the
+ * column also has to carry LED's own tambon identifier, and LED does not publish
+ * a numeric one - get_tambon.asp returns a postcode, which repeats freely
+ * (83000 stands in for "no postcode" across five Phuket tambons). One column
+ * cannot hold a duplicate-prone postcode and a unique eva code, so they are
+ * separate: led_code, eva_code, dol_code.
+ *
+ * eva codes are unique WITHIN a district but repeat across districts
  * (หนองไผ่=93 in ชุมแพ and บ้านค้อ=93 in เมืองขอนแก่น are different tambons), so
- * `subdistricts_code_idx` is UNIQUE (district_id, code) for a reason.
+ * the unique index is on (district_id, eva_code).
  *
  * That makes the code the authority inside a district. LED's tambon name and
  * the reference table's name for the same tambon are not always byte-identical,
  * and a plain INSERT of a spelling variant with an already-claimed code died on
- * `duplicate key value violates unique constraint "subdistricts_code_idx"`,
- * taking down the whole province ingest. So: known name wins, then known code
- * wins, and only a genuinely new pair inserts.
+ * a unique violation, taking down the whole province ingest. So: known name wins,
+ * then known code wins, and only a genuinely new pair inserts.
  */
 async function ensureSubdistrict(client, districtId, name, code) {
     if (!districtId || !txt(name)) return null;
@@ -148,7 +155,7 @@ async function ensureSubdistrict(client, districtId, name, code) {
 
     if (txt(code)) {
         const byCode = await client.query(
-            `SELECT id, name FROM subdistricts WHERE district_id = $1 AND code = $2 LIMIT 1`,
+            `SELECT id, name FROM subdistricts WHERE district_id = $1 AND eva_code = $2 LIMIT 1`,
             [districtId, txt(code)],
         );
         if (byCode.rows[0]) {
@@ -158,7 +165,7 @@ async function ensureSubdistrict(client, districtId, name, code) {
     }
 
     const r = await client.query(
-        `INSERT INTO subdistricts (district_id, name, code)
+        `INSERT INTO subdistricts (district_id, name, eva_code)
          VALUES ($1, $2, $3)
          ON CONFLICT (district_id, name) DO NOTHING
          RETURNING id`,

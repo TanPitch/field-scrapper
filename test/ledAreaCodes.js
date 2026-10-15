@@ -136,7 +136,7 @@ async function main() {
             await db.unsafe(
                 `INSERT INTO districts (province_id, code, dol_code, name)
                  VALUES ($1, $2, $3, $4)
-                 ON CONFLICT (province_id, dol_code) DO UPDATE SET name = EXCLUDED.name`,
+                 ON CONFLICT (province_id, code) DO UPDATE SET name = EXCLUDED.name, dol_code = EXCLUDED.dol_code`,
                 [Number(pc), d.value, dolCode, d.label],
             );
             stats.districts++;
@@ -149,20 +149,21 @@ async function main() {
             );
             const districtId = drow[0]?.id;
             for (const t of tambons) {
-                if (!districtId || !t.label || !t.value) continue;
-                /* Same order as ingest.js's ensureSubdistrict: a known name wins,
-                   then a known code wins (LED's code is the authority inside a
-                   district), and only a genuinely new pair inserts. */
+                if (!districtId || !t.label) continue;
+                /* LED publishes no numeric tambon id. get_tambon.asp's option
+                   value is a postcode, and it repeats - 83000 stands in for "no
+                   postcode" across five different Phuket tambons - so it cannot
+                   be an identity column. LED is searched by name and answers in
+                   text, so the tambon name is the whole of what LED knows here. */
                 const known = await db.unsafe(
                     `SELECT id FROM subdistricts
-                      WHERE district_id = $1 AND (name = $2 OR led_code = $3) LIMIT 1`,
-                    [districtId, t.label, t.value],
+                      WHERE district_id = $1 AND name = $2 LIMIT 1`,
+                    [districtId, t.label],
                 );
                 if (known.length) continue;
                 const s = await db.unsafe(
-                    `INSERT INTO subdistricts (district_id, name, led_code)
-                     VALUES ($1, $2, $3) RETURNING id`,
-                    [districtId, t.label, t.value],
+                    `INSERT INTO subdistricts (district_id, name) VALUES ($1, $2) RETURNING id`,
+                    [districtId, t.label],
                 );
                 if (s.length) stats.subdistricts++;
                 await sleep(DELAY_MS);

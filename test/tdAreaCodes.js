@@ -121,22 +121,22 @@ async function main() {
         const used = new Set();
         const claimed = new Set();
 
-        /* Which TD code each LED district already holds. districts.dol_code is
+        /* Which TD code each LED district already holds. districts.td_code is
          * NOT NULL and UNIQUE (province_id, dol_code), so it cannot be blanked
          * to force a clean rebuild - two unmatched rows would collide on ''.
          * Instead, an existing holder is released explicitly before reuse. */
         const holders = new Map(
             (
                 await db.unsafe(
-                    `SELECT dol_code, id FROM districts WHERE province_id = $1`,
+                    `SELECT td_code, id FROM districts WHERE province_id = $1`,
                     [Number(pc)],
                 )
-            ).map((r) => [Number(r.dol_code), r.id]),
+            ).map((r) => [r.td_code, r.id]),
         );
 
         /* LED districts of this province, loaded once and matched in JS. */
         const ledDistricts = await db.unsafe(
-            `SELECT id, name, dol_code FROM districts WHERE province_id = $1 ORDER BY dol_code, name`,
+            `SELECT id, name, td_code FROM districts WHERE province_id = $1 ORDER BY td_code, name`,
             [Number(pc)],
         );
 
@@ -171,10 +171,10 @@ async function main() {
                 /* Released to NULL rather than a sentinel: UNIQUE
                  * (province_id, dol_code) permits any number of NULLs, so
                  * unmatched districts coexist instead of colliding. */
-                await db.unsafe(`UPDATE districts SET dol_code = NULL WHERE id = $1`, [holder]);
+                await db.unsafe(`UPDATE districts SET td_code = NULL WHERE id = $1`, [holder]);
                 claimed.delete(holder);
             }
-            await db.unsafe(`UPDATE districts SET dol_code = $1 WHERE id = $2`, [tdNum, hit.id]);
+            await db.unsafe(`UPDATE districts SET td_code = $1 WHERE id = $2`, [tdNum, hit.id]);
             holders.set(tdNum, hit.id);
             stats.matched++;
             stats.districts++;
