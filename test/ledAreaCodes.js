@@ -123,15 +123,20 @@ async function main() {
 
         const districts = await get(`${LED}/get_amphur.asp?provinceId=${pc}`);
         for (const d of districts) {
-            const dolCode = d.value.slice(2);
             if (d.value === `${pc}00` || !d.label) {
                 stats.aggregateSkipped++;
                 console.log(`    -- skip province-wide aggregate "${d.value}"`);
                 continue;
             }
-            if (!dolCode) {
-                console.log(`    -- skip unreadable district code "${d.value}"`);
-                continue;
+            /* The 2-digit suffix only exists for the ordinary 4-digit amphurId.
+             * LED also publishes six-digit codes for the pre-2013 provinces
+             * (252505 วังน้ำเย็น, under what was then ปราจีนบุรี), where slicing
+             * off the province gave "2505" - not a district code at all, and not
+             * something the districts table holds. Those keep a NULL dol_code;
+             * `code` is LED's own identifier and is the reliable key either way. */
+            const dolCode = d.value.length === 4 ? d.value.slice(2) : null;
+            if (d.value.length !== 4) {
+                console.log(`    -- ${d.value} ${d.label}: non-standard ${d.value.length}-digit code, no dol_code`);
             }
             await db.unsafe(
                 `INSERT INTO districts (province_id, code, dol_code, name)
@@ -140,12 +145,12 @@ async function main() {
                 [Number(pc), d.value, dolCode, d.label],
             );
             stats.districts++;
-            console.log(`    ${d.value}  ${dolCode.padEnd(3)} ${d.label}`);
+            console.log(`    ${d.value}  ${String(dolCode ?? "-").padEnd(3)} ${d.label}`);
 
             const tambons = await get(`${LED}/get_tambon.asp?amphurId=${d.value}`);
             const drow = await db.unsafe(
-                `SELECT id FROM districts WHERE province_id = $1 AND dol_code = $2`,
-                [Number(pc), dolCode],
+                `SELECT id FROM districts WHERE province_id = $1 AND code = $2`,
+                [Number(pc), d.value],
             );
             const districtId = drow[0]?.id;
             for (const t of tambons) {
