@@ -245,7 +245,7 @@ app.get("/api/parcels", async (req, res) => {
         SELECT p.id, p.deed_number, p.land_title, p.tumbol, p.district_name,
                p.province_code, p.tambon_code, p.tambon_match,
                p.td_lat, p.td_lon, p.td_eva_price, p.td_rawang, p.td_survey_no,
-               p.td_land_no, p.td_status, p.geo_precision, p.geo_status,
+               p.td_land_no, p.td_status, p.dol_status, p.geo_precision, p.geo_status,
                p.eva_price_min, p.eva_price_max,
                p.elevation_m, p.elevation_uncertainty_m, p.elevation_source,
                p.province_name, p.district_name AS district_full,
@@ -298,10 +298,18 @@ FROM parcels p
 
     res.json({
         type: "FeatureCollection",
-        features: rows.map((r) => ({
+        features: rows.map((r) => {
+            /* geom is legacy and nothing writes it, so reading ST_Y(p.geom) alone
+             * gave every parcel a null geometry and an empty map. The resolve
+             * cascade writes td_lat/td_lon and dol_lat/dol_lon instead. Prefer
+             * geom when it is somehow populated, then TD, then DOL - DOL is last
+             * because its quota is 20/day and TD is the primary source. */
+            const lat = r.lat ?? r.td_lat ?? r.dol_lat;
+            const lng = r.lng ?? r.td_lon ?? r.dol_lon;
+            return {
             type: "Feature",
-            geometry: r.lat === null || r.lng === null
-                ? null : { type: "Point", coordinates: [Number(r.lng), Number(r.lat)] },
+            geometry: lat == null || lng == null
+                ? null : { type: "Point", coordinates: [Number(lng), Number(lat)] },
             properties: {
                 id: r.id, lotId: r.lot_id, deed: r.deed_number,
                 landTitle: r.land_title, tambon: r.tumbol, amphur: r.district_name,
@@ -348,14 +356,15 @@ FROM parcels p
                 evaMin: toNum(r.eva_price_min), evaMax: toNum(r.eva_price_max),
                 rawang: r.td_rawang, surveyNo: r.td_survey_no, landNo: r.td_land_no,
                 geoPrecision: r.geo_precision ?? null,
-                geoStatus: r.geo_status, tdStatus: r.td_status,
+                geoStatus: r.geo_status, tdStatus: r.td_status, dolStatus: r.dol_status,
                 /* Height, so the table can filter and sort on it without a second
                    round trip per row. Null where no DEM covers the point. */
                 elevation: toNum(r.elevation_m),
                 elevationUncertainty: toNum(r.elevation_uncertainty_m),
                 elevationSource: r.elevation_source,
             },
-        })),
+        };
+        }),
     });
 });
 
