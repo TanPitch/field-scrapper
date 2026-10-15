@@ -19,7 +19,12 @@ const FORCE_UNMATCHED = new Set(["2412", "2413"]);
 
 const map = JSON.parse(readFileSync(MAP, "utf8")).entries;
 const { SQL } = await import("bun");
-const db = new SQL(process.env.DATABASE_URL);
+const DB_URL =
+    process.env.DATABASE_URL ?? "postgres://postgres:landmap@localhost:5433/landmap";
+if (!process.env.DATABASE_URL) {
+    console.log(`  DATABASE_URL not set; using ${DB_URL.replace(/:[^:@]*@/, ":***@")}`);
+}
+const db = new SQL(DB_URL);
 
 const rows = map.map((m) => {
     const skip = FORCE_UNMATCHED.has(m.led_district_code);

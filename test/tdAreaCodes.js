@@ -52,7 +52,15 @@ try {
 }
 
 const { SQL } = await import("bun");
-const DB_URL = process.env.DATABASE_URL;
+/* Running plain `bun tdAreaCodes.js` without DATABASE_URL used to fall back to
+ * a default that auth failed against, which surfaced as a password error rather
+ * than the real cause: the variable simply was not set. AGENTS.md documents the
+ * project's URL, so default to it and say so. */
+const DB_URL =
+    process.env.DATABASE_URL ?? "postgres://postgres:landmap@localhost:5433/landmap";
+if (!process.env.DATABASE_URL) {
+    console.log(`  [cfg] DATABASE_URL not set; using ${DB_URL.replace(/:[^:@]*@/, ":***@")}`);
+}
 let db = new SQL(DB_URL);
 
 /* This run holds one connection open across ~930 HTTP calls and thousands of
