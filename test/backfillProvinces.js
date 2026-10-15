@@ -57,11 +57,43 @@ function ingest() {
 
 async function runProvince(prov) {
     /* Set per-pass rather than mutating CONFIG, so a failed province cannot
-       leave the next one pointed at the wrong region. */
+     * leave the next one pointed at the wrong region. */
     process.env.LED_PROVINCE = prov.text;
     process.env.LED_QUIET = "1";
     const { scrapeLED } = await import("./scrapeLED.js");
-    const { rows, errors, totalPages } = await scrapeLED();
+
+    /* LED_QUIET suppresses scrapeLED's own per-page chatter, which left a
+     * province looking hung for minutes with no way to tell whether it was
+     * working or stuck. Report progress and an ETA instead: the site's own
+     * totalpage is known after page 1, so the remaining pages can be counted
+     * down, and images are usually the bulk of the wall-clock time. */
+    const t0 = Date.now();
+    const origLog = console.log;
+    let lastPct = -1;
+    const report = (pct, note) => {
+        const step = Math.floor(pct / 5) * 5;
+        if (step === lastPct && pct < 100) return;
+        lastPct = step;
+        const el = (Date.now() - t0) / 1000;
+        const eta = pct > 0 ? Math.round(el * (100 - pct) / pct) : null;
+        origLog(`    ${String(pct).padStart(3)}%  ${String(Math.round(el)).padStart(4)}s elapsed` +
+            (eta !== null ? `  ~${eta}s left` : "") + (note ? `  ${note}` : ""));
+    };
+
+    console.log = (...a) => {
+        const s = a.join(" ");
+        const pg = s.match(/Page (\d+)\/(\d+)/) ?? s.match(/Fetching Page (\d+)\/(\d+)/);
+        if (pg) report(Math.round((Number(pg[1]) / Number(pg[2])) * 100), s.slice(0, 40));
+        else if (/images/i.test(s)) origLog(`    ${s.slice(0, 70)}`);
+    };
+
+    let rows, errors, totalPages;
+    try {
+        ({ rows, errors, totalPages } = await scrapeLED());
+    } finally {
+        console.log = origLog;
+    }
+    report(100, `${rows.length} rows, ${errors.length} errors`);
     return { rows, errors, totalPages };
 }
 

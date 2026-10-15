@@ -467,34 +467,65 @@ export async function ingest(lots, { client, imageStore = null, imageBudget = 30
         console.warn("  ! scrapeLand.js unavailable — codes must be supplied on the row");
     }
 
-    const provinceOf = (lot) => {
+    /* Resolve province and district from the LED-loaded reference tables, by
+     * name, rather than from a third hard-coded dictionary.
+     *
+     * scrapeLand.js looked like the right source but it is numbered in TD's
+     * scheme, not LED's, and the two only agree in most provinces - which is
+     * why nothing looked wrong. For บึงกาฬ it has provinceCode "38" with
+     * districts 01-08, while LED is 97 with districts 02-09. Ingesting บึงกาฬ
+     * therefore filed its parcels under province 38, and every district lookup
+     * missed and fell through to inserting a synthesised code.
+     *
+     * provinces and districts are loaded straight from LED's own dropdowns, so
+     * matching the name LED printed against them cannot drift. */
+    const provinceOf = async (lot) => {
         const a = lot.address ?? {};
-        const fromName = parsers.provinceParser?.(a.city);
-        return int(fromName) ?? int(a.province_id) ?? int(a.province_code);
+        const raw = parsers.nameOf?.(a.city) ?? a.city;
+        if (!raw) return null;
+        /* LED qualifies provinces in its own display text - "บึงกาฬ(หนองคาย)",
+         * "สระแก้ว (ปราจีนบุรี)" - naming the parent province a district was split
+         * from. The reference table holds the bare name, so match on that. */
+        const candidates = [raw, raw.replace(/\s*\([^)]*\)\s*/g, "").trim(), raw.replace(/\s+/g, "")].filter(Boolean);
+        for (const nm of candidates) {
+            const r = await client.query(`SELECT code FROM provinces WHERE name = $1 LIMIT 1`, [nm]);
+            if (r.rows[0]) return r.rows[0].code;
+        }
+        const loose = await client.query(`SELECT code FROM provinces WHERE name LIKE $1 LIMIT 1`, [`${candidates[1]}%`]);
+        if (loose.rows[0]) return loose.rows[0].code;
+        console.warn(`    [province] "${raw}" is not in LED's province list`);
+        return null;
     };
-    const districtOf = (lot) => {
+
+    const districtOf = async (lot, provinceCode) => {
         const a = lot.address ?? {};
-        return int(a.dol_code) ?? int(parsers.amphurParser?.(a.amphur, a.city));
+        if (!provinceCode || !a.amphur) return null;
+        const r = await client.query(
+            `SELECT dol_code FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
+            [provinceCode, a.amphur],
+        );
+        return r.rows[0]?.dol_code ?? null;
     };
 
     /* Seed reference data once, so the dol_code lookup has something to resolve
        against. */
     for (const lot of lots) {
-        const pc = provinceOf(lot);
+        const pc = await provinceOf(lot);
         if (pc === null) continue;
         const code = await ensureProvince(client, pc, lot.address?.city);
-        await ensureDistrict(client, code, districtOf(lot), lot.address?.amphur);
+        await ensureDistrict(client, code, await districtOf(lot, pc), lot.address?.amphur);
     }
 
     for (const lot of lots) {
-        const provinceCode = provinceOf(lot);
+        const provinceCode = await provinceOf(lot);
         if (provinceCode === null) {
             stats.skippedNoProvince++;
             continue;
         }
         const name = await ensureProvince(client, provinceCode, lot.address?.city);
+        const dolCode = await districtOf(lot, provinceCode);
 
-        const parcels = await upsertParcels(client, lot, name, districtOf(lot), stats, ctx);
+        const parcels = await upsertParcels(client, lot, name, dolCode, stats, ctx);
         if (!parcels.length) continue;
 
         for (const parcel of parcels) {
@@ -583,11 +614,13 @@ if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1]
     const { beginRun, step, finishRun } = await import("./runs.js");
 
     const file = process.argv[2] ?? "./out/rows.json";
-    const url = process.env.DATABASE_URL;
-    if (!url) {
-        console.error("DATABASE_URL is required, e.g.");
-        console.error("  DATABASE_URL=postgres://postgres:test@localhost:5432/fmtest node ingest.js");
-        process.exit(1);
+    /* Defaulted rather than required. backfillProvinces.js inherits this shell's
+     * environment, so a bare `bun backfillProvinces.js 97` used to die with
+     * "DATABASE_URL is required" after the scrape had already run, which reads
+     * as an ingest failure rather than a missing variable. */
+    const url = process.env.DATABASE_URL ?? "postgres://postgres:landmap@localhost:5433/landmap";
+    if (!process.env.DATABASE_URL) {
+        console.log(`  [cfg] DATABASE_URL not set; using ${url.replace(/:[^:@]*@/, ":***@")}`);
     }
 
     const lots = JSON.parse(fs.readFileSync(file, "utf8")).map((r) => priceRow(r));

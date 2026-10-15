@@ -27,8 +27,18 @@ export const SELL_STATUS = {
        ladder does not read. */
     14: "งดขาย",
     15: "งดขาย",
+    /* 8 is the officer exercising discretion, not a court order. Observed
+     * leading into plain งดขาย (16) on ผบE.1312/2566, so the next round is
+     * usually cancelled outright rather than rescheduled. */
+    8: "เจ้าพนักงานงดขาย",
     16: "งดขาย",
     23: "งดขาย",
+    22: "งดขาย", // LED prints ไม่รู้จัก(รหัส 22); confirmed as งดขาย on ผบE.1648/2564
+    /* 19 is the enforcement itself ending, which is a different thing from a
+     * round not going ahead. Confirmed on ผบE.1207/2563 (บึงโขงหลง ดงบัง,
+     * deed 4245). NOT added to TERMINAL_CODES: on that lot rounds continued
+     * after it (1:19 2:19 3:19 4:19 5:8 6:10), so it did not stop the lot. */
+    19: "งดการบังคับคดี",
     26: "งดขายในนัดที่เหลือ", // cancelled for all remaining rounds
 };
 
