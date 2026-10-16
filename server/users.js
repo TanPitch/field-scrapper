@@ -65,7 +65,13 @@ function requireUser(req, res, next) {
  */
 async function requireAdmin(req, res, next) {
     if (!req.session?.userId) return res.status(401).json({ error: "not signed in" });
-    const { rows } = await req.db.query(`SELECT is_admin FROM app_users WHERE id = $1`, [req.session.userId]);
+    let rows;
+    try {
+        ({ rows } = await req.db.query(`SELECT is_admin FROM app_users WHERE id = $1`, [req.session.userId]));
+    } catch (e) {
+        console.error("[requireAdmin]", e);
+        return res.status(500).json({ error: e.message });
+    }
     if (!rows.length) return res.status(401).json({ error: "not signed in" });
     if (!rows[0].is_admin) return res.status(403).json({ error: "admin only" });
     req.userId = req.session.userId;

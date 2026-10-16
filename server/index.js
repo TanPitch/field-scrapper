@@ -218,7 +218,7 @@ app.get("/api/status", async (_req, res) => {
         },
         recent: runs
             .filter((r) => r.finished_at)
-            .slice(0, 12)
+            .slice(0, 40)
             .map((r) => ({
                 id: r.id, stage: r.stage, province: r.province_name, provinceCode: r.province_code,
                 startedAt: isoDate(r.started_at), finishedAt: isoDate(r.finished_at),
@@ -504,7 +504,7 @@ function mapStatus(status, closeReason, closeCode) {
  * from which columns are null. That is enough to triage, but it means a row
  * resolved but wrong does not appear here - only unresolved ones do.
  */
-app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => {
+app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
     const province = Number(req.query.province) || null;
     const kind = String(req.query.kind ?? "");
     const limit = Math.min(Number(req.query.limit) || 200, 1000);
@@ -515,9 +515,9 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => {
      * queue writes 'resolved' - and matching on one literal listed 761 genuinely
      * resolved Phuket parcels as gaps. */
     const where = [
-        `(p.td_status IS NULL AND p.dol_status IS NULL)`,
-        `OR (p.td_lat IS NULL AND p.dol_lat IS NULL)`,
-        `OR (p.deed_number IS NULL OR p.deed_number = '')`,
+        `p.td_status IS NULL AND p.dol_status IS NULL`,
+        `p.td_lat IS NULL AND p.dol_lat IS NULL`,
+        `p.deed_number IS NULL OR p.deed_number = ''`,
     ];
     if (province) where.push(`p.province_code = $1`);
     const params = province ? [province] : [];
@@ -554,6 +554,7 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => {
         FROM parcels`);
 
     res.json({ gaps, summary: summary[0], limit, offset });
+      } catch (e) { console.error("[coord-gaps]", e); res.status(500).json({ error: e.message }); }
 });
 
 /** One row's manual correction. Narrow on purpose: an admin is fixing the

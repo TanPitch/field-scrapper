@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
 import { toast } from '../../../store/useApp';
@@ -16,7 +16,6 @@ interface Gap {
   land_title: string | null;
   td_status: string | null;
   dol_status: string | null;
-  td_rawang: string | null;
   td_lat: number | null;
   td_lon: number | null;
   dol_lat: number | null;
@@ -102,10 +101,10 @@ export function CoordGapsPane() {
       <table className="mt-3 w-full text-[11.5px]">
         <thead>
           <tr className="border-b border-line text-left text-dim2">
+            <th className="py-1 pr-2 font-medium">จังหวัด / อำเภอ</th>
             <th className="py-1 pr-2 font-medium">เลขโฉนด</th>
-            <th className="py-1 pr-2 font-medium">อำเภอ / ตำบล</th>
+            <th className="py-1 pr-2 font-medium">ตำบล</th>
             <th className="py-1 pr-2 font-medium">ขนาด (ตร.วา)</th>
-            <th className="py-1 pr-2 font-medium">ระวาง</th>
             <th className="py-1 pr-2 font-medium">พิกาด (lat, lng)</th>
           </tr>
         </thead>
@@ -116,34 +115,37 @@ export function CoordGapsPane() {
             return (
               <tr key={g.id} className="border-b border-line/40 align-top">
                 <td className="py-1.5 pr-2">
+                  {g.province_name ?? '-'}
+                  <div className="text-[10px] text-dim2">
+                    {g.district_ref ?? g.district_name ?? '-'}
+                    {g.district_name && g.district_ref && g.district_name !== g.district_ref && (
+                      <span className="ml-1 text-warn">LED: {g.district_name}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="py-1.5 pr-2">
                   {g.deed_number ?? <span className="text-err">ไม่มี</span>}
                   {g.case_no && <div className="text-[10px] text-dim2">{g.case_no}/{g.case_year}</div>}
                 </td>
-                <td className="py-1.5 pr-2">
-                  {g.district_ref ?? g.district_name ?? '-'}
-                  <div className="text-[10px] text-dim2">{g.tumbol ?? '-'}</div>
-                  {g.district_name && g.district_ref && g.district_name !== g.district_ref && (
-                    <div className="flex items-center gap-1 text-[10px] text-warn">
-                      <AlertTriangle size={10} /> LED: {g.district_name}
-                    </div>
-                  )}
-                </td>
+                <td className="py-1.5 pr-2 text-dim2">{g.tumbol ?? '-'}</td>
                 <td className="py-1.5 pr-2 font-display">{size(g)}</td>
-                <td className="py-1.5 pr-2 text-dim2">{g.td_rawang ?? g.dol_office ?? '-'}</td>
                 <td className="py-1.5 pr-2">
                   {has && !v && <span className="font-display">{num(g.td_lat)}, {num(g.td_lon)}</span>}
                   {!has && !v && <span className="text-dim2">-</span>}
                   {v && (
                     <span className="flex gap-1">
-                      <input className={`${inp} w-24 py-0.5`} placeholder="lat" value={v.lat}
+                      <input className={`${inp} w-20 py-0.5`} placeholder="lat" value={v.lat}
                         onChange={(e) => setEdit({ ...edit, [g.id]: { ...v, lat: e.target.value } })} />
-                      <input className={`${inp} w-24 py-0.5`} placeholder="lng" value={v.lon}
+                      <input className={`${inp} w-20 py-0.5`} placeholder="lng" value={v.lon}
                         onChange={(e) => setEdit({ ...edit, [g.id]: { ...v, lon: e.target.value } })} />
                       <button className={btn} onClick={() => void save(g)}>บันทึก</button>
+                      <button className={btn} onClick={() => {
+                        const next = { ...edit }; delete next[g.id]; setEdit(next);
+                      }}>ยกเลิก</button>
                     </span>
                   )}
                   {!v && (
-                    <button className="ml-1 text-[10px] text-accent underline"
+                    <button className="text-[10px] text-accent underline"
                       onClick={() => setEdit({ ...edit, [g.id]: { lat: '', lon: '' } })}>
                       แก้ไข
                     </button>

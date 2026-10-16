@@ -173,7 +173,11 @@ export function ServerPane() {
         <div className="py-2 text-[10.5px] text-dim2">
           {loading ? 'กำลังโหลด…' : 'ยังไม่มีประวัติการทำงาน — ลองรัน cd test; bun scrapeLED.js'}
         </div>
-      ) : recent.map(r => (
+      ) : (
+        /* Capped: 27 runs already, and the list grows forever. Scroll rather
+           * than paginate - the newest is what anyone reads, and it stays at top. */
+        <div className="max-h-56 overflow-y-auto pr-1">
+        {recent.map(r => (
         <div key={r.id} className={`${frow} !border-b-0`}>
           <span className={fl}>
             {r.outcome === 'failed'
@@ -181,14 +185,22 @@ export function ServerPane() {
               : <CheckCircle2 size={11} className="mr-1 inline text-[#6BD07C]" />}
             {stageTh(r.stage)}
             {r.province ? ` · ${r.province}` : ''}
+            {r.notes ? <span className="ml-1 text-[10px] text-dim2">{r.notes}</span> : null}
           </span>
           <span className="flex items-center gap-2 font-display text-[10.5px] text-dim2">
             {r.lotsSeen != null && <span>{r.lotsSeen} แปลง</span>}
+            {r.lotsNew != null && r.lotsNew !== r.lotsSeen && <span>ใหม่ {r.lotsNew}</span>}
+            {r.errors > 0 && (
+              <span className="text-[#FF8B7D]">พลาด {r.errors}</span>
+            )}
+            {r.lastStep && <span className="max-w-52 truncate">{r.lastStep}</span>}
             <span>{secs(r.durationS)}</span>
             <span>{hhmm(r.finishedAt)}</span>
           </span>
         </div>
-      ))}
+        ))}
+        </div>
+      )}
 
       <div className="mt-2.5 flex items-start gap-1.5 text-[10.5px] leading-[1.6] text-dim2">
         <Play size={11} className="mt-[2px] flex-none" />

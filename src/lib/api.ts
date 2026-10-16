@@ -203,5 +203,6 @@ export interface ApiStatus {
     startedAt: string | null; finishedAt: string | null; durationS: number;
     pages: number | null; lotsSeen: number | null; lotsNew: number | null;
     errors: number; outcome: 'ok' | 'failed'; detail: Record<string, unknown> | null;
+    notes: string | null; lastStep: string | null;
   }>;
 }
