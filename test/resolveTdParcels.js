@@ -274,6 +274,18 @@ for (const [i, p] of todo.entries()) {
         }
         stats.districtMismatch++;
         districtMismatch.push({ deed: p.deed_number, want, got: rows.map((x) => x.AMPHUR_NAME) });
+        /* Two different problems wearing the same face. "TD never heard of this
+         * deed" is settled - retrying changes nothing. "DOL quota spent before we
+         * got here" is not: DOL addresses by province/amphur/parcel and may hold
+         * it, we just were not allowed to ask today. Filing both as no_result
+         * would put an unrun lookup next to a dead end, and the queue of work that
+         * might still succeed is the one worth seeing. */
+        if (WRITE) {
+            await client.query(
+                `UPDATE parcels SET dol_verdict = $2 WHERE id = $1`,
+                [p.parcel_id, dolStats.blocked ? "pending_quota" : "no_result"],
+            );
+        }
         await sleep(DELAY_MS);
         continue;
     }

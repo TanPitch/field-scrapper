@@ -28,10 +28,11 @@ interface Gap {
 }
 
 interface Summary {
-  td_resolved: number;
-  dol_resolved: number;
-  unresolved: number;
-  no_coords: number;
+  matched: number;
+  mismatch: number;
+  waiting_dol: number;
+  dead_end: number;
+  never_tried: number;
   no_deed: number;
   total: number;
 }
@@ -87,10 +88,15 @@ export function CoordGapsPane() {
       <div className={setSec}>ข้อมูลที่ยังหาไม่เจอ</div>
       {err && <p className="text-[12px] text-err">เข้าถึงข้อมูลไม่ได้: {err}</p>}
       {summary && (
-        <p className="mb-2 text-[11px] leading-[1.7] text-dim2">
-          ทั้งหมด {summary.total} แปลง — TD ให้ {summary.td_resolved} · DOL ให้ {summary.dol_resolved} ·
-          ยังไม่ได้ {summary.unresolved} · ไม่มีพิกาด {summary.no_coords} · ไม่มีเลขโฉนด {summary.no_deed}
-        </p>
+        <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] leading-[1.7]">
+          <span className="text-dim2">ทั้งหมด</span><span className="font-display">{summary.total}</span>
+          <span className="text-dim2">จับคู่แล้ว</span><span className="font-display">{summary.matched}</span>
+          <span className="text-warn">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.mismatch}</span>
+          <span className="text-dim2">รอ DOL (โควตาหมด)</span><span className="font-display">{summary.waiting_dol}</span>
+          <span className="text-dim2">TD กับ DOL ไม่มี</span><span className="font-display">{summary.dead_end}</span>
+          <span className="text-dim2">ยังไม่ได้ตรวจ</span><span className="font-display">{summary.never_tried}</span>
+          <span className="text-dim2">ไม่มีเลขโฉนด</span><span className="font-display">{summary.no_deed}</span>
+        </div>
       )}
 
       <button className={btn} onClick={() => void load()} disabled={busy}>

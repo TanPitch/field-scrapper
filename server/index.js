@@ -525,7 +525,7 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
 
     const { rows: gaps } = await pool.query(`
         SELECT p.id, p.province_code, p.province_name, p.district_name, p.district_dol_code,
-               p.tumbol, p.deed_number, p.land_title, p.td_status, p.dol_status,
+               p.deed_number, p.land_title, p.td_status, p.dol_status, p.td_verdict, p.dol_verdict,
                p.td_rawang, p.td_lat, p.td_lon, p.dol_lat, p.dol_lon,
                p.td_object_id, p.td_eva_price, p.dol_office, p.dol_land_type,
                p.geo_status, p.tambon_match,
@@ -544,14 +544,14 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
         [params[0] ?? null, limit, offset]);
 
     const { rows: summary } = await pool.query(`
-        SELECT
-          count(*) FILTER (WHERE td_status='resolved')                        AS td_resolved,
-          count(*) FILTER (WHERE dol_status='resolved')                       AS dol_resolved,
-          count(*) FILTER (WHERE td_status IS DISTINCT FROM 'resolved'
-                              AND dol_status IS DISTINCT FROM 'resolved')      AS unresolved,
-          count(*) FILTER (WHERE td_lat IS NULL AND dol_lat IS NULL)          AS no_coords,
-          count(*) FILTER (WHERE deed_number IS NULL OR deed_number = '')      AS no_deed,
-          count(*)                                                          AS total
+  SELECT
+    count(*) FILTER (WHERE td_verdict = 'match' OR dol_verdict = 'match')         AS matched,
+    count(*) FILTER (WHERE td_verdict = 'district_mismatch')                      AS mismatch,
+    count(*) FILTER (WHERE dol_verdict = 'pending_quota')                         AS waiting_dol,
+    count(*) FILTER (WHERE td_verdict = 'no_result' OR dol_verdict = 'no_result')  AS dead_end,
+    count(*) FILTER (WHERE td_verdict IS NULL AND dol_verdict IS NULL)            AS never_tried,
+    count(*) FILTER (WHERE deed_number IS NULL OR deed_number = '')               AS no_deed,
+    count(*)                                                                        AS total
         FROM parcels`);
 
     res.json({ gaps, summary: summary[0], limit, offset });
