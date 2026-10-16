@@ -58,6 +58,28 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * lands at 7.870667, 98.369107.
  */
 function utmToLatLng(easting, northing, zone = 47) {
+    /* Datum correction, measured rather than assumed.
+     *
+     * TD reports SRID 24047 and hands back a projected coordinate. Inverting it
+     * as WGS84 / UTM 47N lands every parcel about 310 m off, in the same
+     * direction every time: -0.00279 latitude, +0.00307 longitude against the
+     * true position on LED and DOL.
+     *
+     * Measured on nine deeds across three provinces - ภูเก็ต, ปราจีนบุรี,
+     * ขอนแก่น - spanning 8N to 16N and 98E to 102E. The delta is constant to five
+     * decimal places across that range, so it is a translation rather than a
+     * projection difference, and a constant is the right correction.
+     *
+     * What 24047 actually is was not verified against an EPSG registry; this is
+     * fitted, not authoritative. Revisit if a parcel ever lands in the wrong
+     * province, which would mean the shift is regional after all. */
+    const DATUM_LAT = -0.00279;
+    const DATUM_LNG = 0.00307;
+    const [lat, lng] = utmToWgs84(easting, northing, zone);
+    return [lat - DATUM_LAT, lng - DATUM_LNG];
+}
+
+function utmToWgs84(easting, northing, zone = 47) {
     const a = 6378137;
     const f = 1 / 298.257223563;
     const k0 = 0.9996;
