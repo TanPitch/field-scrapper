@@ -29,3 +29,8 @@ test/NUL
 
 # Local database dumps
 *.dump
+
+# research bundles: contain live credentials and findings not meant to be published
+test/research/dol_api_bundle/
+test/research/led_api_bundle/
+test/research/led_to_td/
