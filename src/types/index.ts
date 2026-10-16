@@ -74,6 +74,9 @@ export interface Parcel {
   resell: boolean;
   /** How many images this lot has. */
   imgs: number;
+  /** Resolver verdict: only 'match' is shown on the map or in the table. */
+  tdVerdict?: string | null;
+  dolVerdict?: string | null;
   /**
    * Stored image paths, served by the API at /img/land/<name>.
    *

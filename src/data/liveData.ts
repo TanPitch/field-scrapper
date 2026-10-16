@@ -271,6 +271,8 @@ function publish(rows: Parcel[], kind: DataSourceKind) {
  */
 export async function loadParcels(provinceCode?: number): Promise<{
   kind: DataSourceKind; count: number; error: string | null;
+  /** Rows the resolvers could not confirm; kept out of the map and table. */
+  hidden?: number;
 }> {
   const q = provinceCode != null ? `?province=${provinceCode}` : '';
   const r = await api.get<{ features: Feature[] }>(`/api/parcels${q}`);
@@ -283,11 +285,18 @@ export async function loadParcels(provinceCode?: number): Promise<{
   const now = Date.now();
   const rows = r.data.features.map((f) => featureToParcel(f, now)).filter((p): p is Parcel => p != null);
 
-  /* An empty but successful response is not a reason to show fixtures. If the
-     database genuinely holds nothing, the user should see "no data", because
-     silently substituting 2,660 invented parcels would be a lie. */
-  publish(rows, 'api');
-  return { kind: 'api', count: rows.length, error: null };
+  /* Only a confirmed match is user-facing. A resolver that returned a row has
+     not necessarily answered the right one - TD takes a bare deed number and can
+     hand back a parcel in the wrong district - and an unresolved parcel has no
+     geometry at all, which featureToParcel turns into lat/lng 0. Those would
+     otherwise plot as a blob in the Gulf of Guinea rather than going missing.
+
+     The rejected ones are not lost: /api/admin/coord-gaps lists them by verdict
+     so an admin can see what needs a hand. */
+  const shown = rows.filter((p) => p.tdVerdict === 'match' || p.dolVerdict === 'match');
+
+  publish(shown, 'api');
+  return { kind: 'api', count: shown.length, error: null, hidden: rows.length - shown.length };
 }
 
 /** Subscribe to "the parcel collection was replaced". */

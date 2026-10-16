@@ -95,6 +95,62 @@ const parseShape = (shape) => {
     return m ? [Number(m[1]), Number(m[2])] : null;
 };
 
+/* ------------------------------------------------------------ DOL fallback
+ *
+ * TD does not carry every parcel. Anything it does not return, or returns
+ * outside the district LED named, goes to LandsMaps (กรมการถือกรรมที่ดิน).
+ *
+ * DOL numbers provinces like TD, not LED: Bueng Kan is 97 on LED and 38 on both
+ * TD and DOL. districts.td_province_code therefore serves both without change.
+ * DOL also wants the 2-digit district, which is districts.td_code.
+ *
+ * The route is /{prov}/{amphur}/{parcelno} - three segments. The research note
+ * documents two and 404s.
+ *
+ * DOL allows 20 lookups per day, server side, and returns
+ *   {"status":500,"message":"เกินจำกัด 20 /วัน"}
+ * The quota is per day, not per token: minting a fresh JWT does not reset it.
+ * The research bundle asserts there is no quota; the live service disagrees, so
+ * dol_quota_ledger stays authoritative and this leg is rate-limited to match.
+ */
+const DOL = "https://landsmaps.dol.go.th/apiService";
+const DOL_DAILY_LIMIT = Number(process.env.DOL_DAILY_LIMIT ?? 20);
+
+let dolToken = null;
+async function dolHeaders() {
+    if (!dolToken) {
+        const r = await fetch(`${DOL}/JWT/GetJWTAccessToken`, { headers: { Accept: "application/json" } });
+        dolToken = (await r.json())?.result?.[0]?.access_token ?? null;
+        if (!dolToken) throw new Error("could not mint anonymous DOL token");
+    }
+    return { Authorization: `Bearer ${dolToken}`, Accept: "application/json" };
+}
+
+const dolStats = { tried: 0, resolved: 0, quota: 0, none: 0, error: 0, blocked: false };
+
+async function dolLookup(tdProv, tdAmphur, parcelNo) {
+    if (dolStats.tried >= DOL_DAILY_LIMIT) { dolStats.blocked = true; return null; }
+    dolStats.tried++;
+    try {
+        const r = await fetch(`${DOL}/LandsMaps/GetParcelByParcelNo/${tdProv}/${tdAmphur}/${parcelNo}`, {
+            headers: await dolHeaders(),
+        });
+        const j = await r.json();
+        if (j?.status === 500 && /เกินจำกัด/.test(String(j.message ?? ""))) {
+            dolStats.quota++;
+            dolStats.blocked = true;
+            return null;
+        }
+        const rows = Array.isArray(j?.result) ? j.result : [];
+        if (!rows.length) { dolStats.none++; return null; }
+        dolStats.resolved++;
+        return rows[0];
+    } catch (e) {
+        dolStats.error++;
+        return null;
+    }
+}
+
 async function query(prov, deed, survey = "", tries = 3) {
     const body = new URLSearchParams({
         SP: "GIS5_Q_PARCEL",
@@ -185,12 +241,42 @@ for (const [i, p] of todo.entries()) {
     const byDistrict = want
         ? rows.filter((r) => String(r.AMPHUR_NAME ?? "").trim() === want)
         : [];
-    if (byDistrict.length === 1) stats.found++;
+    let r = null;
+    let via = "td";
+    if (byDistrict.length === 1) { stats.found++; r = byDistrict[0]; verdict = "match"; }
     else if (byDistrict.length > 1) { stats.ambiguous++; ambiguous.push({ deed: p.deed_number, n: byDistrict.length, dist: want }); await sleep(DELAY_MS); continue; }
-    else if (rows.length === 1) { stats.found++; stats.districtUnverified++; }
-    else { stats.districtMismatch++; districtMismatch.push({ deed: p.deed_number, want, got: rows.map((r) => r.AMPHUR_NAME) }); await sleep(DELAY_MS); continue; }
+    else if (rows.length === 1) {
+    /* One row, but not in the district our map resolved. Accepting it would put a
+     * marker on the wrong district, so it is recorded as a mismatch instead. */
+    stats.found++; stats.districtUnverified++; r = rows[0]; verdict = "district_mismatch";
+  }
+    else {
+        /* TD could not place this one. Fall through to DOL. */
+        const d = await dolLookup(p.td_province_code, p.td_code, p.deed_number);
+        if (d) {
+            via = "dol";
+            stats.found++;
+            console.log(`    ${String(i + 1).padStart(4)}/${todo.length}  ${p.prov_name}/${p.district_name}  deed ${String(p.deed_number).padEnd(10)} DOL fallback -> amphur ${d.amphurid ?? "?"} tambol ${d.tambol_id ?? "?"}`);
+            if (WRITE) {
+                await client.query(
+                    `UPDATE parcels
+                        SET td_office     = COALESCE($2, td_office),
+                            td_eva_price  = COALESCE($3, td_eva_price),
+                            td_status     = 'resolved_via_dol',
+                            td_checked_at = now()
+                      WHERE id = $1`,
+                    [p.parcel_id, d.landoffice_id ?? null, Number(d.landprice) || null],
+                );
+            }
+            await sleep(DELAY_MS);
+            continue;
+        }
+        stats.districtMismatch++;
+        districtMismatch.push({ deed: p.deed_number, want, got: rows.map((x) => x.AMPHUR_NAME) });
+        await sleep(DELAY_MS);
+        continue;
+    }
 
-    const r = byDistrict.length === 1 ? byDistrict[0] : rows[0];
     if (rows.length > 1) stats.multiCandidate++;
 
     const objId = r.OBJECTID != null ? Number(r.OBJECTID) : null;
@@ -231,12 +317,12 @@ for (const [i, p] of todo.entries()) {
                     td_srid       = COALESCE($10, td_srid),
                     td_lat        = COALESCE($11, td_lat),
                     td_lon        = COALESCE($12, td_lon),
-                    td_status     = 'resolved',
+                    td_status     = $13,
                     td_checked_at = now()
               WHERE id = $1`,
             [p.parcel_id, objId, r.RAWANG ?? null, r.LAND_NO ?? null, r.SURVEY_NO ?? null,
              r.DOL_NAME ?? null, Number(String(r.CURR_EVAPRICE ?? "").replace(/,/g, "")) || null,
-             utmE, utmN, r.SRID ?? null, lat, lng],
+             utmE, utmN, r.SRID ?? null, lat, lng, `resolved_via_${via}`, verdict],
         );
     }
     await sleep(DELAY_MS);
@@ -251,6 +337,8 @@ console.log(`  multiple candidates, disambiguated by district ${stats.multiCandi
 console.log(`  lone candidate, district not verified        ${stats.districtUnverified}`);
 console.log(`  AMBIGUOUS: >1 candidate in the right district ${stats.ambiguous}`);
 console.log(`  NO MATCH in any candidate's district          ${stats.districtMismatch}`);
+console.log(`\n  DOL fallback: tried ${dolStats.tried} (limit ${DOL_DAILY_LIMIT}/day), resolved ${dolStats.resolved}, none ${dolStats.none}, quota-stopped ${dolStats.quota}, errors ${dolStats.error}`);
+if (dolStats.blocked) console.log("  DOL quota exhausted - remaining failures stay unresolved until the daily limit resets");
 console.log(`  no SHAPE (no coordinates) ${stats.noShape}`);
 console.log(`  tambon mismatches logged above`);
 console.log(`  elapsed        ${el}s`);

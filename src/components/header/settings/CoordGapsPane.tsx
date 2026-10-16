@@ -11,7 +11,6 @@ interface Gap {
   district_name: string | null;
   district_ref: string | null;
   td_match_method: string | null;
-  tumbol: string | null;
   deed_number: string | null;
   land_title: string | null;
   td_status: string | null;
@@ -103,7 +102,6 @@ export function CoordGapsPane() {
           <tr className="border-b border-line text-left text-dim2">
             <th className="py-1 pr-2 font-medium">จังหวัด / อำเภอ</th>
             <th className="py-1 pr-2 font-medium">เลขโฉนด</th>
-            <th className="py-1 pr-2 font-medium">ตำบล</th>
             <th className="py-1 pr-2 font-medium">ขนาด (ตร.วา)</th>
             <th className="py-1 pr-2 font-medium">พิกาด (lat, lng)</th>
           </tr>
@@ -127,7 +125,6 @@ export function CoordGapsPane() {
                   {g.deed_number ?? <span className="text-err">ไม่มี</span>}
                   {g.case_no && <div className="text-[10px] text-dim2">{g.case_no}/{g.case_year}</div>}
                 </td>
-                <td className="py-1.5 pr-2 text-dim2">{g.tumbol ?? '-'}</td>
                 <td className="py-1.5 pr-2 font-display">{size(g)}</td>
                 <td className="py-1.5 pr-2">
                   {has && !v && <span className="font-display">{num(g.td_lat)}, {num(g.td_lon)}</span>}

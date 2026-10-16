@@ -245,7 +245,7 @@ app.get("/api/parcels", async (req, res) => {
         SELECT p.id, p.deed_number, p.land_title, p.tumbol, p.district_name,
                p.province_code, p.tambon_code, p.tambon_match,
                p.td_lat, p.td_lon, p.td_eva_price, p.td_rawang, p.td_survey_no,
-               p.td_land_no, p.td_status, p.dol_status, p.geo_precision, p.geo_status,
+               p.td_land_no, p.td_status, p.dol_status, p.td_verdict, p.dol_verdict, p.geo_precision, p.geo_status,
                p.eva_price_min, p.eva_price_max,
                p.elevation_m, p.elevation_uncertainty_m, p.elevation_source,
                p.province_name, p.district_name AS district_full,
@@ -357,6 +357,7 @@ FROM parcels p
                 rawang: r.td_rawang, surveyNo: r.td_survey_no, landNo: r.td_land_no,
                 geoPrecision: r.geo_precision ?? null,
                 geoStatus: r.geo_status, tdStatus: r.td_status, dolStatus: r.dol_status,
+                tdVerdict: r.td_verdict, dolVerdict: r.dol_verdict,
                 /* Height, so the table can filter and sort on it without a second
                    round trip per row. Null where no DEM covers the point. */
                 elevation: toNum(r.elevation_m),
