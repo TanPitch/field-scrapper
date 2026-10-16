@@ -242,6 +242,7 @@ for (const [i, p] of todo.entries()) {
         ? rows.filter((r) => String(r.AMPHUR_NAME ?? "").trim() === want)
         : [];
     let r = null;
+  let verdict = null;
     let via = "td";
     if (byDistrict.length === 1) { stats.found++; r = byDistrict[0]; verdict = "match"; }
     else if (byDistrict.length > 1) { stats.ambiguous++; ambiguous.push({ deed: p.deed_number, n: byDistrict.length, dist: want }); await sleep(DELAY_MS); continue; }
@@ -347,5 +348,25 @@ if (ambiguous.length) {
     for (const a of ambiguous.slice(0, 10)) console.log(`    deed ${a.deed} -> ${a.n} rows, ${a.dist}`);
 }
 if (!WRITE) console.log("\n  DRY RUN - nothing written. Re-run with --write.");
+
+/* Persist the outcome so the admin pane can see what the bot did.
+ * scrape_runs already has the columns - stage, province_code, lots_seen,
+ * lots_new, error_count, notes, detail - and /api/status already serves them;
+ * the scrapers write rows there and the resolvers only printed to stdout, so
+ * from the frontend a resolve looked identical to nothing happening. */
+if (WRITE) {
+    await client.query(
+        `INSERT INTO scrape_runs
+            (stage, province_code, started_at, finished_at,
+             lots_seen, lots_new, error_count, notes, detail, last_step)
+         VALUES ('enrich_td', $1, $2, now(), $3, $4, $5, $6, $7::jsonb, $8)`,
+        [Number(ONLY_PROV) || null, new Date(t0).toISOString(),
+         stats.found + stats.noResult + stats.districtMismatch + stats.ambiguous + stats.error,
+         stats.found, stats.error,
+         `${dolStats.tried} DOL tried, ${dolStats.resolved} resolved, ${dolStats.quota} quota-stopped`,
+         JSON.stringify({ ...stats, dol: dolStats }),
+         dolStats.blocked ? "DOL quota exhausted; rest wait for tomorrow" : "done"],
+    );
+}
 
 await client.end();
