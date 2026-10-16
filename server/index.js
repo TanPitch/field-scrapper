@@ -510,8 +510,12 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 200, 1000);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
 
+    /* Resolved is "anything non-null", not a string match. Two writers spell it
+     * differently - resolveTdParcels.js writes 'resolved_via_td', the coord
+     * queue writes 'resolved' - and matching on one literal listed 761 genuinely
+     * resolved Phuket parcels as gaps. */
     const where = [
-        `(p.td_status IS DISTINCT FROM 'resolved' AND p.dol_status IS DISTINCT FROM 'resolved')`,
+        `(p.td_status IS NULL AND p.dol_status IS NULL)`,
         `OR (p.td_lat IS NULL AND p.dol_lat IS NULL)`,
         `OR (p.deed_number IS NULL OR p.deed_number = '')`,
     ];
