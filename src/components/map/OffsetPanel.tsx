@@ -35,8 +35,22 @@ export function OffsetPanel() {
     return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
   }, []);
 
-  const nudge = (k: 'lat' | 'lng', n: number) =>
+  /* Typed input keeps its own draft string so a half-typed "-" or "" survives
+     instead of being read back as 0 on the next render. The store is written on
+     every keystroke that parses, because the map should follow the number being
+     typed rather than waiting for blur. */
+  const [draft, setDraft] = useState<Record<'lat' | 'lng', string | null>>({ lat: null, lng: null });
+  const set = (k: 'lat' | 'lng', raw: string) => {
+    setDraft(d => ({ ...d, [k]: raw }));
+    const v = parseFloat(raw);
+    if (Number.isFinite(v)) patchApp({ coordOffset: { ...off, [k]: Number(v.toFixed(5)) } });
+  };
+  const clearDraft = (k: 'lat' | 'lng') => setDraft(d => ({ ...d, [k]: null }));
+
+  const nudge = (k: 'lat' | 'lng', n: number) => {
+    clearDraft(k);
     patchApp({ coordOffset: { ...off, [k]: Number((off[k] + n * STEP).toFixed(5)) } });
+  };
 
   const copy = () => {
     const text = `${fmt(off.lat)}, ${fmt(off.lng)}`;
@@ -51,7 +65,10 @@ export function OffsetPanel() {
       <span className="w-7 font-mono text-[10.5px] text-dim2">{label}</span>
       <button className="w-6 rounded border border-line py-0.5 text-[12px] leading-none hover:bg-panel2"
         onClick={() => nudge(label, -1)}>-</button>
-      <span className="w-16 text-center font-mono text-[11px] tabular-nums">{fmt(off[label])}</span>
+      <input type="number" step={STEP} value={draft[label] ?? off[label]}
+        onChange={e => set(label, e.target.value)}
+        onBlur={() => clearDraft(label)}
+        className="w-[74px] rounded border border-line bg-bg px-1 py-0.5 text-center font-mono text-[11px] tabular-nums outline-none focus:border-accent" />
       <button className="w-6 rounded border border-line py-0.5 text-[12px] leading-none hover:bg-panel2"
         onClick={() => nudge(label, 1)}>+</button>
       <span className="w-12 text-right text-[10px] text-dim2">{metres(off[label])} m</span>
@@ -59,14 +76,14 @@ export function OffsetPanel() {
   );
 
   return (
-    <div className="absolute z-20 w-[240px] rounded-lg border border-line bg-panel/95 shadow-lg backdrop-blur"
+    <div className="absolute z-20 w-[240px] rounded-lg border border-line2 bg-panel shadow-[0_8px_22px_rgba(0,0,0,.5)]"
       style={{ left: pos.x, top: pos.y }}>
       <div ref={onHead}
         onPointerDown={e => {
           const r = onHead.current!.parentElement!.getBoundingClientRect();
           drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top };
         }}
-        className="cursor-grab rounded-t-lg border-b border-line px-2 py-1.5 text-[11px] font-medium active:cursor-grabbing">
+        className="cursor-grab rounded-t-lg border-b border-line bg-panel2 px-2 py-1.5 text-[11px] font-medium active:cursor-grabbing">
         เลื่อนพิกัด (ชั่วคราว)
       </div>
       <div className="space-y-1.5 p-2">

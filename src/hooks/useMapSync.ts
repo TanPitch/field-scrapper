@@ -110,7 +110,14 @@ export function useMapSync(): void {
       if (s.bounds !== prev.bounds || s.zoom !== prev.zoom) refresh();
     });
 
-    return () => { unsub(); unsubBounds(); };
+    /* Same story for the calibration nudge: the offset is read inside refresh()
+       rather than passed in, so without this the dots kept the position they
+       were first drawn at no matter what the panel said. */
+    const unsubOffset = useApp.subscribe((s, prev) => {
+      if (s.coordOffset !== prev.coordOffset) refresh();
+    });
+
+    return () => { unsub(); unsubBounds(); unsubOffset(); };
   }, [mapReady, priceBath]);
 
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */
