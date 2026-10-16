@@ -98,16 +98,17 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
         else select(id, { fly: false });
       } else if (s.selectedId != null) deselect();
     };
-    /* Right-click a marker to copy its exact coordinate. Temporary, for checking
-     * resolved positions against TD and DOL by hand. Copying the feature's own
-     * lat/lng rather than the click position matters - the click lands wherever
-     * the cursor is, which is not where the marker is. */
+    /* Right-click anywhere to copy the coordinate under the pointer. Temporary, for
+     * checking resolved positions against TD and DOL by hand.
+     *
+     * Reads the pointer, not the marker: the parcel layer does not carry lat/lng
+     * on its features, so feature.properties.lat came back undefined. unproject
+     * gives the true lng/lat at that pixel, which is what you want anyway when
+     * the marker's own position is the thing under suspicion. */
     const onContext = (e: maplibregl.MapMouseEvent) => {
         e.preventDefault();
-        const fs = map.queryRenderedFeatures(e.point, { layers: ['parcels-dot'] });
-        if (!fs.length) return;
-        const p = fs[0].properties ?? {};
-        const text = `${p.lat}, ${p.lng}`;
+        const { lng, lat } = map.unproject(e.point);
+        const text = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         navigator.clipboard?.writeText(text).then(
             () => toast(`คัดลอกพิกาดแล้ว: ${text}`),
             () => toast(text, 'warn'),
