@@ -319,6 +319,7 @@ for (const [i, p] of todo.entries()) {
                     td_lat        = COALESCE($11, td_lat),
                     td_lon        = COALESCE($12, td_lon),
                     td_status     = $13,
+                    td_verdict    = $14,
                     td_checked_at = now()
               WHERE id = $1`,
             [p.parcel_id, objId, r.RAWANG ?? null, r.LAND_NO ?? null, r.SURVEY_NO ?? null,
