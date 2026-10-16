@@ -17,6 +17,13 @@ export function RangeSlider({ parcel: p }: { parcel: Parcel }) {
   const track = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Handle | null>(null);
 
+  /* A lot with no price history has nothing to slide. p.hist is empty, so the
+     * first and last reads below both threw and took the whole detail panel
+     * down with it - an empty chart is not worth an error boundary. */
+  if (!p.hist.length) {
+    return <div className="py-3 text-center text-[10.5px] text-dim2">ไม่มีข้อมูลราคา</div>;
+  }
+
   const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
   const span = Math.max(DAY, f1 - f0);
   const min = Math.max(f0, Math.min(chartRange?.min ?? f0, f1));
