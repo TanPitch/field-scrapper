@@ -77,6 +77,11 @@ export interface AppState {
   filters: Filters;
   sort: SortState;
   chartRange: { min: number; max: number } | null;
+  /** Manual calibration nudge in degrees, applied to markers as they are drawn.
+   *  TD's own pin sits a metre or two off the parcel, so the user can walk a
+   *  known-good position onto a marker and read back the correction. Degrees,
+   *  not metres: 0.00001 deg is about 1 m, which is the resolution that matters. */
+  coordOffset: { lat: number; lng: number };
   /** Price-chart x-axis marker interval. */
   chartTick: ChartTick;
   forceArea: BBox | null;
@@ -200,6 +205,7 @@ export const useApp = create<AppState>(set => ({
   filters: { ...EMPTY_FILTERS },
   sort: { key: 'price', dir: 'desc' },
   chartRange: null,
+  coordOffset: { lat: 0, lng: 0 },
   chartTick: 'none',
   forceArea: null,
   basemap: 'sat',

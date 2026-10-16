@@ -83,7 +83,10 @@ export function useMapSync(): void {
          siblings so the label and popup can say how many assets are behind it.
          The table still lists every lot. */
       const markers = markerRows(rows.vis, s.condoUnitOrder);
-      setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng, m.unit.lat], {
+      /* Calibration nudge, applied here rather than in liveData so the stored
+         coordinates and the table stay truthful — only the drawn dot moves. */
+      const { lat: dLat, lng: dLng } = s.coordOffset;
+      setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng + dLng, m.unit.lat + dLat], {
         id: m.id,
         status: m.unit.status,
         resell: isResell(m.unit),
