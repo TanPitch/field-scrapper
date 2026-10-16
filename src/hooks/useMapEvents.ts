@@ -1,4 +1,4 @@
-﻿import type maplibregl from 'maplibre-gl';
+import type maplibregl from 'maplibre-gl';
 import { useEffect } from 'react';
 import { addCustomLayers, addOverlayLayers } from '../map/layers';
 import { requireMap } from '../map/mapRef';
@@ -98,6 +98,21 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
         else select(id, { fly: false });
       } else if (s.selectedId != null) deselect();
     };
+    /* Right-click a marker to copy its exact coordinate. Temporary, for checking
+     * resolved positions against TD and DOL by hand. Copying the feature's own
+     * lat/lng rather than the click position matters - the click lands wherever
+     * the cursor is, which is not where the marker is. */
+    const onContext = (e: maplibregl.MapMouseEvent) => {
+        e.preventDefault();
+        const fs = map.queryRenderedFeatures(e.point, { layers: ['parcels-dot'] });
+        if (!fs.length) return;
+        const p = fs[0].properties ?? {};
+        const text = `${p.lat}, ${p.lng}`;
+        navigator.clipboard?.writeText(text).then(
+            () => toast(`คัดลอกพิกาดแล้ว: ${text}`),
+            () => toast(text, 'warn'),
+        );
+    };
     const onDbl = (e: maplibregl.MapMouseEvent) => {
       const s = getApp();
       if (s.drawMode === 'draw' && s.drawTool !== 'circle') { e.preventDefault(); finishDraw(); }
@@ -131,6 +146,7 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
     map.on('mouseenter', 'draw-verts', vertMouse);
     map.on('mouseleave', 'draw-verts', vertLeave);
     map.on('click', onClick);
+    map.on('contextmenu', onContext);
     map.on('dblclick', onDbl);
     map.on('mousemove', queueMove);
     map.on('touchmove', queueMove);
