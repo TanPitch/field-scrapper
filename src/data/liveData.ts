@@ -295,8 +295,16 @@ export async function loadParcels(provinceCode?: number): Promise<{
      so an admin can see what needs a hand. */
   const shown = rows.filter((p) => p.tdVerdict === 'match' || p.dolVerdict === 'match');
 
-  publish(shown, 'api');
-  return { kind: 'api', count: shown.length, error: null, hidden: rows.length - shown.length };
+  /* The filter above fails closed: an API that predates the verdict column sends
+     no tdVerdict at all, every row fails the test, and the map goes blank
+     rather than showing everything. That is the worst failure mode - it looks
+     like "no data" instead of "wrong build". If nothing carries a verdict,
+     show what we have and let the user see stale data rather than nothing. */
+  const verdictsKnown = rows.some((p) => p.tdVerdict != null || p.dolVerdict != null);
+  const visible = verdictsKnown ? shown : rows;
+
+  publish(visible, 'api');
+  return { kind: 'api', count: visible.length, error: null, hidden: rows.length - visible.length };
 }
 
 /** Subscribe to "the parcel collection was replaced". */
