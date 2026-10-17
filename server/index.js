@@ -340,7 +340,7 @@ FROM parcels p
                 sizeUnit: r.size_unit,
                 wah: r.size_unit === 'sqm' ? null : sqWa(r.size_rai, r.size_ngan, r.size_wa),
                 askingPrice: toNum(r.start_price), askingSource: r.start_price_src,
-                status: mapStatus(r.status, r.close_reason, r.close_code),
+                status: mapStatus(r.status, r.close_reason, r.close_code, r.remark),
                 nextRound: isoDate(r.next_round_date),
                 closeReason: r.close_reason,
                 /* The LED cascade's opening price — what the "smart price"
@@ -490,7 +490,17 @@ app.get("/api/parcels/:id", async (req, res) => {
  * a seizure revoked or a cancelled remainder is not a sale, and showing it as
  * "ขายแล้ว" would be a straightforward lie.
  */
-function mapStatus(status, closeReason, closeCode) {
+function mapStatus(status, closeReason, closeCode, remark) {
+  /* ถอนการยึด - the attachment was lifted, so this case will not be auctioned
+   * again. It has to be read before the status checks below: LED leaves some of
+   * these lots flagged active, and an active lot becomes "กำลังขาย", which then
+   * advertises a next auction date for land that is permanently off the market.
+   * Neither หมดอายุประกาศ nor ขายแล้ว is true either - nothing was ever sold.
+   *
+   * Matched on the reason text rather than a code because LED does not publish
+   * one for this; the wording varies ("ถอนการยึด", "ถอนการยึดทรัพย์", and
+   * "ยึดทรัพย์" alone), so it is a substring test on the whole reason string. */
+  if (/ถอนการยึด|ยึดทรัพย์/.test(String(closeReason ?? '') + ' ' + String(remark ?? ''))) return 'withdrawn';
   if (status === 'active') return 'sale';
   if (status === 'inactive') return 'inactive';
   if (closeCode === 1 || closeReason === 'sold') return 'sold';

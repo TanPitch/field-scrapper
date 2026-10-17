@@ -20,6 +20,8 @@
  * wrong rather than the data changing.
  */
 
+import type { Status } from '../types';
+
 /** One saleable unit. Shape is deliberately loose - it is built from whatever
  *  the API returns for a lot, not from the Parcel type, because a unit is a lot
  *  and lots are not parcels once a building is split. */
@@ -35,8 +37,10 @@ export interface CondoUnit {
   sizeUnit?: string | null;
   startPrice?: number | null;
   /** Auction status, used by the statusFirst cascade. Optional so fixture data
-   *  that predates the field still sorts rather than failing to typecheck. */
-  status?: "sale" | "sold" | "inactive" | null;
+   *  that predates the field still sorts rather than failing to typecheck.
+   *  Typed as Status rather than a literal union so adding a status cannot
+   *  silently drop the parcel out of the cascade. */
+  status?: Status | null;
 }
 
 /* Which status stands in for the building, and in what order.
@@ -54,7 +58,7 @@ export interface CondoUnit {
  * Anything unknown sorts last rather than first. Guessing "probably still
  * selling" for a status we do not recognise would put unknown data in front of
  * known data, which is the exact failure this ordering exists to prevent. */
-const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, sold: 2 };
+const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, sold: 2, withdrawn: 3 };
 
 /** Total square wa for a lot. Condo lots may be in square metres. */
 function areaWa(u: CondoUnit): number {
@@ -131,8 +135,10 @@ export function representativeUnit<T extends CondoUnit>(
 function statusRank(u: CondoUnit): number {
   const r = u.status == null ? undefined : STATUS_RANK[u.status];
   /* Unknown and missing sort after every known status, in that order, so the
-     ordering never depends on where an unrecognised value happened to land. */
-  return r == null ? STATUS_RANK.sold + 1 + (u.status == null ? 0 : 0.5) : r;
+     ordering never depends on where an unrecognised value happened to land.
+     Withdrawn is ranked explicitly rather than falling through: it is a known
+     dead end, not unknown data, and the two should not be indistinguishable. */
+  return r == null ? STATUS_RANK.withdrawn + 1 : r;
 }
 
 function byPrice(a: CondoUnit, b: CondoUnit, dir: 1 | -1): number {

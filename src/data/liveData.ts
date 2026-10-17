@@ -126,7 +126,7 @@ function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], a
 }
 
 function mapStatus(raw: string | null): Status {
-  return raw === 'sold' || raw === 'inactive' ? raw : 'sale';
+  return raw === 'sold' || raw === 'inactive' || raw === 'withdrawn' ? raw : 'sale';
 }
 
 /** One API feature -> a Parcel the rest of the app can render unchanged. */

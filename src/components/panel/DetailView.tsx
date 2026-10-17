@@ -379,7 +379,10 @@ export function DetailView() {
         <PriceHeadline p={p} />
       </div>
 
-      {hasUpcoming && upcoming?.date != null && kind !== "sold" && (
+      {/* Not sold, not expired - lifted. A scheduled round may still sit in the
+          data, but the case will not be auctioned, so advertising a date is a
+          promise the office has already withdrawn. */}
+      {hasUpcoming && upcoming?.date != null && kind !== "sold" && p.status !== "withdrawn" && (
         <div className="my-2 flex items-center gap-2 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-[11.5px] font-semibold text-accent">
           <span className="flex-none rounded-full bg-accent px-2 py-[2px] font-display text-[10px] text-accent-ink">
             {daysLeft === 0 ? 'วันนี้' : `อีก ${daysLeft} วัน`}
