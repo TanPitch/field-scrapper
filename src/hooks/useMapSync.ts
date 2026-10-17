@@ -83,10 +83,7 @@ export function useMapSync(): void {
          siblings so the label and popup can say how many assets are behind it.
          The table still lists every lot. */
       const markers = markerRows(rows.vis, s.condoUnitOrder);
-      /* Calibration nudge, applied here rather than in liveData so the stored
-         coordinates and the table stay truthful — only the drawn dot moves. */
-      const { lat: dLat, lng: dLng } = s.coordOffset;
-      setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng + dLng, m.unit.lat + dLat], {
+      setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng, m.unit.lat], {
         id: m.id,
         status: m.unit.status,
         resell: isResell(m.unit),
@@ -110,14 +107,7 @@ export function useMapSync(): void {
       if (s.bounds !== prev.bounds || s.zoom !== prev.zoom) refresh();
     });
 
-    /* Same story for the calibration nudge: the offset is read inside refresh()
-       rather than passed in, so without this the dots kept the position they
-       were first drawn at no matter what the panel said. */
-    const unsubOffset = useApp.subscribe((s, prev) => {
-      if (s.coordOffset !== prev.coordOffset) refresh();
-    });
-
-    return () => { unsub(); unsubBounds(); unsubOffset(); };
+    return () => { unsub(); unsubBounds(); };
   }, [mapReady, priceBath]);
 
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */

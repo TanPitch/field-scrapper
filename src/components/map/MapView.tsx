@@ -9,7 +9,6 @@ import { registerProtocols } from '../../map/protocols';
 import { setMap } from '../../map/mapRef';
 import { getApp, patchApp, useApp } from '../../store/useApp';
 import { centerInside, useSearch } from '../../store/useSearch';
-import { OffsetPanel } from './OffsetPanel';
 import { DrawBar } from './DrawBar';
 import { Crosshair } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
@@ -108,7 +107,6 @@ export function MapView() {
         </button>
       )}
       <DrawBar />
-      <OffsetPanel />
       <div className={`absolute inset-0 z-[35] grid place-items-center bg-bg transition-opacity duration-[400ms] ${loaderOff ? 'pointer-events-none opacity-0' : ''}`}>
         <div>
           <div className="spin-keep mx-auto mb-3 size-[26px] animate-spin2 rounded-full border-2 border-line2 border-t-accent" />

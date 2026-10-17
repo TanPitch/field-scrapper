@@ -72,9 +72,18 @@ function utmToLatLng(easting, northing, zone = 47) {
      *
      * What 24047 actually is was not verified against an EPSG registry; this is
      * fitted, not authoritative. Revisit if a parcel ever lands in the wrong
-     * province, which would mean the shift is regional after all. */
-    const DATUM_LAT = -0.00279;
-    const DATUM_LNG = 0.00307;
+     * province, which would mean the shift is regional after all.
+     *
+     * A second, much smaller correction was measured by eye afterwards: TD's own
+     * web map draws its pin a few metres off the parcel it represents, so
+     * aligning to LED and DOL left the dot visibly apart from TD's. -0.00008
+     * lat and +0.00005 lng - about 9 m south, 5 m east - brings the two into
+     * agreement. That reference is TD's renderer rather than ground truth, so
+     * this trades a little accuracy on LED and DOL for matching what the user
+     * sees on the official site. Folded into the same constants rather than
+     * applied separately, since from here it is one correction. */
+    const DATUM_LAT = -0.00271;
+    const DATUM_LNG = 0.00302;
     const [lat, lng] = utmToWgs84(easting, northing, zone);
     return [lat - DATUM_LAT, lng - DATUM_LNG];
 }
