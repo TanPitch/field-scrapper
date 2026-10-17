@@ -58,10 +58,16 @@ export function tickLabel(ts: number, tick: ChartTick): string {
 /** Apply the shared chart range (and auto-fit the y axis to the visible window). */
 export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
   const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
+  /* The upper bound has to cover the forecast leg too. The dataset carries a
+     point for the next round, plotted as a dashed tail past the last real one,
+     but the axis stopped at f1 and clipped it - the chart offered to show where
+     the price is heading and then cut off exactly where the heading started. */
+  const next = nextRoundPrice(p, Date.now());
+  const top = next?.date != null && next.date > f1 ? next.date : f1;
   const r = getApp().chartRange;
-  let min = r?.min ?? f0, max = r?.max ?? f1;
-  min = Math.max(f0, Math.min(min, f1));
-  max = Math.max(min + DAY, Math.min(max, f1));
+  let min = r?.min ?? f0, max = r?.max ?? top;
+  min = Math.max(f0, Math.min(min, top));
+  max = Math.max(min + DAY, Math.min(max, top));
   const vis = p.hist.filter(h => h.d >= min && h.d <= max);
   const ys = (vis.length ? vis : p.hist).map(h => h.v);
   const ymin = Math.min(...ys), ymax = Math.max(...ys);

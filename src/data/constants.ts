@@ -34,11 +34,10 @@ export const STATUS: Record<PopupKind, { th: string }> = {
   sale: { th: 'กำลังขาย' },
   sold: { th: 'ขายแล้ว' },
   inactive: { th: 'หมดอายุประกาศ' },
-  withdrawn: { th: 'ถอนการยึด' },
-  cancelled: { th: 'งดขายในนัดที่เหลือ' },
+  cancelled: { th: 'ยกเลิกการขาย' },
   re: { th: 'นำกลับมาขายใหม่' },
 };
-export const STATUS_KEYS: Status[] = ['sale', 'sold', 'inactive', 'withdrawn', 'cancelled'];
+export const STATUS_KEYS: Status[] = ['sale', 'sold', 'cancelled', 'inactive'];
 
 export const POP_FIELDS: [PopupField, string][] = [
   ['size', 'ขนาดที่ดิน'], ['perWah', 'ราคา/ตร.วา'], ['announce', 'วันประกาศขาย'],
@@ -47,9 +46,8 @@ export const POP_FIELDS: [PopupField, string][] = [
 /** [popup kind, label, colour source status] */
 export const POP_KINDS: [PopupKind, string, Status][] = [
   ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'],
-  ['re', 'นำกลับมาขายใหม่', 'sale'], ['inactive', 'หมดอายุประกาศ', 'inactive'],
-  ['withdrawn', 'ถอนการยึด', 'withdrawn'],
-  ['cancelled', 'งดขายในนัดที่เหลือ', 'cancelled'],
+  ['re', 'นำกลับมาขายใหม่', 'sale'], ['cancelled', 'ยกเลิกการขาย', 'cancelled'],
+  ['inactive', 'หมดอายุประกาศ', 'inactive'],
 ];
 export const LB_FIELDS: [LightboxField, string][] = [
   ['name', 'ชื่อแปลง'], ['status', 'สถานะ'], ['price', 'ราคา'], ['size', 'ขนาด'], ['deed', 'เลขโฉนด'], ['soldTs', 'วันขายออก'],
@@ -61,10 +59,9 @@ export const DEFAULT_POPUP_CFG: PopupConfig = {
   /* Pulled from the listing, so there is no upcoming round to advertise. The
      useful fields are the schedule it ran and the deed. */
   inactive: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
-  /* Never sold and never will be on this case - the attachment was lifted.
-     Price per ตร.ว. is withheld for the same reason as inactive: there is no
-     auction left for it to mean anything about. */
-  withdrawn: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
+  /* Never sold and never will be on this case - lifted or no sale in the rounds
+     left. Price per ตร.ว. is withheld for the same reason as inactive: there is
+     no auction left for it to mean anything about. */
   cancelled: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
 };
 export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
@@ -77,11 +74,9 @@ export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
  *  background rather than shouting. */
 export const DEFAULT_POP_COLORS: Record<PopupKind, string> = {
   sale: '#E5484D', sold: '#8B9096', re: '#242424', inactive: '#5C5247',
-  /* Cooler and darker than the inactive brown: withdrawn is a dead end rather
-     than an expired listing, and the two should be told apart at a glance.
-     cancelled sits between them - it ran rounds and gave up, it did not lose
-     the asset. */
-  withdrawn: '#3E4A5C', cancelled: '#4A5568',
+  /* Cooler and darker than the inactive brown: cancelled is a dead end rather
+     than an expired listing, and the two should be told apart at a glance. */
+  cancelled: '#3E4A5C',
 };
 
 export const PRESET_COLORS = [

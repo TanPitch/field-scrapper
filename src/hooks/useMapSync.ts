@@ -127,7 +127,12 @@ export function useMapSync(): void {
   useEffect(() => { if (mapReady) positionParcelLabels(); }, [mapReady, labelOverlap]);
 
   /* the land-kind icon is baked into the label markup, so rebuild on toggle */
-  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelNextDate); }, [mapReady, showLandKindIcon, labelNextDate]);
+  /* In แสดงทุกจุด the visible popups are these labels, not the Popup class, so
+     they are what a money-format change has to redraw. refreshOpenPopups below
+     only reaches the click and hover boxes, which is why toggling the baht sign
+     or the comma spacing did nothing until the labels were rebuilt by hand. */
+  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelNextDate); },
+    [mapReady, showLandKindIcon, labelNextDate, priceBath, priceSpace]);
 
   /* the DOM labels are positioned in screen space, so they follow the camera */
   useEffect(() => {

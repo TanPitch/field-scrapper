@@ -15,12 +15,21 @@ import { landKindSvg, unitBadge } from './parcelLabels';
 
 export const popupKind = (p: Parcel): PopupKind => (p.resell && p.status === 'sale' ? 're' : p.status);
 
+/** 'empty' is "no data", not a land type - it has nothing to say in the table. */
+const landKindLabel = (p: Parcel): string | null =>
+  p.landKind === 'empty' ? null : LAND_KIND_LABEL[p.landKind];
+
 function popupContent(p: Parcel): { html: string; bg: string } {
   const s = getApp();
   const kind = popupKind(p), cfg = s.popupCfg[kind];
   const row = (l: string, v: string) => `<div class="pop-row"><span>${l}</span><b>${v}</b></div>`;
   let rows = '';
   if (cfg.size) rows += row('ขนาดที่ดิน', fmtRai(p.wah));
+  /* Land type sits between the size and the unit price: it is the answer to
+     "what is this, and can I build on it", which is the next question after how
+     big. It used to be a text chip in the header row, where it competed with the
+     status and pushed the unit price off a short popup. */
+  if (landKindLabel(p)) rows += row('ประเภทที่ดิน', landKindLabel(p)!);
   if (cfg.perWah) rows += row('ราคา/ตร.วา', fmtMoneyNow(p.perWah));
   // if (cfg.announce) rows += row('ประกาศขาย', fdate(p.announce));
   // if (cfg.soldTs && p.soldTs) rows += row('ขายออกแล้ว', fdate(p.soldTs));
@@ -63,29 +72,37 @@ function popupContent(p: Parcel): { html: string; bg: string } {
       : '';
 
     return {
-      html: `<div class="pop-box pop-box--compact" data-selectable>`
-        + `<div class="pop-price">${icon}`
-        + `<span>${shortPrice(next ? next.price : p.price)}</span>`
-        + (disc ? `<span class="pop-disc">${disc}</span>` : '')
-        + `</div>`
-        + (when ? `<div class="pop-next">รอบถัดไป ${when}</div>` : '')
-        + `</div>`,
+      html: `<div class="pop-box pop-box--compact" data-selectable>
+        <div class="pop-price">
+          ${icon}
+          <span>${shortPrice(next ? next.price : p.price)}</span>
+          ${disc ? `<span class="pop-disc">${disc}</span>` : ''}
+        </div>
+        ${when ? `<div class="pop-next">รอบถัดไป ${when}</div>` : ''}
+        </div>`,
       bg,
     };
   }
 
-/* full popup: status tag, data source, price, optional land-kind badge */
-  const kindBadge = s.showLandKindIcon
-    ? `<span class="pop-kind" data-kind="${p.landKind}">${LAND_KIND_LABEL[p.landKind]}</span>`
+/* full popup: status tag, data source, price, optional land-kind badge.
+     The chip is the glyph only - the words moved into the table row. A label
+     chip in the header competed with the status for the same line and pushed
+     the unit price down; the icon carries the same meaning beside the row that
+     now spells it out, and keeps its full name in the tooltip. */
+  const kindBadge = s.showLandKindIcon && landKindLabel(p)
+    ? `<span class="pop-kind-ic" data-kind="${p.landKind}" title="${esc(LAND_KIND_LABEL[p.landKind])}">${landKindSvg(p.landKind)}</span>`
     : '';
   /* Hand-off links removed: the map is already the map, and Street View is a
      second trip out of the app for something the popup tells you anyway. */
   return {
-    html: `<div class="pop-box" data-selectable>`
-      + `<div class="pop-tags"><span class="pop-tag">${STATUS[kind].th}</span>`
-      + `<span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}</div>`
-      + priceHtmlFull(p)
-      + `<div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}</div>`,
+    html: `<div class="pop-box" data-selectable>
+      <div class="pop-tags">
+        <span class="pop-tag">${STATUS[kind].th}</span>
+        <span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}
+      </div>
+      ${priceHtmlFull(p)}
+      <div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}
+    </div>`,
     bg,
   };
 }
@@ -192,7 +209,11 @@ export function toggleClickPopup(id: number): void {
 }
 /** Re-render open popups after a settings change (fields, colours, price format). */
 export function refreshOpenPopups(): void {
-  if (clickPopId != null) openClickPopup(PARCEL_BY_ID.get(clickPopId));
-  if (hoverPopId != null) openHoverPopup(PARCEL_BY_ID.get(hoverPopId));
+  /* Both ids read first. openClickPopup closes the hover popup, which nulls
+     hoverPopId - so reading it afterwards meant a hover popup was never
+     refreshed, and a settings change silently closed it instead. */
+  const clickId = clickPopId, hoverId = hoverPopId;
+  if (clickId != null) openClickPopup(PARCEL_BY_ID.get(clickId));
+  if (hoverId != null) openHoverPopup(PARCEL_BY_ID.get(hoverId));
 }
 export const getHoverPopId = (): number | null => hoverPopId;

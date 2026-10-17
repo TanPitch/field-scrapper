@@ -191,7 +191,7 @@ export const useApp = create<AppState>(set => ({
   /* inactive is ON by default. A withdrawn lot is history the user is actively
      looking for, so hiding it by default would lose rows silently; the land-type
      filter is how you narrow back to live inventory. */
-  statusVisible: { sale: true, sold: true, inactive: true, withdrawn: true, cancelled: true },
+  statusVisible: { sale: true, sold: true, inactive: true, cancelled: true },
   reColor: DEFAULT_POP_COLORS.re,
   popColors: { ...DEFAULT_POP_COLORS },
   popupCfg: structuredClone(DEFAULT_POPUP_CFG),

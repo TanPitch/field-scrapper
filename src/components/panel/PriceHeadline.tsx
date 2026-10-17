@@ -26,7 +26,7 @@ export function PriceHeadline({
 }) {
   const fmt = useMoney();
   const next = nextRoundPrice(p, now);
-  const perWah = p.perWah;
+  const perWah = p.perWah || p.td?.perSqWa;
 
   /* Sold, or no future round scheduled: there is no next-round price to lead
      with, so fall back to the latest known price rather than inventing one. */

@@ -141,9 +141,12 @@ export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
       off.forEach(({ ev, side }, i) => {
         const y = chartArea.top + 15 + i * 16;
         if (y + 13 > chartArea.bottom) return;
-        /* pin to the edge the event actually sits beyond, arrow pointing that way */
-        if (side === 'left') pill(ctx, `${ev.label} ↩`, chartArea.left + 2, y, ev.color, ev.ink, 'left');
-        else pill(ctx, `↪ ${ev.label}`, chartArea.right - 2, y, ev.color, ev.ink, 'right');
+        /* Pin to the edge the event sits beyond. No arrow character in the text:
+           pill() already draws a triangular tip on that side, so the glyph was
+           saying the same thing twice - and ↩/↪ are exactly the kind of symbol
+           that renders as a tofu box wherever the Thai font lacks the glyph. */
+        if (side === 'left') pill(ctx, ev.label, chartArea.left + 2, y, ev.color, ev.ink, 'left');
+        else pill(ctx, ev.label, chartArea.right - 2, y, ev.color, ev.ink, 'right');
       });
       ctx.restore();
     },

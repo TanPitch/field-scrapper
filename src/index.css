@@ -405,7 +405,19 @@ body.reduce-motion .spin-keep {
 .pop-kind-ic {
   display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.22);
   opacity: 0.92;
+}
+/* Same highlight the text chip had, so the icon reads at the same weight it
+   used to when it also carried the words. */
+.pop-kind-ic[data-kind='land_with_buildings'],
+.pop-kind-ic[data-kind='condominium_unit'] {
+  background: rgba(255, 255, 255, 0.92);
 }
 .pop-kind-ic svg {
   width: 11px;

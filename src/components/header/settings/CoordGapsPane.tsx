@@ -15,6 +15,8 @@ interface Gap {
   land_title: string | null;
   td_status: string | null;
   dol_status: string | null;
+  td_verdict: string | null;
+  dol_verdict: string | null;
   td_lat: number | null;
   td_lon: number | null;
   dol_lat: number | null;
@@ -38,6 +40,40 @@ interface Summary {
 }
 
 /**
+ * Why a row is here, in the same terms as the summary counts above it.
+ *
+ * The classification mirrors /api/admin/coord-gaps exactly - matched, then
+ * district_mismatch, then waiting for DOL's quota, then a dead end, then never
+ * tried at all. Deriving it here from the same two verdict columns means the
+ * per-row tag and the headline number can never disagree; the summary is the
+ * same arithmetic done in SQL.
+ *
+ * `no_deed` wins over everything else, because a parcel with no deed number is
+ * unresolvable by construction and labelling it "no result" would read as
+ * "we looked and it was not there".
+ */
+type GapKind = 'no_deed' | 'never_tried' | 'waiting_dol' | 'dead_end' | 'district_mismatch' | 'other';
+
+const GAP_KIND: Record<GapKind, { th: string; cls: string }> = {
+  no_deed: { th: 'ไม่มีเลขโฉนด', cls: 'text-err' },
+  never_tried: { th: 'ยังไม่ได้ตรวจ', cls: 'text-dim2' },
+  waiting_dol: { th: 'รอ DOL', cls: 'text-warn' },
+  dead_end: { th: 'TD/DOL ไม่มี', cls: 'text-dim2' },
+  district_mismatch: { th: 'อำเภอไม่ตรง', cls: 'text-warn' },
+  other: { th: 'อื่น ๆ', cls: 'text-dim2' },
+};
+
+function gapKind(g: Gap): GapKind {
+  if (!g.deed_number) return 'no_deed';
+  if (g.td_verdict === 'match' || g.dol_verdict === 'match') return 'other';
+  if (g.dol_verdict === 'pending_quota') return 'waiting_dol';
+  if (g.td_verdict === 'district_mismatch') return 'district_mismatch';
+  if (g.td_verdict === 'no_result' || g.dol_verdict === 'no_result') return 'dead_end';
+  if (g.td_verdict == null && g.dol_verdict == null) return 'never_tried';
+  return 'other';
+}
+
+/**
  * Parcels LED listed that neither TD nor DOL could place, for an admin to
  * correct by hand.
  *
@@ -56,6 +92,8 @@ export function CoordGapsPane() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState<Record<number, { lat: string; lon: string }>>({});
+  const [q, setQ] = useState('');
+  const [only, setOnly] = useState<GapKind | ''>('');
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -83,6 +121,19 @@ export function CoordGapsPane() {
   const num = (v: number | null) => (v == null ? '-' : String(v));
   const size = (g: Gap) => [g.size_rai, g.size_ngan, g.size_wa].some((x) => x != null) ? `${num(g.size_rai)}-${num(g.size_ngan)}-${num(g.size_wa)}` : '-';
 
+  /* Filtered on the client because the list is already capped at 300 rows, and
+     the fields a person searches on - province, district, deed, case - are all
+     in the response. Paging it server-side would mean a second round trip for
+     every keystroke over a list that fits in memory. */
+  const needle = q.trim().toLowerCase();
+  const shown = gaps.filter((g) => {
+    if (only && gapKind(g) !== only) return false;
+    if (!needle) return true;
+    return [g.province_name, g.district_name, g.district_ref, g.deed_number, g.land_title,
+      g.case_no, g.case_year, g.td_status, g.dol_status, g.dol_office]
+      .some((v) => v != null && String(v).toLowerCase().includes(needle));
+  });
+
   return (
     <div className="px-3 pb-6">
       <div className={setSec}>ข้อมูลที่ยังหาไม่เจอ</div>
@@ -99,13 +150,40 @@ export function CoordGapsPane() {
         </div>
       )}
 
-      <button className={btn} onClick={() => void load()} disabled={busy}>
-        <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> {busy ? 'กำลังโหลด…' : 'โหลดใหม่'}
-      </button>
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <input
+          className={`${inp} min-w-0 flex-1`}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ค้นหา จังหวัด / อำเภอ / เลขโฉนด / คดี…"
+        />
+        <button className={btn} onClick={() => void load()} disabled={busy}>
+          <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> {busy ? 'กำลังโหลด…' : 'โหลดใหม่'}
+        </button>
+      </div>
+
+      <div className="mb-2 flex flex-wrap gap-1">
+        <button
+          className={`rounded-full border px-2 py-0.5 text-[10.5px] ${only === '' ? 'border-accent text-accent' : 'border-line text-dim2'}`}
+          onClick={() => setOnly('')}
+        >ทั้งหมด {gaps.length}</button>
+        {(Object.keys(GAP_KIND) as GapKind[]).map((k) => {
+          const n = gaps.filter((g) => gapKind(g) === k).length;
+          if (!n) return null;
+          return (
+            <button key={k}
+              className={`rounded-full border px-2 py-0.5 text-[10.5px] ${only === k ? 'border-accent text-accent' : 'border-line text-dim2'}`}
+              onClick={() => setOnly(only === k ? '' : k)}>
+              {GAP_KIND[k].th} {n}
+            </button>
+          );
+        })}
+      </div>
 
       <table className="mt-3 w-full text-[11.5px]">
         <thead>
           <tr className="border-b border-line text-left text-dim2">
+            <th className="py-1 pr-2 font-medium">ปัญหา</th>
             <th className="py-1 pr-2 font-medium">จังหวัด / อำเภอ</th>
             <th className="py-1 pr-2 font-medium">เลขโฉนด</th>
             <th className="py-1 pr-2 font-medium">ขนาด (ตร.วา)</th>
@@ -113,11 +191,13 @@ export function CoordGapsPane() {
           </tr>
         </thead>
         <tbody>
-          {gaps.map((g) => {
+          {shown.map((g) => {
             const v = edit[g.id];
             const has = g.td_lat != null || g.dol_lat != null;
+            const kind = gapKind(g);
             return (
               <tr key={g.id} className="border-b border-line/40 align-top">
+                <td className={`py-1.5 pr-2 text-[10.5px] ${GAP_KIND[kind].cls}`}>{GAP_KIND[kind].th}</td>
                 <td className="py-1.5 pr-2">
                   {g.province_name ?? '-'}
                   <div className="text-[10px] text-dim2">
@@ -160,6 +240,7 @@ export function CoordGapsPane() {
         </tbody>
       </table>
       {!gaps.length && !busy && !err && <p className="mt-2 text-[11px] text-dim2">ไม่มีรายการที่ค้างอยู่</p>}
+      {!!gaps.length && !shown.length && <p className="mt-2 text-[11px] text-dim2">ไม่ตรงกับที่ค้นหา</p>}
     </div>
   );
 }

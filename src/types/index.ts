@@ -14,14 +14,17 @@ export type BBox = [number, number, number, number]; /* west, south, east, north
  *              it is excluded from live views.
  */
 /**
- * `withdrawn` is ถอนการยึด - the court lifted the attachment.
- * `cancelled` is งดขายในนัดที่เหลือ - no sale in the rounds that remained.
+ * Four states, because that is how the user reads a case: on the market, done,
+ * called off, or run out of time.
  *
- * Neither is a sale and neither is an expiry, and reporting them as either one
- * produced a lie the user acted on: the detail panel advertised a next auction
- * date for land that was never going to be auctioned again.
+ * `cancelled` is both LED dead ends - ถอนการยึด (attachment lifted) and
+ * งดขายในนัดที่เหลือ (no sale in the rounds left). They are different legal
+ * reasons and the table keeps both in the detail panel, but as a buying decision
+ * they are one answer: this is not happening, stop looking at it. Reporting
+ * either as an expiry produced a lie acted on - the panel advertised a next
+ * auction date for land that was never going to be auctioned.
  */
-export type Status = 'sale' | 'sold' | 'inactive' | 'withdrawn' | 'cancelled';
+export type Status = 'sale' | 'sold' | 'cancelled' | 'inactive';
 /**
  * Marker kind — resale parcels get "นำกลับมาขายใหม่" until they sell again, which
  * is a display distinction layered on top of `Status`, not a separate status.

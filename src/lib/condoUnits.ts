@@ -58,7 +58,7 @@ export interface CondoUnit {
  * Anything unknown sorts last rather than first. Guessing "probably still
  * selling" for a status we do not recognise would put unknown data in front of
  * known data, which is the exact failure this ordering exists to prevent. */
-const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, cancelled: 2, sold: 3, withdrawn: 4 };
+const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, cancelled: 2, sold: 3 };
 
 /** Total square wa for a lot. Condo lots may be in square metres. */
 function areaWa(u: CondoUnit): number {
@@ -136,9 +136,9 @@ function statusRank(u: CondoUnit): number {
   const r = u.status == null ? undefined : STATUS_RANK[u.status];
   /* Unknown and missing sort after every known status, in that order, so the
      ordering never depends on where an unrecognised value happened to land.
-     Withdrawn is ranked explicitly rather than falling through: it is a known
+     cancelled is ranked explicitly rather than falling through: it is a known
      dead end, not unknown data, and the two should not be indistinguishable. */
-  return r == null ? STATUS_RANK.withdrawn + 1 : r;
+  return r == null ? STATUS_RANK.sold + 1 : r;
 }
 
 function byPrice(a: CondoUnit, b: CondoUnit, dir: 1 | -1): number {

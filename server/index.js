@@ -491,23 +491,17 @@ app.get("/api/parcels/:id", async (req, res) => {
  * "ขายแล้ว" would be a straightforward lie.
  */
 function mapStatus(status, closeReason, closeCode) {
-  /* The reason is LED's own enum, not prose, and those two values are dead ends
-   * that must not be reported as an expiry:
+  /* The reason is LED's own enum, not prose. Its full set is null, sold,
+   * withdrawn and cancelled_remaining_rounds - 4524 / 600 / 321 / 348 lots - and
+   * the last two are both dead ends. They are reported as one `cancelled`
+   * because as a buying decision they are one answer; the detail panel still
+   * shows which of the two it was.
    *
-   *   withdrawn                  ถอนการยึด - attachment lifted
-   *   cancelled_remaining_rounds งดขายในนัดที่เหลือ - no sale in the rounds left
-   *
-   * Both run before the status checks, because LED leaves some of these lots
+   * Checked before the status tests, because LED leaves some of these lots
    * flagged active and an active lot becomes กำลังขาย, which then advertises a
-   * next auction date for land that will not be auctioned again. Neither was sold
-   * either, so ขายแล้ว is equally a lie.
-   *
-   * The full set of values in the table is null, sold, withdrawn and
-   * cancelled_remaining_rounds - 4524 / 600 / 321 / 348 lots. An earlier attempt
-   * matched Thai text here and could never fire, because LED never writes Thai
-   * into this column. */
-  if (closeReason === 'withdrawn') return 'withdrawn';
-  if (closeReason === 'cancelled_remaining_rounds') return 'cancelled';
+   * next auction date for land that will not be auctioned again. Neither was
+   * sold either, so ขายแล้ว is equally a lie. */
+  if (closeReason === 'withdrawn' || closeReason === 'cancelled_remaining_rounds') return 'cancelled';
   if (status === 'active') return 'sale';
   if (status === 'inactive') return 'inactive';
   if (closeCode === 1 || closeReason === 'sold') return 'sold';
