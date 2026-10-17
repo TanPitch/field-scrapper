@@ -14,6 +14,7 @@ import { RangeSlider } from '../charts/RangeSlider';
 import { DateButton } from '../ui/DateButton';
 import { LandKindIcon } from '../ui/LandKindIcon';
 import { pickBtn, pillCls } from '../ui/styles';
+import { Select } from '../ui/Select';
 import { PriceHeadline } from './PriceHeadline';
 import { DetRows, DetSub, DetTop, VPad } from './shared';
 import { orderRows } from '../../lib/detailRows';
@@ -309,31 +310,32 @@ export function DetailView() {
     <VPad>
       {units.length > 1 && (
         <div className="mb-2 flex items-center gap-1.5 rounded-[9px] border border-line2 bg-panel2 px-2 py-1.5">
-          <span className="whitespace-nowrap rounded-[4px] bg-accent/15 px-1.5 py-[2px] text-[10px] font-semibold text-accent">×{units.length} หน่วยยอด</span>
-          <select
-            aria-label="เลือกหน่วยยอด"
-            value={Math.max(0, units.findIndex(u => u.id === p.id))}
-            onChange={e => setPicked(units[Number(e.target.value)])}
-            className="min-w-0 flex-1 rounded-[6px] border border-line2 bg-bg px-1.5 py-1 text-[11px] outline-none focus:border-accent"
-          >
-            {units.map((u, i) => (
-              <option key={u.id} value={i}>
-                #{i + 1}/{units.length} · {fmtRai(u.wah)} วา · {u.price > 0 ? fmt(u.price) : '-'}
-              </option>
-            ))}
-          </select>
+          <span className="whitespace-nowrap rounded-[4px] bg-accent/15 px-1.5 py-[2px] text-[10px] font-semibold text-accent">{units.length} รายการ</span>
+          {/* Units of one building all carry the same parcel id, so they cannot
+              be told apart by it - findIndex always answered 0 and the option
+              keys collided. They are the same object references out of
+              ALL_PARCELS, so position identifies which one is showing. */}
+          <Select
+            value={String(Math.max(0, units.indexOf(p)))}
+            onChange={v => setPicked(units[Number(v)])}
+            items={units.map((u, i) => ({
+              v: String(i),
+              l: `#${i + 1}/${units.length} · ${fmtRai(u.wah)} วา · ${u.price > 0 ? fmt(u.price) : '-'}`,
+            }))}
+            className="min-w-0 flex-1 text-[11px]"
+          />
           <button
-            type="button" aria-label="หน่วยยอดก่อนหน้า" title="หน่วยยอดก่อนหน้า"
+            type="button" title="รายการก่อนหน้า" {...useTipProps(`รายการก่อนหน้า`)}
             onClick={() => {
-              const i = Math.max(0, units.findIndex(u => u.id === p.id));
+              const i = Math.max(0, units.indexOf(p));
               setPicked(units[(i - 1 + units.length) % units.length]);
             }}
             className="size-[22px] flex-none rounded border border-line2 text-[12px] leading-none text-dim hover:border-line3 hover:text-ink"
           >‹</button>
           <button
-            type="button" aria-label="หน่วยยอดถัดไป" title="หน่วยยอดถัดไป"
+            type="button" title="รายการถัดไป" {...useTipProps(`รายการถัดไป`)}
             onClick={() => {
-              const i = Math.max(0, units.findIndex(u => u.id === p.id));
+              const i = Math.max(0, units.indexOf(p));
               setPicked(units[(i + 1) % units.length]);
             }}
             className="size-[22px] flex-none rounded border border-line2 text-[12px] leading-none text-dim hover:border-line3 hover:text-ink"
