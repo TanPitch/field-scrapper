@@ -12,10 +12,10 @@ import type { Parcel } from '../../types';
 import { PriceChart } from '../charts/PriceChart';
 import { RangeSlider } from '../charts/RangeSlider';
 import { DateButton } from '../ui/DateButton';
-import { LAND_KIND_LABEL, LandKindIcon } from '../ui/LandKindIcon';
+import { LandKindIcon } from '../ui/LandKindIcon';
 import { pickBtn, pillCls } from '../ui/styles';
 import { PriceHeadline } from './PriceHeadline';
-import { DetName, DetRows, DetSub, DetTop, VPad } from './shared';
+import { DetRows, DetSub, DetTop, VPad } from './shared';
 import { orderRows } from '../../lib/detailRows';
 
 /* Round status → optional no-buyer flag. A round where nobody placed a bid is marked
@@ -307,60 +307,7 @@ export function DetailView() {
   return (
     <div data-selectable>
     <VPad>
-      <Carousel key={p.id} p={p} />
-      <DetTop>
-        <span className="rounded-full px-[9px] py-0.5 text-[10px] font-semibold" style={{ background: chipBg, color: chipInk }}>{STATUS[kind].th}</span>
-        {/* data source + land kind badges */}
-        <span
-          {...useTipProps(`แหล่งข้อมูล: ${p.dataSource}`)}
-          className="rounded-full border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
-        >
-          {p.dataSource}
-        </span>
-        {showKindIcon && (
-          <span
-            {...useTipProps(LAND_KIND_LABEL[p.landKind])}
-            className="inline-flex items-center gap-1 rounded-full border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim"
-          >
-            <LandKindIcon kind={p.landKind} />
-            {LAND_KIND_LABEL[p.landKind]}
-          </span>
-        )}
-        <span className="ml-auto text-[10.5px] text-dim2">{p.deed}</span>
-      </DetTop>
-      <DetName>{p.name}</DetName>
-      <div className="mt-0.5">
-        <PriceHeadline p={p} />
-      </div>
-
-      {hasUpcoming && upcoming?.date != null && (
-        <div className="my-2 flex items-center gap-2 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-[11.5px] font-semibold text-accent">
-          <span className="flex-none rounded-full bg-accent px-2 py-[2px] font-display text-[10px] text-accent-ink">
-            {daysLeft === 0 ? 'วันนี้' : `อีก ${daysLeft} วัน`}
-          </span>
-          จะมีการขายทรัพย์ — นัดวันที่ {numDate(upcoming.date)}
-        </div>
-      )}
-
-      <ul>
-        {p.events.length ? p.events.map(e => {
-          const h = p.hist[e.idx];
-          /* Defensive. The event log indexes the price history, and a lot can
-             legitimately have an event with no matching point. Rendering the
-             rest of the panel matters more than one log line, so skip it rather
-             than take the whole panel down. */
-          if (!h) return null;
-          return (
-            <li key={e.idx} className="flex items-center gap-2 pt-[5px] pb-[16px] text-[11.5px]">
-              <span className="size-[7px] flex-none rounded-sm" style={{ background: e.label.includes('นำกลับมาขายใหม่') ? reColor : e.color }} />
-              <span className="flex-1">{e.label}เมื่อ</span>
-              <span className="font-display text-[10.5px] text-dim">{fdate(h.d)}</span>
-              <span className="font-display text-[11px] font-semibold">{fmt(h.v)}</span>
-            </li>
-          );
-        }) : <li className="flex justify-center py-[5px] text-[11.5px] text-dim2">ไม่มีเหตุการณ์สถานะพิเศษ</li>}
-      </ul>
-          {units.length > 1 && (
+      {units.length > 1 && (
         <div className="mb-2 flex items-center gap-1.5 rounded-[9px] border border-line2 bg-panel2 px-2 py-1.5">
           <span className="whitespace-nowrap rounded-[4px] bg-accent/15 px-1.5 py-[2px] text-[10px] font-semibold text-accent">×{units.length} หน่วยยอด</span>
           <select
@@ -393,6 +340,71 @@ export function DetailView() {
           >›</button>
         </div>
       )}
+
+      <Carousel key={p.id} p={p} />
+      <DetTop>
+        <span className="rounded px-[9px] py-0.5 text-[10px] font-semibold" style={{ background: chipBg, color: chipInk }}>{STATUS[kind].th}</span>
+        {/* data source + land kind badges */}
+        <span
+          {...useTipProps(`แหล่งข้อมูล`)}
+          className="rounded border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
+        >
+          {p.dataSource}
+        </span>
+        {showKindIcon && (
+          <span
+            {...useTipProps(p.propertyType)}
+            className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim"
+          >
+            <LandKindIcon kind={p.landKind} />
+            {p.propertyType}
+          </span>
+        )}
+
+        {units.length > 1 && (
+          <span
+            {...useTipProps(`มีอีก ${units.length} ที่ซ้อนกัน`)}
+            className="ml-auto rounded border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
+          >
+            x {units.length}
+          </span>
+        )}
+      </DetTop>
+
+      {/* <DetName>{p.name}</DetName> */}
+
+      <div className="mt-0.5">
+        <PriceHeadline p={p} />
+      </div>
+
+      {hasUpcoming && upcoming?.date != null && kind !== "sold" && (
+        <div className="my-2 flex items-center gap-2 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-[11.5px] font-semibold text-accent">
+          <span className="flex-none rounded-full bg-accent px-2 py-[2px] font-display text-[10px] text-accent-ink">
+            {daysLeft === 0 ? 'วันนี้' : `อีก ${daysLeft} วัน`}
+          </span>
+          จะมีการขายทรัพย์ — นัดวันที่ {numDate(upcoming.date)}
+        </div>
+      )}
+
+      <ul>
+        {p.events.length ? p.events.map(e => {
+          const h = p.hist[e.idx];
+          /* Defensive. The event log indexes the price history, and a lot can
+             legitimately have an event with no matching point. Rendering the
+             rest of the panel matters more than one log line, so skip it rather
+             than take the whole panel down. */
+          if (!h) return null;
+          return (
+            <li key={e.idx} className="flex items-center gap-2 pt-[5px] pb-[16px] text-[11.5px]">
+              <span className="size-[7px] flex-none rounded-sm" style={{ background: e.label.includes('นำกลับมาขายใหม่') ? reColor : e.color }} />
+              <span className="flex-1">{e.label}เมื่อ</span>
+              <span className="font-display text-[10.5px] text-dim">{fdate(h.d)}</span>
+              <span className="font-display text-[11px] font-semibold">{fmt(h.v)}</span>
+            </li>
+          );
+        }) : <li className="flex justify-center py-[5px] text-[11.5px] text-dim2">ไม่มีเหตุการณ์สถานะพิเศษ</li>}
+      </ul>
+
       <DetRows rows={orderRows(detRows, rowOrder, rowHidden)} />
 
       <div className="mb-2 mt-4 overflow-hidden rounded-[10px] border border-line bg-bg">

@@ -5,13 +5,13 @@ import { fmtMoneyNow } from '../hooks/useMoney';
 import { esc, fmtRai, numDate } from '../lib/format';
 import { priceHtmlFull } from '../lib/priceHtml';
 import { discountBadge, nextRoundPrice } from '../lib/price';
-import { landTypeOf, shortPrice } from '../lib/landType';
+import { shortPrice } from '../lib/landType';
 import { LAND_KIND_LABEL } from '../components/ui/LandKindIcon';
 import { parcelPopupBg } from '../lib/parcelColor';
 import { getApp } from '../store/useApp';
 import type { Parcel, PopupField, PopupKind } from '../types';
 import { requireMap } from './mapRef';
-import { unitBadge } from './parcelLabels';
+import { landKindSvg, unitBadge } from './parcelLabels';
 
 export const popupKind = (p: Parcel): PopupKind => (p.resell && p.status === 'sale' ? 're' : p.status);
 
@@ -48,9 +48,13 @@ function popupContent(p: Parcel, withGeoLinks = false): { html: string; bg: stri
          [land-type icon] [short price] [discount] [next round date]
        Hover and click do not open it (see popupMode gating in useMapEvents);
        click still opens the right-hand detail panel. */
-    const lt = landTypeOf(p.propertyType);
+    /* landTypeOf returns an icon *name*, and this used to interpolate that name
+       straight into the HTML, so the popup printed the word "Building2" where
+       the glyph belonged. Rendered through the shared bridge instead, same as
+       the map label. The tooltip keeps LED's own Thai wording - that is the
+       authority on the property, the icon is only our shorthand for it. */
     const icon = s.showLandKindIcon
-      ? `<span class="pop-kind-ic" title="${esc(p.propertyType || lt.label || 'ที่ดิน')}">${esc(lt.icon)}</span>`
+      ? `<span class="pop-kind-ic" title="${esc(p.propertyType || LAND_KIND_LABEL[p.landKind])}">${landKindSvg(p.landKind)}</span>`
       : '';
     const next = nextRoundPrice(p, Date.now());
     const disc = next ? discountBadge(next.discountPct) : null;

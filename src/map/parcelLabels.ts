@@ -78,7 +78,7 @@ function labelHtml(p: Parcel, showDate: boolean): string {
   const next = nextRoundPrice(p, now);
   const lt = landTypeOf(p.propertyType);
   const iconEl = app.showLandKindIcon
-  ? `<span class="inline-flex flex-none items-center opacity-95 [&>svg]:size-[11px]">${landTypeSvg(p.landKind)}</span>`
+  ? `<span class="inline-flex flex-none items-center opacity-95 [&>svg]:size-[11px]">${landKindSvg(p.landKind)}</span>`
   : '';
   const title = lt.label ?? p.propertyType ?? 'ที่ดิน';
 
@@ -132,7 +132,7 @@ export function unitBadge(p: { lotCount?: number | null }): string {
  * fallback problem (tofu boxes wherever the emoji font is missing).
  */
 
-function landTypeSvg(kind: string): string {
+export function landKindSvg(kind: string): string {
   if (!kind) return '';
   return renderToStaticMarkup(
     createElement(LandKindIcon, { kind, size: 11 })
