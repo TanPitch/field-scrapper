@@ -47,14 +47,21 @@ export interface Mortgage { amount: number; bank: string }
 /** Agency that published the auction. */
 export type DataSource = 'กรมบังคับคดี' | 'ธนาคาร' | 'กรมการคลัง' | 'กองทุนสินครและสงคราม';
 /** What sits on the parcel. */
-export type LandKind = 'empty' | 'building';
+// export type LandKind = 'empty' | 'building';
+export type LandKind = 'empty' | 'vacant_land' |'land_with_buildings' |'condominium_unit';
 
 export interface Parcel {
   /** Lots sharing this parcel's coordinates. >1 for a condominium building,
    *  which is one cadastral parcel sold as several units. */
   lotCount?: number;
-  /** Shared by every lot on one cadastral parcel. Lets the panel find a   *  building's other units without matching on coordinates. */
+  /** Shared by every lot on one cadastral parcel. Lets the panel find a
+   *  building's other units without matching on coordinates. */
   parcelKey?: string;
+  /** The cadastral parcel this lot sits on. Equal to `id` for live API rows -
+   *  the endpoint's feature id is the parcel and `lotId` is the lot - but kept
+   *  as its own field because that is what groups a building's units together,
+   *  and inferring it from `id` only holds while those two agree. */
+  parcelId?: number;
   /** The auction lot this row came from. `id` is the cadastral parcel, so every
    *  lot in a condominium building shares it - one parcel here carries 36 lots -
    *  and keying a list on `id` collided. */

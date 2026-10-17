@@ -145,3 +145,43 @@ test("the default is largest first", () => {
     representativeUnit(PHUKET, "sizeDesc").orderLabel,
   );
 });
+
+/* statusFirst: the map answers "where is land on sale now", so a building with
+   one unit still selling and another already gone must be represented by the one
+   still selling, however large or dear the sold one is. */
+const MIXED = [
+  { orderLabel: "1 - 1", rai: 0, ngan: 0, wa: 90, sizeUnit: "wa", startPrice: 100, status: "sold" as const },
+  { orderLabel: "1 - 2", rai: 0, ngan: 0, wa: 10, sizeUnit: "wa", startPrice: 100, status: "sale" as const },
+  { orderLabel: "1 - 3", rai: 0, ngan: 0, wa: 50, sizeUnit: "wa", startPrice: 100, status: "inactive" as const },
+];
+
+test("statusFirst puts the still-selling unit ahead of a much larger sold one", () => {
+  expect(representativeUnit(MIXED, "statusFirst").orderLabel).toBe("1 - 2");
+});
+
+test("statusFirst orders sale, then out, then bought", () => {
+  const sold = representativeUnit(MIXED.filter((u) => u.status !== "sale"), "statusFirst");
+  expect(sold.orderLabel).toBe("1 - 3"); // inactive before sold
+});
+
+test("statusFirst ignores size and price entirely", () => {
+  const onlySaleAndSold = [MIXED[0], MIXED[1]];
+  expect(representativeUnit(onlySaleAndSold, "sizeDesc").orderLabel).toBe("1 - 1");
+  expect(representativeUnit(onlySaleAndSold, "statusFirst").orderLabel).toBe("1 - 2");
+});
+
+test("a unit with no status sorts last, never ahead of a known one", () => {
+  const units = [
+    { orderLabel: "1 - 1", rai: 0, ngan: 0, wa: 40, sizeUnit: "wa", startPrice: 1, status: null },
+    { orderLabel: "1 - 2", rai: 0, ngan: 0, wa: 40, sizeUnit: "wa", startPrice: 1, status: "sold" as const },
+  ];
+  expect(representativeUnit(units, "statusFirst").orderLabel).toBe("1 - 2");
+});
+
+test("statusFirst breaks a status tie on order_label", () => {
+  const tie = [
+    { orderLabel: "1 - 5", rai: 0, ngan: 0, wa: 40, sizeUnit: "wa", startPrice: 1, status: "sale" as const },
+    { orderLabel: "1 - 2", rai: 0, ngan: 0, wa: 40, sizeUnit: "wa", startPrice: 1, status: "sale" as const },
+  ];
+  expect(representativeUnit(tie, "statusFirst").orderLabel).toBe("1 - 2");
+});

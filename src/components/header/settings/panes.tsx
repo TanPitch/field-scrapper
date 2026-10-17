@@ -314,6 +314,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <span className={fl}>หน่วยที่แสดงบนจุด</span>
         <Seg<CondoUnitOrder>
           items={[
+            ['statusFirst', 'กำลังขายก่อน'],
             ['sizeDesc', 'ใหญ่สุด'],
             ['sizeAsc', 'เล็กสุด'],
             ['priceAsc', 'ราคาต่ำสุด'],

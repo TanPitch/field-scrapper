@@ -34,7 +34,27 @@ export interface CondoUnit {
   /** "wa" for square wa, "sqm" for square metres (condominium units). */
   sizeUnit?: string | null;
   startPrice?: number | null;
+  /** Auction status, used by the statusFirst cascade. Optional so fixture data
+   *  that predates the field still sorts rather than failing to typecheck. */
+  status?: "sale" | "sold" | "inactive" | null;
 }
+
+/* Which status stands in for the building, and in what order.
+ *
+ * The map exists to answer "where is land on sale now", so a building where one
+ * unit is still selling and another already went must be represented by the one
+ * still selling - otherwise the dot reports a finished sale and the user walks
+ * to a plot that is off the market. Resale ('sale' with the resell flag set) is
+ * the same rank as a first listing: it is on the market either way.
+ *
+ *   sale      still selling
+ *   inactive  the auction closed with no buyer
+ *   sold      bought
+ *
+ * Anything unknown sorts last rather than first. Guessing "probably still
+ * selling" for a status we do not recognise would put unknown data in front of
+ * known data, which is the exact failure this ordering exists to prevent. */
+const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, sold: 2 };
 
 /** Total square wa for a lot. Condo lots may be in square metres. */
 function areaWa(u: CondoUnit): number {
@@ -51,7 +71,7 @@ function areaWa(u: CondoUnit): number {
  *               startPrice and orderLabel.
  * @returns the unit that represents the building, or null when there are none.
  */
-export type CondoUnitOrder = "orderLabel" | "priceAsc" | "priceDesc" | "sizeAsc" | "sizeDesc";
+export type CondoUnitOrder = "orderLabel" | "priceAsc" | "priceDesc" | "sizeAsc" | "sizeDesc" | "statusFirst";
 
 /**
  * Which unit stands in for a condominium building on the map.
@@ -86,6 +106,7 @@ export function representativeUnit<T extends CondoUnit>(
     priceAsc: (a, b) => byPrice(a, b, 1),
     priceDesc: (a, b) => byPrice(a, b, -1),
     orderLabel: () => 0,
+    statusFirst: (a, b) => statusRank(a) - statusRank(b),
   };
 
   const lead = cmp[order] ?? cmp.sizeDesc;
@@ -107,6 +128,13 @@ export function representativeUnit<T extends CondoUnit>(
  * would flip between them depending only on which sort the user picked. A lot
  * LED has not priced is not an extreme, it is simply unknown.
  */
+function statusRank(u: CondoUnit): number {
+  const r = u.status == null ? undefined : STATUS_RANK[u.status];
+  /* Unknown and missing sort after every known status, in that order, so the
+     ordering never depends on where an unrecognised value happened to land. */
+  return r == null ? STATUS_RANK.sold + 1 + (u.status == null ? 0 : 0.5) : r;
+}
+
 function byPrice(a: CondoUnit, b: CondoUnit, dir: 1 | -1): number {
   const pa = a.startPrice;
   const pb = b.startPrice;

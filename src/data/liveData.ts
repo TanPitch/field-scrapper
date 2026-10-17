@@ -18,6 +18,7 @@
  */
 import { api, type ApiParcelProps, type ApiRound } from '../lib/api';
 import { landKindOf } from '../components/ui/LandKindIcon';
+import { groupUnitsByParcel, representativeUnit, type CondoUnitOrder } from '../lib/condoUnits';
 import type { HistPoint, Parcel, PriceEvent, SellRound, Status } from '../types';
 import { FALLBACK_PARCELS } from './mockData';
 
@@ -171,6 +172,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   return {
     id,
     lotId: (p.lotId as number | null) ?? undefined,
+    parcelId: id,
     status,
     wah: land,
     price: lastPrice,
@@ -259,6 +261,32 @@ export const getDataOrigin = (): DataSourceKind => origin;
 
 let origin: DataSourceKind = 'fixtures';
 
+/* Which unit of a multi-unit parcel stands in for the building wherever a parcel
+ * is looked up by id - the popup, the detail panel, the selected row.
+ *
+ * This used to be "whichever row was written last", because every unit of a
+ * building carries the same parcel id and the map iterated them into the index.
+ * The dot and the popup could then disagree, and a building with one unit still
+ * selling and another already sold could be represented by the finished one.
+ * Resolving it here means the call sites cannot get it wrong. */
+let unitOrder: CondoUnitOrder = 'sizeDesc';
+
+function reindex() {
+  PARCEL_BY_ID.clear();
+  for (const group of groupUnitsByParcel(ALL_PARCELS).values()) {
+    const rep = representativeUnit(group, unitOrder) ?? group[0];
+    if (rep) PARCEL_BY_ID.set(rep.id, rep);
+  }
+}
+
+/** Apply the user's unit cascade to the lookup index. No-op when unchanged. */
+export function setUnitOrder(next: CondoUnitOrder): void {
+  if (next === unitOrder) return;
+  unitOrder = next;
+  reindex();
+  listeners.forEach((fn) => fn());
+}
+
 const listeners = new Set<() => void>();
 const onChange = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 
@@ -266,8 +294,7 @@ function publish(rows: Parcel[], kind: DataSourceKind) {
   ALL_PARCELS.length = 0;
   for (const p of rows) ALL_PARCELS.push(p);
 
-  PARCEL_BY_ID.clear();
-  for (const p of rows) PARCEL_BY_ID.set(p.id, p);
+  reindex();
 
   origin = kind;
   listeners.forEach((fn) => fn());
