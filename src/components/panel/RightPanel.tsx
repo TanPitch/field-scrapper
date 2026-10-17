@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
-import { useEffect, type ReactNode } from 'react';
+import { Component, useEffect, type ReactNode } from 'react';
 import { deselectPin, setRight } from '../../store/actions';
 import { clearSearchSelection } from '../../map/pins';
 import { useApp } from '../../store/useApp';
@@ -17,6 +17,29 @@ const TITLES: Record<RightView, string> = {
   results: 'ผลการค้นหา', overlay: 'ตั้งค่าเลย์เยอร์', draw: 'เครื่องมือวาด', area: 'ตั้งค่าพื้นที่', detail: 'รายละเอียดที่ดิน',
   cctv: 'กล้อง CCTV', sensor: 'เซ็นเซอร์น้ำ', 'pins-settings': 'เซ็นเซอร์น้ำ/เขื่อน — ตั้งค่า', transport: 'รถประจำทาง', 'transport-settings': 'รถประจำทาง — ตั้งค่า', search: 'ค้นหาที่ดิน',
 };
+
+/* Keeps one bad parcel from taking down the map and the table.
+ *
+ * A throw inside the detail panel unmounted the whole tree above it, so a single
+ * lot with no price history blacked out the entire app - the user lost the map
+ * and the list over one row. Two separate charts had this failure, which makes
+ * it a property of the panel rather than of one component, so the boundary goes
+ * around the panel. React needs a class here; function components cannot catch. */
+class PanelGuard extends Component<{ children: ReactNode }, { err: string | null }> {
+  state = { err: null as string | null };
+  static getDerivedStateFromError(e: unknown) { return { err: e instanceof Error ? e.message : String(e) }; }
+  render() {
+    if (this.state.err == null) return this.props.children;
+    return (
+      <div className="space-y-2 p-4 text-[11px] text-dim2">
+        <div className="font-medium text-ink">เปิดรายละเอียดไม่ได้</div>
+        <div>ข้อมูลแปลงนี้ทำให้แผงนี้แสดงผลไม่ได้ แผนที่และตารางยังใช้งานได้</div>
+        <code className="block break-words rounded bg-panel2 p-2 text-[10px]">{this.state.err}</code>
+        <button className="rounded border border-line px-2 py-1 hover:bg-panel2" onClick={() => this.setState({ err: null })}>ลองอีกครั้ง</button>
+      </div>
+    );
+  }
+}
 
 export function RightPanel({ small }: { small: boolean }) {
   const view = useApp(s => s.rpView);
@@ -40,7 +63,7 @@ useEffect(() => { if (!open) { deselectPin(); clearSearchSelection(); } }, [open
   if (view === 'transport' && transport) title = 'รถประจำทาง — ' + transport.name;
 
   const body: Record<RightView, ReactNode> = {
-    results: <ResultsView />, overlay: <OverlayView />, draw: <DrawView />, area: <AreaView />, detail: <DetailView />,
+    results: <ResultsView />, overlay: <OverlayView />, draw: <DrawView />, area: <AreaView />, detail: <PanelGuard><DetailView /></PanelGuard>,
     cctv: <CctvView />, sensor: <SensorView />, 'pins-settings': <PinSettingsView />, transport: <TransportView />, 'transport-settings': <TransportSettingsView />, search: <SearchView />,
   };
 

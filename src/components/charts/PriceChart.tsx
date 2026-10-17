@@ -102,6 +102,12 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     /* A single point cannot draw a line. Fall back to the full history so the
        chart still shows something rather than an empty box. */
     const plot = past.length >= 2 ? past : p.hist;
+    /* No price history at all, so there is no first point and nothing to draw.
+       Everything below reads plot[0] and plot[plot.length - 1]; without this the
+       lot has no rounds published and the panel died on `plot[0].d`. Safe to
+       return here because this is an effect body, not the render - an early
+       return between hooks is what broke the range slider. */
+    if (!plot.length) return;
 
     /* The next round's price is computable — the discount ladder is public
        arithmetic, not a guess — so it belongs on the chart. It is drawn as a
