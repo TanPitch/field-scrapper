@@ -96,8 +96,17 @@ export async function getQuota(client, { date, limit = 20 } = {}) {
  * Queue every parcel that has no coordinates yet, prioritised by its soonest
  * upcoming round. Idempotent: re-running updates priority and leaves done rows
  * alone.
+ *
+ * `only` narrows it to a set of parcel ids. It exists for the integration
+ * tests, which run against the real dev database and would otherwise enqueue
+ * every unresolved parcel in it - 5000 rows, 8.5 seconds, past bun's 5s default,
+ * so all of them reported as timeouts. Scoping to the fixture is both faster
+ * and what the test file says it wanted.
  */
-export async function enqueueUnresolved(client, { limit = 5000 } = {}) {
+export async function enqueueUnresolved(client, { limit = 5000, only = null } = {}) {
+    /* $2 is a bigint[]; passing null means "no filter", and `id = ANY(null)`
+       is null for every row, which would queue nothing at all. */
+    const scope = only == null ? '' : 'AND p.id = ANY($2::bigint[])';
     const { rows } = await client.query(
         `
         WITH urgency AS (
@@ -120,7 +129,8 @@ export async function enqueueUnresolved(client, { limit = 5000 } = {}) {
                    ) - CURRENT_DATE END AS priority
               FROM parcels p
              WHERE p.dol_lat IS NULL
-             LIMIT $1
+              ${scope}
+              LIMIT $1
         )
         INSERT INTO coord_queue (parcel_id, state, priority, priority_at)
         SELECT parcel_id, 'pending', priority, now() FROM urgency
@@ -137,7 +147,11 @@ export async function enqueueUnresolved(client, { limit = 5000 } = {}) {
                                            AND coord_queue.next_attempt_at <= now()
                                       THEN now() ELSE coord_queue.next_attempt_at END
         RETURNING parcel_id, priority, state`,
-        [limit],
+        /* Postgres rejects a bind message with more values than the statement
+           has placeholders: 08P01, "bind message supplies 2 parameters, but
+           prepared statement requires 1". So the scope parameter only travels
+           when the scope clause is actually in the SQL. */
+        scope ? [limit, only] : [limit],
     );
     return rows;
 }

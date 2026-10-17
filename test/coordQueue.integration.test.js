@@ -31,7 +31,7 @@ const ok = (over = {}) => ({
  *  onto the real ingested parcels. */
 async function freshQueue() {
     await client.query(`DELETE FROM coord_queue`);
-    await enqueueUnresolved(client);
+    await enqueueUnresolved(client, { only: made.parcels });
     await client.query(
         `DELETE FROM coord_queue WHERE parcel_id NOT IN (SELECT unnest($1::bigint[]))`,
         [made.parcels]);
@@ -43,11 +43,30 @@ before(async () => {
     client = new Client({ connectionString: url });
     await client.connect();
 
-    // A previous interrupted run must not poison this one.
+    /* A previous interrupted run must not poison this one.
+     *
+     * Children before parents. This only ever held coord_queue, so it worked
+     * until an interrupted run left its auction_lots behind - and then the
+     * parcels delete raised a foreign key violation from auction_lots, the
+     * before hook threw, and every test below then timed out at 5000 ms waiting
+     * on a client that had already failed. All eleven failures were one missing
+     * DELETE, not eleven bugs.
+     *
+     * Scoped to the 9900% fixture namespace, which is what this file owns. */
+    const FIXTURE = `deed_number LIKE '9900%'`;
+    await client.query(`DELETE FROM coord_queue WHERE parcel_id IN (SELECT id FROM parcels WHERE ${FIXTURE})`);
     await client.query(
-        `DELETE FROM coord_queue
-          WHERE parcel_id IN (SELECT id FROM parcels WHERE deed_number LIKE '9900%')`);
-    await client.query(`DELETE FROM parcels WHERE deed_number LIKE '9900%'`);
+        `DELETE FROM auction_rounds
+          WHERE lot_id IN (SELECT l.id FROM auction_lots l
+                             JOIN parcels p ON p.id = l.parcel_id WHERE p.${FIXTURE})`);
+    await client.query(
+        `DELETE FROM lot_images
+          WHERE lot_id IN (SELECT l.id FROM auction_lots l
+                             JOIN parcels p ON p.id = l.parcel_id WHERE p.${FIXTURE})`);
+    await client.query(
+        `DELETE FROM auction_lots
+          WHERE parcel_id IN (SELECT id FROM parcels WHERE ${FIXTURE})`);
+    await client.query(`DELETE FROM parcels WHERE ${FIXTURE}`);
 
     await client.query(`INSERT INTO provinces (code, name, dol_code)
                        VALUES (40, 'ขอนแก่น', 40) ON CONFLICT (code) DO NOTHING`);
@@ -139,7 +158,7 @@ test("classify handles a not-found response", () => {
 
 test("enqueueUnresolved only queues parcels without coordinates", async () => {
     await client.query(`DELETE FROM coord_queue`);
-    const rows = await enqueueUnresolved(client);
+    const rows = await enqueueUnresolved(client, { only: made.parcels });
     assert.ok(rows.length >= 25, `expected at least 25 queued, got ${rows.length}`);
 
     const { rows: done } = await client.query(
@@ -184,7 +203,7 @@ test("a parcel that already has coordinates is never re-queried", async () => {
     await client.query(`UPDATE parcels SET dol_lat=16.4, dol_lon=102.8 WHERE id=$1`, [target]);
 
     await client.query(`DELETE FROM coord_queue`);
-    await enqueueUnresolved(client);
+    await enqueueUnresolved(client, { only: made.parcels });
     const { rows } = await client.query(
         `SELECT parcel_id FROM coord_queue WHERE parcel_id=$1`, [target]);
     assert.equal(rows.length, 0, "a parcel with coordinates must not be queued");
