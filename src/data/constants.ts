@@ -35,9 +35,10 @@ export const STATUS: Record<PopupKind, { th: string }> = {
   sold: { th: 'ขายแล้ว' },
   inactive: { th: 'หมดอายุประกาศ' },
   withdrawn: { th: 'ถอนการยึด' },
+  cancelled: { th: 'งดขายในนัดที่เหลือ' },
   re: { th: 'นำกลับมาขายใหม่' },
 };
-export const STATUS_KEYS: Status[] = ['sale', 'sold', 'inactive', 'withdrawn'];
+export const STATUS_KEYS: Status[] = ['sale', 'sold', 'inactive', 'withdrawn', 'cancelled'];
 
 export const POP_FIELDS: [PopupField, string][] = [
   ['size', 'ขนาดที่ดิน'], ['perWah', 'ราคา/ตร.วา'], ['announce', 'วันประกาศขาย'],
@@ -48,6 +49,7 @@ export const POP_KINDS: [PopupKind, string, Status][] = [
   ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'],
   ['re', 'นำกลับมาขายใหม่', 'sale'], ['inactive', 'หมดอายุประกาศ', 'inactive'],
   ['withdrawn', 'ถอนการยึด', 'withdrawn'],
+  ['cancelled', 'งดขายในนัดที่เหลือ', 'cancelled'],
 ];
 export const LB_FIELDS: [LightboxField, string][] = [
   ['name', 'ชื่อแปลง'], ['status', 'สถานะ'], ['price', 'ราคา'], ['size', 'ขนาด'], ['deed', 'เลขโฉนด'], ['soldTs', 'วันขายออก'],
@@ -63,6 +65,7 @@ export const DEFAULT_POPUP_CFG: PopupConfig = {
      Price per ตร.ว. is withheld for the same reason as inactive: there is no
      auction left for it to mean anything about. */
   withdrawn: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
+  cancelled: { size: true, perWah: false, announce: true, soldTs: false, resale: false, deed: true },
 };
 export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
   name: true, status: true, price: true, size: true, deed: false, soldTs: false,
@@ -75,8 +78,10 @@ export const DEFAULT_LB_CFG: Record<LightboxField, boolean> = {
 export const DEFAULT_POP_COLORS: Record<PopupKind, string> = {
   sale: '#E5484D', sold: '#8B9096', re: '#242424', inactive: '#5C5247',
   /* Cooler and darker than the inactive brown: withdrawn is a dead end rather
-     than an expired listing, and the two should be told apart at a glance. */
-  withdrawn: '#3E4A5C',
+     than an expired listing, and the two should be told apart at a glance.
+     cancelled sits between them - it ran rounds and gave up, it did not lose
+     the asset. */
+  withdrawn: '#3E4A5C', cancelled: '#4A5568',
 };
 
 export const PRESET_COLORS = [

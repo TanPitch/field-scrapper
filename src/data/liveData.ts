@@ -115,18 +115,26 @@ function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], a
     const sold = rounds.find((r) => r.statusCode === 1);
     const at = roundToHist[rounds.indexOf(sold ?? rounds[0])] ?? -1;
     if (at >= 0) out.push({ idx: at, label: 'ขายออกแล้ว', color: '#9BA1A6', ink: '#101211' });
-  } else if (status === 'inactive') {
+  } else if (status === 'inactive' || status === 'withdrawn' || status === 'cancelled') {
     /* The last round that actually produced a point. Indexing rounds.length-1
        assumes every round made it into hist, which is false whenever one lacks a
        price or a date - and reading past the end crashed the panel. */
     const last = [...roundToHist].reverse().find(i => i >= 0) ?? -1;
-    if (last >= 0) out.push({ idx: last, label: 'หมดอายุประกาศ ไม่มีผู้สู้ราคา', color: '#5C5247', ink: '#fff' });
+    /* One label per reason. All three used to render as หมดอายุประกาศ ไม่มีผู้สู้ราคา,
+       which told the user a listing had run out when in fact the court had lifted
+       the attachment - the parcel left the market, the auction did not expire. */
+    const dead = status === 'withdrawn'
+      ? { label: 'ถอนการยึด ไม่ดำเนินการขาย', color: '#3E4A5C', ink: '#fff' }
+      : status === 'cancelled'
+        ? { label: 'งดขายในนัดที่เหลือ', color: '#4A5568', ink: '#fff' }
+        : { label: 'หมดอายุประกาศ ไม่มีผู้สู้ราคา', color: '#5C5247', ink: '#fff' };
+    if (last >= 0) out.push({ idx: last, ...dead });
   }
   return out;
 }
 
 function mapStatus(raw: string | null): Status {
-  return raw === 'sold' || raw === 'inactive' || raw === 'withdrawn' ? raw : 'sale';
+  return raw === 'sold' || raw === 'inactive' || raw === 'withdrawn' || raw === 'cancelled' ? raw : 'sale';
 }
 
 /** One API feature -> a Parcel the rest of the app can render unchanged. */

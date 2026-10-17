@@ -340,7 +340,7 @@ FROM parcels p
                 sizeUnit: r.size_unit,
                 wah: r.size_unit === 'sqm' ? null : sqWa(r.size_rai, r.size_ngan, r.size_wa),
                 askingPrice: toNum(r.start_price), askingSource: r.start_price_src,
-                status: mapStatus(r.status, r.close_reason, r.close_code, r.remark),
+                status: mapStatus(r.status, r.close_reason, r.close_code),
                 nextRound: isoDate(r.next_round_date),
                 closeReason: r.close_reason,
                 /* The LED cascade's opening price — what the "smart price"
@@ -490,17 +490,24 @@ app.get("/api/parcels/:id", async (req, res) => {
  * a seizure revoked or a cancelled remainder is not a sale, and showing it as
  * "ขายแล้ว" would be a straightforward lie.
  */
-function mapStatus(status, closeReason, closeCode, remark) {
-  /* ถอนการยึด - the attachment was lifted, so this case will not be auctioned
-   * again. It has to be read before the status checks below: LED leaves some of
-   * these lots flagged active, and an active lot becomes "กำลังขาย", which then
-   * advertises a next auction date for land that is permanently off the market.
-   * Neither หมดอายุประกาศ nor ขายแล้ว is true either - nothing was ever sold.
+function mapStatus(status, closeReason, closeCode) {
+  /* The reason is LED's own enum, not prose, and those two values are dead ends
+   * that must not be reported as an expiry:
    *
-   * Matched on the reason text rather than a code because LED does not publish
-   * one for this; the wording varies ("ถอนการยึด", "ถอนการยึดทรัพย์", and
-   * "ยึดทรัพย์" alone), so it is a substring test on the whole reason string. */
-  if (/ถอนการยึด|ยึดทรัพย์/.test(String(closeReason ?? '') + ' ' + String(remark ?? ''))) return 'withdrawn';
+   *   withdrawn                  ถอนการยึด - attachment lifted
+   *   cancelled_remaining_rounds งดขายในนัดที่เหลือ - no sale in the rounds left
+   *
+   * Both run before the status checks, because LED leaves some of these lots
+   * flagged active and an active lot becomes กำลังขาย, which then advertises a
+   * next auction date for land that will not be auctioned again. Neither was sold
+   * either, so ขายแล้ว is equally a lie.
+   *
+   * The full set of values in the table is null, sold, withdrawn and
+   * cancelled_remaining_rounds - 4524 / 600 / 321 / 348 lots. An earlier attempt
+   * matched Thai text here and could never fire, because LED never writes Thai
+   * into this column. */
+  if (closeReason === 'withdrawn') return 'withdrawn';
+  if (closeReason === 'cancelled_remaining_rounds') return 'cancelled';
   if (status === 'active') return 'sale';
   if (status === 'inactive') return 'inactive';
   if (closeCode === 1 || closeReason === 'sold') return 'sold';

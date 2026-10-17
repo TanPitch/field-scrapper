@@ -348,6 +348,16 @@ body.reduce-motion .spin-keep {
   padding: 2px 9px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.17);
+}
+
+/* Status, source, land kind and the unit count used to sit on two rows, the
+   status pill floating above a separate meta line. One row of pills reads as one
+   set of facts about the same parcel. */
+.pop-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 6px;
 }
 .pop-price {
@@ -408,12 +418,6 @@ body.reduce-motion .spin-keep {
   padding-right: 12px;
 }
 /* data source + land-kind badges on the full popup */
-.pop-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 4px 0 5px;
-}
 .pop-src,
 .pop-kind {
   font: 500 9.5px 'Noto Sans Thai', sans-serif;
@@ -525,25 +529,4 @@ body.fs-land-off .sp-pin {
 /* Hand-off links at the foot of the full popup. `display: inline-flex` keeps
    the <a> boxes tight to their labels; without it the anchors stretch across
    the popup and the whole width reads as one giant link. */
-  .pop-geo {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    padding-top: 7px;
-    border-top: 1px solid var(--line);
-  }
-  .pop-geo a {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 9px;
-    border: 1px solid var(--line2);
-    border-radius: 6px;
-    background: var(--panel2);
-    color: var(--ink);
-    font-size: 11px;
-    line-height: 1.5;
-    text-decoration: none;
-  }
-  .pop-geo a:hover {
-    border-color: var(--line3);
-  }
+  

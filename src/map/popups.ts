@@ -15,7 +15,7 @@ import { landKindSvg, unitBadge } from './parcelLabels';
 
 export const popupKind = (p: Parcel): PopupKind => (p.resell && p.status === 'sale' ? 're' : p.status);
 
-function popupContent(p: Parcel, withGeoLinks = false): { html: string; bg: string } {
+function popupContent(p: Parcel): { html: string; bg: string } {
   const s = getApp();
   const kind = popupKind(p), cfg = s.popupCfg[kind];
   const row = (l: string, v: string) => `<div class="pop-row"><span>${l}</span><b>${v}</b></div>`;
@@ -78,23 +78,14 @@ function popupContent(p: Parcel, withGeoLinks = false): { html: string; bg: stri
   const kindBadge = s.showLandKindIcon
     ? `<span class="pop-kind" data-kind="${p.landKind}">${LAND_KIND_LABEL[p.landKind]}</span>`
     : '';
-  /* Hand-off links are only for a deliberate click. On hover the popup is a
-     glance, not a decision, so the buttons stay out of it — two links under a
-     cursor that is only passing through are targets you hit by accident, and
-     the hover box is also what shows up over neighbouring pins. */
-  const q = `${p.lat},${p.lng}`;
-  const geoLinks = withGeoLinks
-    ? `<div class="pop-geo">`
-      + `<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener noreferrer">แผนที่</a>`
-      + `<a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${q}&heading=0&pitch=0&fov=90" target="_blank" rel="noopener noreferrer">Street View</a>`
-      + `</div>`
-    : '';
+  /* Hand-off links removed: the map is already the map, and Street View is a
+     second trip out of the app for something the popup tells you anyway. */
   return {
     html: `<div class="pop-box" data-selectable>`
-      + `<span class="pop-tag">${STATUS[kind].th}</span>`
-      + `<div class="pop-meta"><span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}</div>`
+      + `<div class="pop-tags"><span class="pop-tag">${STATUS[kind].th}</span>`
+      + `<span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}</div>`
       + priceHtmlFull(p)
-      + `<div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}${geoLinks}</div>`,
+      + `<div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}</div>`,
     bg,
   };
 }
@@ -173,8 +164,13 @@ export function setPopupDismissHandler(fn: (() => void) | null): void {
 
 export function openClickPopup(p: Parcel | undefined): void {
   if (!p) return;
+  /* A pinned popup replaces the hover one. They are two Popup instances at the
+     same coordinate, so without this, hovering a marker and then clicking it
+     left both on screen, stacked. The hover handler already refuses to open a
+     second popup on a pinned marker; this covers the other order. */
+  closeHoverPopup();
 const { click } = ensurePopups();
-  const { html, bg } = popupContent(p, true);
+  const { html, bg } = popupContent(p);
   clickPopId = p.id;
   click.setLngLat([p.lng, p.lat]).setHTML(html).addTo(requireMap());
   click.getElement().style.setProperty('--pc', bg);
@@ -182,7 +178,7 @@ const { click } = ensurePopups();
 export function openHoverPopup(p: Parcel | undefined): void {
   if (!p) return;
 const { hover } = ensurePopups();
-  const { html, bg } = popupContent(p, false);
+  const { html, bg } = popupContent(p);
   hoverPopId = p.id;
   hover.setLngLat([p.lng, p.lat]).setHTML(html).addTo(requireMap());
   hover.getElement().style.setProperty('--pc', bg);

@@ -379,10 +379,13 @@ export function DetailView() {
         <PriceHeadline p={p} />
       </div>
 
-      {/* Not sold, not expired - lifted. A scheduled round may still sit in the
-          data, but the case will not be auctioned, so advertising a date is a
-          promise the office has already withdrawn. */}
-      {hasUpcoming && upcoming?.date != null && kind !== "sold" && p.status !== "withdrawn" && (
+      {/* Only for land still in an auction. Listing every non-sold status here
+          was the bug: a scheduled round survives in the data after the court
+          lifted the attachment, so ถอนการยึด and งดขายในนัดที่เหลือ both got a
+          countdown to a sale that was never going to happen. Gating on the
+          status rather than blacklisting the ones we know about means a status
+          added later cannot leak through either. */}
+      {hasUpcoming && upcoming?.date != null && (kind === "sale" || kind === "re") && (
         <div className="my-2 flex items-center gap-2 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-[11.5px] font-semibold text-accent">
           <span className="flex-none rounded-full bg-accent px-2 py-[2px] font-display text-[10px] text-accent-ink">
             {daysLeft === 0 ? 'วันนี้' : `อีก ${daysLeft} วัน`}

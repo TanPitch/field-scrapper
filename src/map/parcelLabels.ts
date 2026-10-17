@@ -120,7 +120,7 @@ function labelHtml(p: Parcel, showDate: boolean): string {
 export function unitBadge(p: { lotCount?: number | null }): string {
   const n = p.lotCount ?? 1;
   if (n <= 1) return '';
-  return `<span class="whitespace-nowrap rounded-[3px] bg-black/45 px-[3px] py-[1px] text-[8.5px] font-bold leading-none text-white">×${n}</span>`;
+  return `<span class="whitespace-nowrap rounded-full bg-black/45 px-[7px] py-[1px] text-[9.5px] font-semibold leading-none text-white">×${n}</span>`;
 }
 
 /**

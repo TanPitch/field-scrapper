@@ -58,7 +58,7 @@ export interface CondoUnit {
  * Anything unknown sorts last rather than first. Guessing "probably still
  * selling" for a status we do not recognise would put unknown data in front of
  * known data, which is the exact failure this ordering exists to prevent. */
-const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, sold: 2, withdrawn: 3 };
+const STATUS_RANK: Record<string, number> = { sale: 0, inactive: 1, cancelled: 2, sold: 3, withdrawn: 4 };
 
 /** Total square wa for a lot. Condo lots may be in square metres. */
 function areaWa(u: CondoUnit): number {
