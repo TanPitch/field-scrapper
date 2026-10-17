@@ -423,7 +423,11 @@ body.reduce-motion .spin-keep {
   background: rgba(0, 0, 0, 0.22);
   color: #fff;
 }
-.pop-kind[data-kind='building'] {
+/* LandKind values. The two kinds that put something on the parcel carry the
+   light pill so they read against the dark price line; 'empty' and
+   'vacant_land' fall through to the default dark pill above. */
+.pop-kind[data-kind='land_with_buildings'],
+.pop-kind[data-kind='condominium_unit'] {
   background: rgba(255, 255, 255, 0.92);
   border-color: rgba(0, 0, 0, 0.22);
   color: #1A1E14;

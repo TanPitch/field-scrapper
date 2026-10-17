@@ -14,24 +14,18 @@
  * Icons come from lucide-react (rendered once to static markup) and every style
  * is a Tailwind utility, so they behave like the rest of the app.
  */
-import { Building, Building2, Factory, Grid2X2, House, LandPlot, SquareDashed, Wheat } from 'lucide-react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { esc, fdate, numDate } from '../lib/format';
 import { landTypeOf } from '../lib/landType';
 import { nextRoundPrice } from '../lib/price';
 import { getApp } from '../store/useApp';
-import type { LandKind, Parcel } from '../types';
+import type { Parcel } from '../types';
 import { getMap } from './mapRef';
+import { LandKindIcon } from '../components/ui/LandKindIcon';
 
 /** Vertical gap between the parcel dot and the top of the label, in px. */
 export const PARCEL_LABEL_OFFSET = 14;
-
-/* Lucide markup, rendered once. `currentColor` keeps the icon on the block colour. */
-const ICON_B = renderToStaticMarkup(createElement(Building, { size: 12, strokeWidth: 2.4, 'aria-hidden': 'true' }));
-const ICON_E = renderToStaticMarkup(createElement(Grid2X2, { size: 12, strokeWidth: 2.4, 'aria-hidden': 'true' }));
-
-export const kindIcon = (k: LandKind): string => (k === 'building' ? ICON_B : ICON_E);
 
 let host: HTMLDivElement | null = null;
 let rows = new Map<number, HTMLDivElement>();
@@ -84,7 +78,7 @@ function labelHtml(p: Parcel, showDate: boolean): string {
   const next = nextRoundPrice(p, now);
   const lt = landTypeOf(p.propertyType);
   const iconEl = app.showLandKindIcon
-  ? `<span class="inline-flex flex-none items-center opacity-95 [&>svg]:size-[11px]">${landTypeSvg(lt.icon)}</span>`
+  ? `<span class="inline-flex flex-none items-center opacity-95 [&>svg]:size-[11px]">${landTypeSvg(p.landKind)}</span>`
   : '';
   const title = lt.label ?? p.propertyType ?? 'ที่ดิน';
 
@@ -137,12 +131,12 @@ export function unitBadge(p: { lotCount?: number | null }): string {
  * Keeps the stroke consistent with the rest of the app and avoids the emoji
  * fallback problem (tofu boxes wherever the emoji font is missing).
  */
-const ICONS = { House, Building2, Factory, Wheat, SquareDashed, LandPlot } as const;
 
-function landTypeSvg(name: keyof typeof ICONS): string {
-  const Icon = ICONS[name];
-  if (!Icon) return '';
-  return renderToStaticMarkup(createElement(Icon, { size: 11, strokeWidth: 2.2 }));
+function landTypeSvg(kind: string): string {
+  if (!kind) return '';
+  return renderToStaticMarkup(
+    createElement(LandKindIcon, { kind, size: 11 })
+  );
 }
 
 /** Compact money for the label: 5M not 5.0M, and a ฿ only when the user asked. */

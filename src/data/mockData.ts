@@ -162,7 +162,7 @@ function generateParcels(): Parcel[] {
         lastTs: soldTs ?? announce,
 saleByText: mortgage ? `${mortgage.amount.toLocaleString('en-US')} ติดจำนอง ${mortgage.bank}` : 'ปลอดการจำนอง',
         dataSource: pick(DATA_SOURCES),
-        landKind: rnd() < 0.32 ? 'building' : 'empty',
+        landKind: pick(['vacant_land', 'land_with_buildings', 'condominium_unit', 'empty']),
         ownerFile: personName(rnd),
         propertyType: pick(TYPES),
         deedNo: deedNo,

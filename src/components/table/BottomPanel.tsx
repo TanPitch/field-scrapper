@@ -7,7 +7,8 @@ import { btn, btnAcc, iconBtn } from '../ui/styles';
 import { useTipProps } from '../ui/Tip';
 import { showRight } from '../../store/actions';
 import { ColumnPicker } from './ColumnPicker';
-import { DataSourceBanner } from './DataSourceBanner';
+/* DataSourceBanner is commented out at the render site; the import went with it,
+   otherwise tsc fails the build on an unused binding. */
 import { DataTable } from './DataTable';
 import { FilterPopup } from './FilterPopup';
 
@@ -76,7 +77,7 @@ export function BottomPanel({ small }: { small: boolean }) {
         <button className={btnAcc} {...useTipProps('เปิดแผงค้นหาพื้นที่ในแผงขวา')} onClick={() => { patchApp({ searchPrefill: filters.text || '' }); showRight('search'); }}><Crosshair size={14} />ค้นหาพื้นที่</button>
         <button className={iconBtn} {...useTipProps('ย่อ/ขยายตาราง')} onClick={snap}><ChevronDown size={17} className={`transition-transform duration-200 ${flipped ? '' : 'rotate-180'}`} /></button>
       </div>
-        <DataSourceBanner />
+        {/* <DataSourceBanner /> */}
         <DataTable />
       {colAnchor && <ColumnPicker anchor={colAnchor} onClose={() => setColAnchor(null)} />}
       {fltAnchor && <FilterPopup anchor={fltAnchor} onClose={() => setFltAnchor(null)} />}

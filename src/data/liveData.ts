@@ -17,6 +17,7 @@
  * parcels that looks real is worse than an honest empty state.
  */
 import { api, type ApiParcelProps, type ApiRound } from '../lib/api';
+import { landKindOf } from '../components/ui/LandKindIcon';
 import type { HistPoint, Parcel, PriceEvent, SellRound, Status } from '../types';
 import { FALLBACK_PARCELS } from './mockData';
 
@@ -194,7 +195,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     lastTs: now,
     saleByText: '',
     dataSource: 'กรมบังคับคดี',
-    landKind: 'empty',
+    landKind: landKindOf(p.assetType),
     ownerFile: p.plaintiff ?? p.owner ?? '',
     propertyType: p.assetType ?? '',
     /* Carried straight through: the marker badge and the unit cycler both key
