@@ -83,12 +83,6 @@ export function useMapSync(): void {
          the user's criterion so the dot is explainable, and `units` carries the
          siblings so the label and popup can say how many assets are behind it.
          The table still lists every lot. */
-        /* The popup and the detail panel resolve a parcel through PARCEL_BY_ID, so
-       the cascade has to be pushed into that index as well as into the marker
-       rows - otherwise the dot picks one unit by the user's order and the popup
-       still shows whichever one the API happened to return last. */
-    useEffect(() => { setUnitOrder(condoUnitOrder); }, [condoUnitOrder]);
-
       const markers = markerRows(rows.vis, s.condoUnitOrder);
       setSourceData('parcels', fc(markers.map(m => ptF([m.unit.lng, m.unit.lat], {
         id: m.id,
