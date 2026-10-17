@@ -169,7 +169,7 @@ app.get("/api/status", async (_req, res) => {
         SELECT r.id, r.stage, r.province_code, p.name AS province_name,
                r.started_at_t AS started_at,
                r.finished_at, r.last_step, r.pages, r.lots_seen, r.lots_new,
-               r.error_count, r.detail,
+               r.error_count, r.notes, r.detail,
                extract(epoch FROM (coalesce(r.finished_at, now()) - r.started_at_t))::int AS duration_s
           FROM scrape_runs r
           LEFT JOIN provinces p ON p.code = r.province_code
@@ -226,6 +226,13 @@ app.get("/api/status", async (_req, res) => {
                 pages: r.pages, lotsSeen: r.lots_seen, lotsNew: r.lots_new,
                 errors: r.error_count,
                 outcome: r.error_count > 0 ? "failed" : "ok",
+                /* The history pane reads lastStep and notes, and neither was ever
+                   sent - it has been rendering a blank line for every run while
+                   the data sat in the table. Both are populated by the scrapers;
+                   the resolver's note is the DOL tally, which is the only place
+                   that count is written down anywhere. */
+                lastStep: r.last_step,
+                notes: r.notes,
                 detail: r.detail,
             })),
     });
