@@ -17,14 +17,13 @@ export function RangeSlider({ parcel: p }: { parcel: Parcel }) {
   const track = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Handle | null>(null);
 
-  /* A lot with no price history has nothing to slide. p.hist is empty, so the
-     * first and last reads below both threw and took the whole detail panel
-     * down with it - an empty chart is not worth an error boundary. */
-  if (!p.hist.length) {
-    return <div className="py-3 text-center text-[10.5px] text-dim2">ไม่มีข้อมูลราคา</div>;
-  }
-
-  const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
+  /* A lot with no price history has nothing to slide, so p.hist is empty and the
+     * first and last reads below would both throw and take the detail panel down
+     * with it. They are guarded rather than short-circuited: an early return here
+     * sat above useMemo and useEffect, so switching to a history-less lot rendered
+     * fewer hooks than the previous render and React tore the panel down. */
+  const f0 = p.hist[0]?.d ?? 0;
+  const f1 = p.hist[p.hist.length - 1]?.d ?? DAY;
   const span = Math.max(DAY, f1 - f0);
   const min = Math.max(f0, Math.min(chartRange?.min ?? f0, f1));
   const max = Math.min(f1, Math.max(chartRange?.max ?? f1, min + DAY));
@@ -66,6 +65,11 @@ export function RangeSlider({ parcel: p }: { parcel: Parcel }) {
     e.stopPropagation();
     setDrag(h);
   };
+
+  /* Past every hook, for the reason above. */
+  if (!p.hist.length) {
+    return <div className="py-3 text-center text-[10.5px] text-dim2">ไม่มีข้อมูลราคา</div>;
+  }
 
   return (
     <div className="mt-1.5 select-none px-[2px]">

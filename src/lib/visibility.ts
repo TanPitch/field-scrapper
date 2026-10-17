@@ -31,8 +31,11 @@ export function dataPass(p: Parcel, { filters: f, statusVisible }: Pick<RowInput
   if (f.status && popupKind(p) !== f.status) return false;
   if (f.province && p.province !== f.province) return false;
   if (f.provinces?.length && !f.provinces.includes(p.province)) return false;
-  if (f.minWah != null && p.wah < f.minWah) return false;
-  if (f.maxWah != null && p.wah > f.maxWah) return false;
+  /* A condo unit has no land area, so it cannot be inside a land-area range.
+     Left as a bare comparison, null coerces to 0 and a minWah of 1 วา would
+     quietly keep every condo in the results. */
+  if (f.minWah != null && (p.wah == null || p.wah < f.minWah)) return false;
+  if (f.maxWah != null && (p.wah == null || p.wah > f.maxWah)) return false;
   if (f.tambons?.length && !f.tambons.includes(p.tambon)) return false;
   if (f.amps?.length && !f.amps.includes(p.amp)) return false;
   if (f.propertyTypes?.length && !f.propertyTypes.includes(p.propertyType)) return false;

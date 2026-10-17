@@ -55,11 +55,19 @@ export interface Parcel {
   lotCount?: number;
   /** Shared by every lot on one cadastral parcel. Lets the panel find a   *  building's other units without matching on coordinates. */
   parcelKey?: string;
+  /** The auction lot this row came from. `id` is the cadastral parcel, so every
+   *  lot in a condominium building shares it - one parcel here carries 36 lots -
+   *  and keying a list on `id` collided. */
+  lotId?: number;
   id: number;
   status: Status;
-  wah: number;
+  /** Land area in ตร.วา, or null where LED publishes square metres instead. A
+   *  condo unit has a floor area and no land area; rendering that as 0 invented
+   *  a zero-size plot and a zero price-per-wah that read as real numbers. */
+  wah: number | null;
   price: number;
-  perWah: number;
+  /** Null for the same reason as `wah` — price per ตร.วา over no ตร.วา is not 0. */
+  perWah: number | null;
   lng: number;
   lat: number;
   name: string;

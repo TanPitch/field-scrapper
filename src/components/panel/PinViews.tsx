@@ -203,8 +203,8 @@ export function SearchView() {
       if (propertyType && propertyType !== 'ทุกประเภท' && !p.name.toLowerCase().includes(propertyType.toLowerCase())) return false;
       if (min != null && p.price < min) return false;
       if (max != null && p.price > max) return false;
-      if (minW != null && p.wah < minW) return false;
-      if (maxW != null && p.wah > maxW) return false;
+      if (minW != null && (p.wah == null || p.wah < minW)) return false;
+      if (maxW != null && (p.wah == null || p.wah > maxW)) return false;
       if (sellerName.trim() && !(p.name + ' ' + p.deed + ' ' + p.province).toLowerCase().includes(sellerName.trim().toLowerCase())) return false;
       if (date != null && new Date(p.announce).setHours(0, 0, 0, 0) !== date) return false;
       return true;

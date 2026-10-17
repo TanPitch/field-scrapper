@@ -158,14 +158,22 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   /* ตร.ว. is null for condo lots, which LED publishes in ตร.ม. Showing them as
      "— ตร.ว." is honest; converting square metres to square wa would be a
      fabrication, since one is an area of land and the other a floor area. */
-  const wah = p.sizeUnit === 'sqm' ? null : p.wah;
+  /* ตร.ว. is null for condo lots, which LED publishes in ตร.ม. Showing them as
+     "— ตร.ว." is honest; converting square metres to square wa would be a
+     fabrication, since one is an area of land and the other a floor area. It
+     used to be coerced back to 0 three lines below, which put a zero-size plot
+     and a zero price-per-wah in front of the user as if they were measurements.
+     Same for a lot whose area is genuinely 0: no area, no per-wah, not zero. */
+  const wah = p.sizeUnit === 'sqm' ? null : (p.wah ?? 0);
+  const land = wah != null && wah > 0 ? wah : null;
 
   return {
     id,
+    lotId: (p.lotId as number | null) ?? undefined,
     status,
-    wah: wah ?? 0,
+    wah: land,
     price: lastPrice,
-    perWah: wah && wah > 0 ? Math.round(lastPrice / wah) : 0,
+    perWah: land != null ? Math.round(lastPrice / land) : null,
     lng: f.geometry?.coordinates?.[0] ?? 0,
     lat: f.geometry?.coordinates?.[1] ?? 0,
     name: [p.assetType, p.tambon, p.landTitle].filter(Boolean).join(' ') || `แปลง ${p.id}`,
@@ -291,9 +299,18 @@ export async function loadParcels(provinceCode?: number): Promise<{
      geometry at all, which featureToParcel turns into lat/lng 0. Those would
      otherwise plot as a blob in the Gulf of Guinea rather than going missing.
 
+     The verdict test alone is not enough. Deed 3722 in Phuket was written as a
+     match by a resolver run that predates the verdict column, yet no source ever
+     gave it a coordinate - geom, td_lat and dol_lat are all null. It passed the
+     verdict test and plotted at 0,0. So a row with no coordinate is dropped
+     whatever its verdict says; a match with nothing to put on the map is not
+     something the user can be shown.
+
      The rejected ones are not lost: /api/admin/coord-gaps lists them by verdict
      so an admin can see what needs a hand. */
-  const shown = rows.filter((p) => p.tdVerdict === 'match' || p.dolVerdict === 'match');
+  const shown = rows.filter((p) =>
+    (p.tdVerdict === 'match' || p.dolVerdict === 'match')
+    && p.lat !== 0 && p.lng !== 0);
 
   /* The filter above fails closed: an API that predates the verdict column sends
      no tdVerdict at all, every row fails the test, and the map goes blank

@@ -27,8 +27,10 @@ export const numDate = (ts: number | null | undefined): string => {
  * doing its own `w % 100`: a separate modulo is how 9.400000000000006 survived
  * the table fix and reappeared in the detail panel.
  */
-export function fmtRai(w: number): string {
-    const [r, n, q] = splitWah(w);
+export function fmtRai(w: number | null): string {
+  /* No land area - a condo unit LED publishes in square metres. "—" says the
+     figure is absent; "0 วา" says the plot is nothing. */
+  if (w == null) return '—';    const [r, n, q] = splitWah(w);
     const p: string[] = [];
     if (r) p.push(r + ' ไร่');
     if (n) p.push(n + ' งาน');
@@ -43,7 +45,8 @@ export const fmtRaiFromM2 = (m2: number): string => fmtRai(Math.round(m2 / 4));
    here has usually been through a division (size in sqm converted, or a
    sum), which is where 9.400000000000006 comes from. toFixed(4) snaps it back to
    a number, and the strip removes a trailing '.0' so 5 shows as 5, not 5.0. */
-export const splitWah = (w: number): [number, number, number] => {
+export const splitWah = (w: number | null): [number, number, number] => {
+  if (w == null) return [0, 0, 0];
   const total = Number(w.toFixed(4));
   let rai = Math.floor(total / 400);
   let rem = Number((total - rai * 400).toFixed(4));

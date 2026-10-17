@@ -146,7 +146,7 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
          name in the `name` column and must not borrow it. */
       case 'pName': return <AnnotCell id={p.id} field="name" onEdit={onAnnotEdit} />;
       case 'pNote': return <AnnotCell id={p.id} field="note" onEdit={onAnnotEdit} />;
-      case 'perWah': return fmt(p.perWah);
+      case 'perWah': return p.perWah == null ? '—' : fmt(p.perWah);
       case 'saleBy': {
         /* show the mortgage amount only; the bank name is the hover title */
         if (p.mortgage) return p.mortgage.amount.toLocaleString('en-US');
@@ -440,7 +440,7 @@ export function DataTable() {
 
   const isSrcOf = (key: ColKey): boolean => ghost?.key === key;
   const rowProps = (p: Parcel, pinned: boolean) => (
-    <Row key={p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} no={noOf.get(p.id) ?? 0} shiftOf={shiftFor} isSrcOf={isSrcOf} onAnnotEdit={setAnnotEdit} />
+    <Row key={p.lotId ?? p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} no={noOf.get(p.id) ?? 0} shiftOf={shiftFor} isSrcOf={isSrcOf} onAnnotEdit={setAnnotEdit} />
   );
 
   /**
