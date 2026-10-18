@@ -1,12 +1,12 @@
 ﻿import { Check as CheckIcon, RotateCcw, X } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ALL_PARCELS } from '../../data/liveData';
 import { useAboveBelow } from '../../hooks/usePlacement';
 import { useOutsideClose } from '../../hooks/useOutsideClose';
 import { convertShortInput, sizeFromWah, sizeToWah, toggleSizeMode, wahLabel, type SizeValue } from '../../lib/landSize';
 import { patchApp, toast, useApp } from '../../store/useApp';
-import type { Filters } from '../../types';
+import type { Filters, PopupKind } from '../../types';
 import { POP_KINDS } from '../../data/constants';
 import { Stepper } from '../ui/Stepper';
 import { btn, btnAcc, iconBtn } from '../ui/styles';
@@ -35,11 +35,15 @@ function Check({ on }: { on: boolean }) {
  * Long click-to-open input: closed state shows the picked values as chips with an
  * × each; opening reveals a search box plus a scrollable option list.
  */
-function ChipMulti({ label, options, value, onChange }: {
+function ChipMulti({ label, options, value, onChange, render }: {
   label: string;
   options: string[];
   value: string[];
   onChange: (v: string[]) => void;
+  /** Draws one option row. Plain text when absent - which is what province,
+   *  district and land type want. Status passes a coloured dot so a kind is
+   *  recognisable as the marker's colour before the map is looked at. */
+  render?: (v: string) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -78,7 +82,7 @@ function ChipMulti({ label, options, value, onChange }: {
         {value.length === 0 && <span className="text-[11px] text-dim2">ทั้งหมด</span>}
         {value.map(v => (
           <span key={v} className={chipBox}>
-            <span className="max-w-[110px] truncate">{v}</span>
+            <span className="flex min-w-0 items-center gap-1">{render ? render(v) : <span className="max-w-[110px] truncate">{v}</span>}</span>
             <span
               role="button"
               tabIndex={-1}
@@ -120,7 +124,7 @@ function ChipMulti({ label, options, value, onChange }: {
                   className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-[11px] hover:bg-panel2 ${on ? 'text-accent' : ''}`}
                 >
                   <Check on={on} />
-                  <span className="truncate">{o}</span>
+                  {render ? render(o) : <span className="truncate">{o}</span>}
                 </button>
               );
             })}
@@ -241,32 +245,19 @@ options must not read as "outside the dialog" and close it. */
         ตัวกรองข้อมูล<button className={`${iconBtn} ml-auto`} onClick={() => { if (!busy) onClose(); }}><X size={17} /></button>
       </div>
       <div className="px-3 pb-2 pt-0.5">
-        {/* Toggles, not a dropdown. The useful question is "still on the market
-            and what came off it" - two kinds at once - and a single-value select
-            made that impossible without picking and un-picking. Painted with the
-            same dot colours the map markers use, so a filtered kind is recognisable
-            before the map is even looked at. */}
-        <div className={row}><span className={lab}>สถานะ</span>
-          <div className="flex flex-1 flex-wrap gap-1">
-            {STATUS_CHIPS.map(({ v, label, color }) => {
-              const on = fd.status.includes(v);
-              return (
-                <button key={v} type="button"
-                  onClick={() => upd('status', on ? fd.status.filter(x => x !== v) : [...fd.status, v])}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[10.5px] ${on
-                    ? 'border-accent bg-accent-dim text-accent'
-                    : 'border-line text-dim2 hover:border-line3'}`}>
-                  <span className="size-1.5 rounded-full" style={{ background: color }} />
-                  {label}
-                </button>
-              );
-            })}
-            {fd.status.length > 0 && (
-              <button type="button" className="rounded-full border border-line px-2 py-[3px] text-[10.5px] text-dim2"
-                onClick={() => upd('status', [])}>ล้าง</button>
-            )}
-          </div>
-        </div>
+        {/* The same searchable multi-select the province and district rows use,
+            so it behaves like them rather than being a second way of doing the
+            same thing. The options carry the marker's dot colour. */}
+        <ChipMulti
+          label="สถานะ"
+          options={STATUS_CHIPS.map(c => c.label)}
+          value={fd.status.map(v => STATUS_CHIPS.find(c => c.v === v)?.label ?? v)}
+          onChange={picked => upd('status', picked.map(l => STATUS_CHIPS.find(c => c.label === l)?.v).filter((v): v is PopupKind => v != null))}
+          render={label => {
+            const c = STATUS_CHIPS.find(x => x.label === label);
+            return <span className="flex min-w-0 items-center gap-1.5"><span className="size-1.5 flex-none rounded-full" style={{ background: c?.color }} />{label}</span>;
+          }}
+        />
         <SizeRow label="ขนาด ≥" value={sizeMin} onChange={setSizeMin} />
         <SizeRow label="ขนาด ≤" value={sizeMax} onChange={setSizeMax} />
         <div className={row}><span className={lab}>ราคาต่ำสุด<br /><span className="text-[9px]">(บาท)</span></span><Stepper value={fd.minPrice} step={50000} sep onChange={v => upd('minPrice', v)} /></div>

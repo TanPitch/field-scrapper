@@ -7,6 +7,7 @@ import {
 } from '../map/layers';
 import { position as positionParcelLabels, registerParcels, syncParcelLabels } from '../map/parcelLabels';
 import { setUnitOrder, subscribeParcels } from '../data/liveData';
+import type { AppState } from '../store/useApp';
 import { markerRows } from '../lib/condoUnits';
 import { fc, getMap, ptF, setSourceData } from '../map/mapRef';
 import { computeRows } from '../lib/visibility';
@@ -102,8 +103,25 @@ export function useMapSync(): void {
        again, so panning updated the table — whose memo does depend on bounds —
        while the map kept its empty initial set. That was the "table has rows,
        map has no dots" state. */
+    /* Everything computeRows reads, so a change to any of them redraws the dots.
+     *
+     * refresh() pulls the filters out of the store itself rather than taking them
+     * as arguments, so before this the only things that redrew the source were a
+     * data publish and a viewport change. Setting a filter updated the table -
+     * whose memo depends on filters - and left the map showing the previous
+     * result until the user panned. Written as a list rather than spread over
+     * the function body so a field added to RowInputs has to be added here too;
+     * missing one is silent, and the symptom is "the filter does not work" when
+     * it very obviously does. */
+    const REDRAW_ON: Array<(s: AppState, p: AppState) => boolean> = [
+      (s, p) => s.bounds !== p.bounds || s.zoom !== p.zoom,
+      (s, p) => s.filters !== p.filters || s.statusVisible !== p.statusVisible,
+      (s, p) => s.pinnedIds !== p.pinnedIds || s.restrict !== p.restrict,
+      (s, p) => s.areas !== p.areas || s.forceArea !== p.forceArea || s.override !== p.override,
+      (s, p) => s.sort !== p.sort,
+    ];
     const unsubBounds = useApp.subscribe((s, prev) => {
-      if (s.bounds !== prev.bounds || s.zoom !== prev.zoom) refresh();
+      if (REDRAW_ON.some(f => f(s, prev))) refresh();
     });
 
     return () => { unsub(); unsubBounds(); };
