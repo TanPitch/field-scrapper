@@ -55,19 +55,36 @@ export function tickLabel(ts: number, tick: ChartTick): string {
   return `${TH_MONTH_ABBR[d.getMonth()]} ${String(d.getFullYear() + 543).slice(-2)}`;
 }
 
+/**
+ * The x window the chart shows.
+ *
+ * Pure, so it can be pinned by tests rather than inferred from what the canvas
+ * happens to look like. `range` is the shared, user-dragged window and may be
+ * null, or may be left over from a different lot - hence the clamping.
+ *
+ * The upper bound follows the next round's date rather than the last real one,
+ * because the dataset carries a forecast point past it. Stopping at the last
+ * real point clipped the very tail the chart draws.
+ */
+export function chartWindow(
+  f0: number, f1: number, forecast: number | null | undefined,
+  range: { min: number; max: number } | null | undefined,
+): { min: number; max: number } {
+  const top = forecast != null && forecast > f1 ? forecast : f1;
+  let min = range?.min ?? f0;
+  let max = range?.max ?? top;
+  min = Math.max(f0, Math.min(min, top));
+  /* Never a zero-width axis: a single-point lot would divide by zero somewhere
+     in Chart.js. One day is the smallest window that means anything. */
+  max = Math.max(min + DAY, Math.min(max, top));
+  return { min, max };
+}
+
 /** Apply the shared chart range (and auto-fit the y axis to the visible window). */
 export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
   const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
-  /* The upper bound has to cover the forecast leg too. The dataset carries a
-     point for the next round, plotted as a dashed tail past the last real one,
-     but the axis stopped at f1 and clipped it - the chart offered to show where
-     the price is heading and then cut off exactly where the heading started. */
   const next = nextRoundPrice(p, Date.now());
-  const top = next?.date != null && next.date > f1 ? next.date : f1;
-  const r = getApp().chartRange;
-  let min = r?.min ?? f0, max = r?.max ?? top;
-  min = Math.max(f0, Math.min(min, top));
-  max = Math.max(min + DAY, Math.min(max, top));
+  const { min, max } = chartWindow(f0, f1, next?.date, getApp().chartRange);
   const vis = p.hist.filter(h => h.d >= min && h.d <= max);
   const ys = (vis.length ? vis : p.hist).map(h => h.v);
   const ymin = Math.min(...ys), ymax = Math.max(...ys);
@@ -114,6 +131,18 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
        return here because this is an effect body, not the render - an early
        return between hooks is what broke the range slider. */
     if (!plot.length) return;
+
+    /* The x window is part of the config, not applied afterwards.
+     *
+     * Chart.js draws once inside the constructor, and with no min/max on a linear
+     * scale it picks its own "nice" bounds for that first frame. applyChartRange
+     * then set the exact window and redrew - so the first thing on screen was
+     * drawn against a different scale from every frame after it, which is what
+     * put the today line in the wrong place until the user touched the range and
+     * forced the correction. Stating the window up front means there is only
+     * ever one scale. */
+    const win = chartWindow(plot[0].d, plot[plot.length - 1].d,
+      nextRoundPrice(p, now)?.date, getApp().chartRange);
 
     /* The next round's price is computable — the discount ladder is public
        arithmetic, not a guess — so it belongs on the chart. It is drawn as a
@@ -174,7 +203,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
           },
         },
         scales: {
-          x: { type: 'linear', ticks: { ...tick, maxTicksLimit: 5, callback: v => dfmtShort.format(Number(v)) }, grid: { color: 'rgba(255,255,255,.05)' } },
+          x: { type: 'linear', min: win.min, max: win.max, ticks: { ...tick, maxTicksLimit: 5, callback: v => dfmtShort.format(Number(v)) }, grid: { color: 'rgba(255,255,255,.05)' } },
           y: { ticks: { ...tick, maxTicksLimit: 4, callback: v => (Number(v) >= 1e6 ? (Number(v) / 1e6).toFixed(1) + 'M' : Math.round(Number(v) / 1000) + 'K') }, grid: { color: 'rgba(255,255,255,.05)' } },
         },
       },
