@@ -131,6 +131,9 @@ function countRows(p: Parcel, cfg: Record<PopupField, boolean>): number {
 /* ---------- popup instances (created lazily — they need the maplibre runtime) ---------- */
 let popClick: maplibregl.Popup | null = null;
 let popHover: maplibregl.Popup | null = null;
+/* True only while refreshOpenPopups tears a popup down to rebuild it. Keeps that
+   teardown from being mistaken for the user dismissing the popup. */
+let rebuilding = false;
 let clickPopId: number | null = null;
 let hoverPopId: number | null = null;
 
@@ -159,7 +162,7 @@ function forceFlatAnchor(popup: maplibregl.Popup): void {
 function ensurePopups(): { click: maplibregl.Popup; hover: maplibregl.Popup } {
   if (!popClick) {
 popClick = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 16, maxWidth: '270px' });
-    popClick.on('close', () => { clickPopId = null; onUserDismiss?.(); });
+    popClick.on('close', () => { clickPopId = null; if (!rebuilding) onUserDismiss?.(); });
     forceFlatAnchor(popClick);
   }
   if (!popHover) {
@@ -216,13 +219,40 @@ export function toggleClickPopup(id: number): void {
   if (clickPopId === id) closeClickPopup();
   else openClickPopup(PARCEL_BY_ID.get(id));
 }
-/** Re-render open popups after a settings change (fields, colours, price format). */
+/**
+ * Re-render open popups after a settings change (fields, colours, price format).
+ *
+ * Tore down and rebuilt, not setHTML on the live popup.
+ *
+ * The reported symptom was a settings change repainting the price once and then
+ * going stale - the popup needed closing and reopening before it would show the
+ * next change. That is the tell: mutating an attached MapLibre popup is not
+ * dependable here, and the user's own workaround was exactly the rebuild this
+ * now performs. Whatever the reason for the first update landing, every later one
+ * now takes the same path as a popup opened fresh.
+ *
+ * Both ids are read first, because opening the click popup closes the hover one
+ * and nulls hoverPopId - reading it afterwards meant a hover popup was never
+ * refreshed at all, and a settings change silently closed it instead.
+ */
 export function refreshOpenPopups(): void {
-  /* Both ids read first. openClickPopup closes the hover popup, which nulls
-     hoverPopId - so reading it afterwards meant a hover popup was never
-     refreshed, and a settings change silently closed it instead. */
   const clickId = clickPopId, hoverId = hoverPopId;
-  if (clickId != null) openClickPopup(PARCEL_BY_ID.get(clickId));
-  if (hoverId != null) openHoverPopup(PARCEL_BY_ID.get(hoverId));
+
+  if (clickId != null) {
+    const p = PARCEL_BY_ID.get(clickId);
+    /* The remove() fires the close handler, which would run the user-dismiss
+       path and drop the land selection - the green ring and the highlighted row
+       would vanish on a settings change. Suppressed for the duration. */
+    rebuilding = true;
+    popClick?.remove();
+    rebuilding = false;
+    if (p) openClickPopup(p);
+  }
+
+  if (hoverId != null) {
+    const p = PARCEL_BY_ID.get(hoverId);
+    popHover?.remove();
+    if (p) openHoverPopup(p);
+  }
 }
 export const getHoverPopId = (): number | null => hoverPopId;

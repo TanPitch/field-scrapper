@@ -274,6 +274,14 @@ export const useApp = create<AppState>(set => ({
 export const getApp = (): AppState => useApp.getState();
 export const patchApp = (p: Partial<AppState>): void => useApp.getState().patch(p);
 
+/* Dev-only handle on the store, for driving the app from a headless probe.
+   Vite strips import.meta.env.DEV from a production build, so this cannot ship.
+   Anything the settings panel writes can be set directly:
+   __app.getState().patch({ priceBath: false }) */
+if (import.meta.env.DEV) {
+  (globalThis as unknown as { __app: typeof useApp }).__app = useApp;
+}
+
 let entityUid = 1;
 export const newEntityId = (): number => entityUid++;
 let toastUid = 1;
