@@ -40,6 +40,15 @@ if (!url) {
 }
 
 const pool = new Pool({ connectionString: url, max: 10 });
+
+/* An idle pooled connection that dies (Postgres restart, failover, a dropped
+ * socket) makes pg emit 'error' on the pool itself. With no listener that is an
+ * unhandled 'error' event, which terminates the process: the whole API goes
+ * down because one idle connection went away, and every in-flight request with
+ * it. pg documents this listener as required; the pool discards the dead client
+ * and the next query opens a fresh one. */
+pool.on("error", (e) => console.error("[pg pool]", e.message));
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
@@ -102,7 +111,10 @@ app.get("/api/health", async (_req, res) => {
         const { rows } = await pool.query(`
             SELECT (SELECT count(*) FROM parcels)::int AS parcels,
                    (SELECT count(*) FROM lot_images)::int AS imageRows`);
-        res.json({ ok: true, parcels: rows[0].parcels, imageRows: rows[0].imageRows, imageRoot: IMAGE_ROOT });
+        /* imageRoot used to be echoed here. Nothing on the client reads it, and
+         * it hands an absolute filesystem path to an unauthenticated caller, so
+         * it is an information leak with no consumer. */
+        res.json({ ok: true, parcels: rows[0].parcels, imageRows: rows[0].imageRows });
     } catch (e) {
         res.status(503).json({ ok: false, error: e.message });
     }
@@ -112,7 +124,11 @@ app.get("/api/health", async (_req, res) => {
 app.get("/api/provinces", async (_req, res) => {
     const { rows } = await pool.query(`
         SELECT p.code, p.name,
-               count(DISTINCT p.id)                       AS parcels,
+               /* count(DISTINCT p.id) counted the provinces row - always 1,
+                  because p.code is the group key. Every province therefore
+                  advertised exactly one parcel while its lot counts said
+                  thousands. The parcel count is a.id. */
+               count(DISTINCT a.id)                       AS parcels,
                count(*) FILTER (WHERE l.status='active')  AS active,
                count(*) FILTER (WHERE a.td_eva_price IS NOT NULL) AS priced,
                min(l.next_round_date)                     AS next_round
@@ -141,7 +157,11 @@ app.get("/api/stats", async (_req, res) => {
     const { rows: lots } = await pool.query(`
         SELECT count(*) AS lots,
                count(*) FILTER (WHERE status='active') AS active,
-               count(DISTINCT case_no||case_year) AS cases
+               /* count(DISTINCT ...) ignores nulls, and concat gives null for a
+                  lot with no case number - so those lots were invisible in the
+                  total, and '1'+'23' collided with '12'+'3'. A row constructor
+                  compares the pair as one value and neither problem exists. */
+               count(DISTINCT (case_no, case_year)) AS cases
           FROM auction_lots`);
     const { rows: rounds } = await pool.query(`
         SELECT count(*) AS rounds,
@@ -251,7 +271,12 @@ app.get("/api/parcels", async (req, res) => {
     const { rows } = await pool.query(`
         SELECT p.id, p.deed_number, p.land_title, p.tumbol, p.district_name,
                p.province_code, p.tambon_code, p.tambon_match,
-               p.td_lat, p.td_lon, p.td_eva_price, p.td_rawang, p.td_survey_no,
+               /* dol_lat/dol_lon have to be selected for the resolver cascade
+                  below to have anything to fall back to. They were missing, so
+                  the dol_lat fallback read undefined and a parcel whose only
+                  coordinate came from DOL had a null geometry and no marker. */
+               p.td_lat, p.td_lon, p.dol_lat, p.dol_lon,
+               p.td_eva_price, p.td_rawang, p.td_survey_no,
                p.td_land_no, p.td_status, p.dol_status, p.td_verdict, p.dol_verdict, p.geo_precision, p.geo_status,
                p.eva_price_min, p.eva_price_max,
                p.elevation_m, p.elevation_uncertainty_m, p.elevation_source,
@@ -509,7 +534,6 @@ function mapStatus(status, closeReason, closeCode) {
   return 'inactive';
 }
 
-/* 404 for unknown API routes, rather than Express's HTML default. */
 /* ------------------------------------------------------- admin: data quality
  *
  * The resolve cascade is LED -> TD -> DOL. TD resolves most parcels; DOL fills
@@ -576,6 +600,9 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
       } catch (e) { console.error("[coord-gaps]", e); res.status(500).json({ error: e.message }); }
 });
 
+/** The values the parcels.geo_status CHECK constraint actually allows. */
+const GEO_STATUSES = ["unresolved", "verified", "mismatch"];
+
 /** One row's manual correction. Narrow on purpose: an admin is fixing the
  * resolver's misses, not rewriting parcel records. Every field is written
  * through COALESCE so a partial body never blanks a column. */
@@ -583,12 +610,39 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ error: "id must be an integer" });
 
-    const lat = req.body?.td_lat ?? req.body?.dol_lat ?? null;
-    const lng = req.body?.td_lon ?? req.body?.dol_lon ?? null;
-    if (lat != null && (Number(lat) < -90 || Number(lat) > 90))
-        return res.status(400).json({ error: "latitude out of range" });
-    if (lng != null && (Number(lng) < -180 || Number(lng) > 180))
-        return res.status(400).json({ error: "longitude out of range" });
+    /* td_* and dol_* are answers from two different sources to the same
+     * question, and they were collapsed into one lat/lng pair with `??`. A body
+     * carrying only dol_lat/dol_lon therefore also wrote td_lat/td_lon - so
+     * setting a DOL coordinate silently overwrote a TD coordinate the admin
+     * never meant to touch, and the wrong figure became the one the cascade
+     * prefers. The two pairs are kept apart and written independently. */
+    const tdLat = req.body?.td_lat ?? null;
+    const tdLng = req.body?.td_lon ?? null;
+    const dolLat = req.body?.dol_lat ?? null;
+    const dolLng = req.body?.dol_lon ?? null;
+
+    for (const [v, limit, what] of [
+        [tdLat, 90, "latitude"], [dolLat, 90, "latitude"],
+        [tdLng, 180, "longitude"], [dolLng, 180, "longitude"],
+    ]) {
+        if (v != null && (!Number.isFinite(Number(v)) || Math.abs(Number(v)) > limit))
+            return res.status(400).json({ error: `${what} out of range` });
+    }
+    /* Half a coordinate is not a fix: it would put a latitude in the row with no
+     * longitude, which reads as resolved to everything downstream. */
+    if ((tdLat == null) !== (tdLng == null))
+        return res.status(400).json({ error: "td_lat and td_lon must be set together" });
+    if ((dolLat == null) !== (dolLng == null))
+        return res.status(400).json({ error: "dol_lat and dol_lon must be set together" });
+
+    /* geo_status has to be one of the three the CHECK constraint allows, and
+     * this endpoint used to default it to "manual" - a value the schema does
+     * not have. Every PATCH it ever received died on 23514, so no admin could
+     * fix a coordinate by hand at all; the 500 said nothing about why. A
+     * coordinate a person typed in is "verified", which is in the enum. */
+    const geoStatus = String(req.body?.geo_status ?? "verified");
+    if (!GEO_STATUSES.includes(geoStatus))
+        return res.status(400).json({ error: `geo_status must be one of ${GEO_STATUSES.join(", ")}` });
 
     const { rows } = await pool.query(`
         UPDATE parcels
@@ -608,15 +662,30 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
          req.body?.td_status ?? null,
          req.body?.dol_status ?? null,
          req.body?.td_rawang ?? null,
-         lat, lng,
-         req.body?.dol_lat ?? null,
-         req.body?.dol_lon ?? null,
+         tdLat, tdLng, dolLat, dolLng,
          req.body?.dol_office ?? null,
-         req.body?.geo_status ?? "manual",
+         geoStatus,
          req.body?.geo_note ?? `set by admin ${req.session?.userId ?? "?"}`,
         ]);
     if (!rows.length) return res.status(404).json({ error: "no such parcel" });
     res.json(rows[0]);
+});
+
+/* 404 for unknown API routes, rather than Express's HTML default. Registered
+ * before listen(): the previous version sat after app.listen(), which worked
+ * only because the request loop starts later than the next synchronous line.
+ * Route order should be what the file says it is. */
+app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
+
+/* Every route above queries Postgres, and Express's default error handler
+ * answers with an HTML body - which lib/api.ts can only report to the user as
+ * "the server failed" - plus the stack trace whenever NODE_ENV is not
+ * production. One JSON shape keeps the client's error contract, and the detail
+ * stays in the log where it belongs. */
+app.use((err, _req, res, _next) => {
+    console.error("[api]", err);
+    if (res.headersSent) return;
+    res.status(500).json({ error: "internal error" });
 });
 
 const PORT = Number(process.env.PORT || 8787);
@@ -631,8 +700,6 @@ app.listen(PORT, () => {
     console.log(`  GET /api/parcels?province=40`);
     console.log(`  GET /api/parcels/:id`);
 });
-
-  app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
 
 process.on("SIGTERM", () => pool.end().then(() => process.exit(0)));
 process.on("SIGINT", () => pool.end().then(() => process.exit(0)));

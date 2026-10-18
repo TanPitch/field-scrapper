@@ -231,6 +231,14 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     rounds,
     mortgage: null,
     geoPrecision: p.geoPrecision ?? null,
+    /* Carried through because loadParcels gates the map on them. They were sent
+     * by the API and then dropped here, so the only two call sites that read
+     * them saw undefined forever: `verdictsKnown` was always false and the
+     * "only a confirmed match is user-facing" filter never ran. 465 rows with
+     * no coordinate of any kind therefore reached the map and were painted at
+     * lat/lng 0 - the Gulf of Guinea blob the comment below says was fixed. */
+    tdVerdict: p.tdVerdict ?? null,
+    dolVerdict: p.dolVerdict ?? null,
     td: p.tdStatus || p.evaPrice != null
       ? {
           perSqWa: p.evaPrice,

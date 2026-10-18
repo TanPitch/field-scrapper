@@ -37,8 +37,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<ApiResu
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...creds,
-      headers: init.body ? { 'Content-Type': 'application/json', ...(init.headers ?? {}) } : init.headers,
+      /* `...init` first: it used to be spread last, so any caller that passed its
+         own headers replaced the merged object wholesale and the JSON
+         Content-Type went with it. The computed headers have to win. */
       ...init,
+      headers: init.body ? { 'Content-Type': 'application/json', ...(init.headers ?? {}) } : init.headers,
     });
     if (res.status === 204) return { ok: true, data: null, error: null, cold: false };
 
@@ -176,6 +179,10 @@ export interface ApiParcelProps {
   geoPrecision: 'parcel' | 'subdistrict' | null;
   geoStatus: string | null;
   tdStatus: string | null;
+  /** Resolver verdicts. liveData.ts gates what reaches the map on these, so a
+   *  field the server sends and this type forgets is a gate that never fires. */
+  tdVerdict?: string | null;
+  dolVerdict?: string | null;
   imageCount: number;
   /** Bare filenames, served at /img/land/<name>. Empty when the lot has none. */
   images: string[];

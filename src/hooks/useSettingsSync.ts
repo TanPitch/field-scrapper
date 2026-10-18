@@ -20,8 +20,10 @@
 
 import { useEffect, useRef } from 'react';
 import { api, makeWriter } from '../lib/api';
+import { normStyle, type RichTextStyle } from '../lib/richText';
 import { useAnnotations } from '../store/useAnnotations';
 import { patchApp, useApp } from '../store/useApp';
+import type { ColKey } from '../types';
 
 /* One writer per sink. Debounced so a burst of changes collapses. */
 const writePrefs = makeWriter(600);
@@ -39,7 +41,7 @@ const SYNCED_PREFS = [
   'statusVisible', 'popColors', 'reColor', 'popupCfg', 'lbCfg', 'popupMode',
   'showLandKindIcon', 'priceBath', 'priceSpace', 'chartTick', 'markerSize',
   'labelSold', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
-  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed', 'detailRowHidden', 'detailRowOrder', 'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
+  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed', 'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
 ] as const;
 
 export interface SyncState {
@@ -139,11 +141,27 @@ export function useSettingsSync(): SyncState {
       if (first) { first = false; return; }
       for (const [tableKey, cols] of Object.entries(s.cols)) {
         writeColumns(`cols:${tableKey}`, async () => {
+          const app = useApp.getState();
           const r = await api.put(`/api/me/tables/${encodeURIComponent(tableKey)}`, {
-            columns: Object.entries(cols).map(([key, c], i) => ({
-              key, label: c.name ?? null, note: c.note ?? null, style: c.style ?? {},
-              visible: true, pinned: false, order: i,
-            })),
+            /* The layout the user actually has. visible/pinned/order were
+               constants, so the server's visible, pinned and sort_order columns
+               could only ever hold their defaults and a layout restored on
+               another machine came back as if nobody had touched it. width was
+               never sent at all. */
+            columns: Object.entries(cols).map(([key, c], i) => {
+              const at = app.colOrder.indexOf(key as ColKey);
+              return {
+                key, label: c.name ?? null, note: c.note ?? null,
+                style: c.style ?? {},
+                /* Per-field styles ride alongside; see styleWith() in
+                   server/users.js, which keeps all three in one jsonb. */
+                nameStyle: c.nameStyle ?? {}, noteStyle: c.noteStyle ?? {},
+                visible: !app.colHidden.has(key as ColKey),
+                pinned: app.colPinned.has(key as ColKey),
+                width: app.colWidths[key as ColKey] ?? null,
+                order: at < 0 ? i : at,
+              };
+            }),
           });
           if (!r.ok) errRef.current = r.error;
         });
@@ -167,10 +185,20 @@ async function loadPrefs(): Promise<void> {
 async function loadColumns(): Promise<void> {
   const r = await api.get<{ columns: Array<Record<string, unknown>> }>('/api/me/tables/lots');
   if (!r.ok || !r.data?.columns?.length) return;
-  const cols: Record<string, { name?: string | null; note?: string | null; style?: object }> = {};
+  const cols: Record<string, {
+    name?: string | null; note?: string | null;
+    style?: RichTextStyle; nameStyle?: RichTextStyle; noteStyle?: RichTextStyle;
+  }> = {};
   for (const c of r.data.columns) {
     const key = String(c.key);
-    cols[key] = { name: (c.label as string) ?? null, note: (c.note as string) ?? null, style: (c.style as object) ?? {} };
+    /* Same lift as loadLayers: the per-field styles live inside the stored
+       style jsonb and normStyle would strip them if left nested. */
+    const raw = (c.style ?? {}) as Record<string, unknown>;
+    cols[key] = {
+      name: (c.label as string) ?? null, note: (c.note as string) ?? null,
+      style: normStyle(raw),
+      nameStyle: normStyle(raw.nameStyle), noteStyle: normStyle(raw.noteStyle),
+    };
   }
   useAnnotations.getState().setColumn('lots', '__bulk__', null);
   for (const [k, v] of Object.entries(cols)) useAnnotations.getState().setColumn('lots', k, v);
@@ -180,10 +208,17 @@ async function loadLayers(): Promise<void> {
   const r = await api.get<{ layers: Array<Record<string, unknown>> }>('/api/me/layers');
   if (!r.ok || !r.data?.layers?.length) return;
   for (const l of r.data.layers) {
+    /* styleToCss only knows the flat keys, and normStyle (applied by setLayer)
+       strips anything else - so the per-field styles have to be lifted out of
+       the stored jsonb here or a nameStyle saved on another machine comes back
+       as nothing. See styleWith() in server/users.js. */
+    const raw = (l.style ?? {}) as Record<string, unknown>;
     useAnnotations.getState().setLayer(String(l.id), {
       name: (l.name as string) ?? null,
       note: (l.note as string) ?? null,
-      style: (l.style as object) ?? {},
+      style: normStyle(raw),
+      nameStyle: normStyle(raw.nameStyle),
+      noteStyle: normStyle(raw.noteStyle),
     });
   }
 }

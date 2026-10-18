@@ -23,7 +23,7 @@ export const router = express.Router();
  * colours are pattern-checked, so a bad client can neither widen the stored
  * shape nor push arbitrary text into a field the renderer treats as a colour.
  */
-const COLOR = /^#[0-9a-fA-F]{3,8}$|^[a-zA-Z]{3,20}$/;
+const COLOR = /^#[0-9a-fA-F]{3,8}$|^[a-zA-Z]{3,20}$|^rgba?\(\s*[\d.\s,%]+\)$/;
 
 function normStyle(s) {
     if (s === null || typeof s !== "object" || Array.isArray(s)) return {};
@@ -92,6 +92,18 @@ async function verifyPassword(pw, hash) {
     }
 }
 
+/**
+ * A real hash of a password nobody can supply, so the "no such user" branch of
+ * login still pays the argon2 cost.
+ *
+ * The login route below claims to spend "a comparable amount of work either
+ * way". It did not: on a miss it skipped hashing entirely and answered in
+ * microseconds, while a real account spent ~100 ms in argon2. That gap is a
+ * username oracle for anyone with a stopwatch. Hashed once at boot rather than
+ * per request, because a constant is what we need to bound the difference.
+ */
+const DUMMY_HASH = await hashPassword("timing-equaliser-not-a-real-password");
+
 /* Registration is open in dev so the app is usable without a seeded admin.
  * Set AUTH_REQUIRE_INVITE=1 to close it once real accounts exist. */
 router.post("/auth/register", async (req, res) => {
@@ -132,9 +144,11 @@ router.post("/auth/login", async (req, res) => {
     const u = rows[0];
 
     /* Same message and a comparable amount of work either way, so the response
-     * does not reveal whether the account exists. */
-    const ok = u ? await verifyPassword(password, u.password_hash) : false;
-    if (!ok) return res.status(401).json({ error: "wrong username or password" });
+     * does not reveal whether the account exists. The verify runs against
+     * DUMMY_HASH when there is no row, so the miss path pays the same argon2
+     * cost as the hit path instead of returning early. */
+    const ok = await verifyPassword(password, u ? u.password_hash : DUMMY_HASH);
+    if (!ok || !u) return res.status(401).json({ error: "wrong username or password" });
 
     req.session.userId = u.id;
     res.json({ user: publicUser(u) });
@@ -182,6 +196,10 @@ router.post("/me/password", requireUser, async (req, res) => {
     if (next.length < 8) return res.status(400).json({ error: "new password must be at least 8 characters" });
 
     const { rows } = await req.db.query(`SELECT password_hash FROM app_users WHERE id = $1`, [req.userId]);
+    /* A session outlives the row it points at when an admin deletes the account
+     * (or a reseed drops it). Reading rows[0].password_hash unguarded threw, and
+     * the caller got a 500 for what is really "you are no longer signed in". */
+    if (!rows.length) return res.status(401).json({ error: "not signed in" });
     if (!await verifyPassword(current, rows[0].password_hash)) {
         return res.status(401).json({ error: "current password is wrong" });
     }
@@ -258,7 +276,7 @@ router.put("/me/tables/:tableKey", requireUser, async (req, res) => {
         key: String(c.key ?? "").slice(0, 64),
         label: c.label == null ? null : String(c.label).slice(0, 120),
         note: c.note == null ? null : String(c.note).slice(0, 2000),
-        style: normStyle(c.style),
+        style: styleWith(c),
         visible: c.visible !== false,
         pinned: Boolean(c.pinned),
         order: Number.isInteger(c.order) ? c.order : 0,
@@ -286,6 +304,24 @@ router.put("/me/tables/:tableKey", requireUser, async (req, res) => {
 });
 
 /* ---------------------------------------------------------------- layers */
+
+/**
+ * The style jsonb for an annotation: the flat style, plus the two per-field
+ * styles that richText.ts lets a user set independently.
+ *
+ * normStyle only knows the six flat keys, so storing `style` on its own dropped
+ * nameStyle/noteStyle on the floor - the per-field styling someone had just
+ * chosen was gone by the next sign-in, quietly, because every read fell back to
+ * `style`. Used for both a layer and a table column: same shape, same loss.
+ */
+function styleWith(body) {
+    const style = normStyle(body?.style);
+    for (const k of ["nameStyle", "noteStyle"]) {
+        const s = normStyle(body?.[k]);
+        if (Object.keys(s).length) style[k] = s;
+    }
+    return style;
+}
 
 function layerOut(r) {
     return {
@@ -335,7 +371,7 @@ router.put("/me/layers/:layerId", requireUser, async (req, res) => {
         [req.userId, layerId, kind, geomType,
             req.body?.name == null ? null : String(req.body.name).slice(0, 200),
             req.body?.note == null ? null : String(req.body.note).slice(0, 4000),
-            JSON.stringify(normStyle(req.body?.style)),
+            JSON.stringify(styleWith(req.body)),
             JSON.stringify(geometry),
             req.body?.visible !== false,
             Number.isInteger(req.body?.order) ? req.body.order : 0]);

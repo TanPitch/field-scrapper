@@ -170,7 +170,7 @@ export const useApp = create<AppState>(set => ({
   condoUnitOrder: "sizeDesc",
   persistMapView: true,
   lastView: null,
-  sectionsCollapsed: false,
+  sectionsCollapsed: true,
   showApiSettings: false,
   detailRowHidden: [],
   detailRowOrder: [],
