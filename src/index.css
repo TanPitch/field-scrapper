@@ -336,6 +336,15 @@ body.reduce-motion .spin-keep {
 }
 .pop-box {
   padding: 10px 12px;
+  /* Room for the unit-count pill that MapLibre's close button sits on. */
+  position: relative;
+}
+/* Top right, under the close button. Anchored to the box rather than to the
+   chip row, so it cannot be pushed around when a chip wraps to a second line. */
+.pop-box > .pop-units {
+  position: absolute;
+  top: 6px;
+  right: 26px;
 }
 /* compact: two lines only — bold price, then the delta chip. Minimal breathing room. */
 .pop-box--compact {

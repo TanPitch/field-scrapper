@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { patchApp, toast } from '../../store/useApp';
 import { useTipProps } from '../ui/Tip';
@@ -28,6 +28,36 @@ export function Splash() {
      on every render -> setState -> render, forever. */
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [err, setErr] = useState('');
+
+  /* Dev only: sign straight in as admin so testing does not start at a login
+     form every time.
+   *
+   * Gated on import.meta.env.DEV, which Vite strips from a production build - so
+   * this cannot ship, and there is no flag to remember to unset. It goes through
+   * the same endpoint as the form, so the session cookie is a real one and the
+   * rest of the app behaves exactly as it would after a manual sign-in. The 2FA
+   * step is skipped because the server does not verify it yet; when it does,
+   * this is the line that has to change. */
+  const [autoTried, setAutoTried] = useState(false);
+  useEffect(() => {
+    if (!import.meta.env.DEV || autoTried) return;
+    setAutoTried(true);
+    void (async () => {
+      const r = await api.post<{ user: { displayName: string | null; isAdmin: boolean } }>(
+        '/api/auth/login', { username: 'admin', password: 'admin1234' });
+      if (r.ok && r.data?.user) {
+        patchApp({ signedIn: true, role: 'admin', userName: r.data.user.displayName ?? 'admin' });
+      } else {
+        /* Server down: fall back to the local mockup accounts rather than
+           stranding the dev on a spinner that never resolves. */
+        setId('admin'); setPw('admin1234');
+      }
+    })();
+  }, [autoTried]);
+
+  if (import.meta.env.DEV && !autoTried) {
+    return <div className="grid h-full place-items-center bg-bg text-[12px] text-dim2">กำลังเข้าระบบ…</div>;
+  }
 
   const signIn = async () => {
     const name = id.trim().toLowerCase();

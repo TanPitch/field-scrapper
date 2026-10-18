@@ -6,17 +6,19 @@ import type { BasemapId, ColKey, Overlay, OverlayId, RightView } from '../types'
 import { EMPTY_FILTERS, getApp, patchApp, toast } from './useApp';
 
 /**
- * Clear the selection only once *both* the popup and the panel are gone.
+ * Clear the selection only once nothing on screen refers to it any more.
  *
- * They are two separate dismissals and the user may mean either one. Closing
- * just the popup leaves the ring and the panel; closing just the panel leaves
- * the popup and the ring. Only when neither surface is showing any more does
- * the selection become stale, and only then is it cleared — the green ring and
- * the highlighted table row have nothing left to refer to.
+ * They are separate dismissals and the user may mean either one. Closing just the
+ * popup leaves the ring and the panel; closing just the panel leaves the popup
+ * and the ring. The panel also stops referring to the parcel without closing at
+ * all — opening search results or the pin settings replaces the detail view in
+ * place — and that counts as a dismissal too, which is why this looks at the
+ * view and not only at `rightOpen`.
  */
 function maybeClearSelection(): void {
-    if (getApp().selectedId == null) return;
-    if (getApp().rightOpen) return;
+    const s = getApp();
+    if (s.selectedId == null) return;
+    if (s.rightOpen && s.rpView === 'detail') return;
     if (getClickPopId() != null) return;
     deselect();
 }
@@ -26,7 +28,10 @@ export function setRight(open: boolean): void {
     if (!open) maybeClearSelection();
 }
 export function setLeft(open: boolean): void { patchApp({ leftOpen: open }); }
-export function setRpView(v: RightView): void { patchApp({ rpView: v }); }
+export function setRpView(v: RightView): void {
+    patchApp({ rpView: v });
+    maybeClearSelection();
+}
 export function showRight(v: RightView): void { patchApp({ rpView: v, rightOpen: true }); }
 
 export function select(id: number, { fly = true }: { fly?: boolean } = {}): void {

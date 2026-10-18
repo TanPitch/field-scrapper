@@ -123,6 +123,12 @@ export function unitBadge(p: { lotCount?: number | null }): string {
   return `<span class="whitespace-nowrap rounded-full bg-black/45 px-[7px] py-[1px] text-[9.5px] font-semibold leading-none text-white">×${n}</span>`;
 }
 
+/** Same pill, positioned in the popup's top-right corner by the close button. */
+export function unitBadgeCorner(p: { lotCount?: number | null }): string {
+  const html = unitBadge(p);
+  return html ? `<span class="pop-units">${html}</span>` : '';
+}
+
 /**
  * Render a land-type Lucide icon to static SVG markup.
  *

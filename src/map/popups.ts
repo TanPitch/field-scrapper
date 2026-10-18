@@ -11,7 +11,7 @@ import { parcelPopupBg } from '../lib/parcelColor';
 import { getApp } from '../store/useApp';
 import type { Parcel, PopupField, PopupKind } from '../types';
 import { requireMap } from './mapRef';
-import { landKindSvg, unitBadge } from './parcelLabels';
+import { landKindSvg, unitBadgeCorner } from './parcelLabels';
 
 export const popupKind = (p: Parcel): PopupKind => (p.resell && p.status === 'sale' ? 're' : p.status);
 
@@ -90,18 +90,24 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      the unit price down; the icon carries the same meaning beside the row that
      now spells it out, and keeps its full name in the tooltip. */
   const kindBadge = s.showLandKindIcon && landKindLabel(p)
-    ? `<span class="pop-kind-ic" data-kind="${p.landKind}" title="${esc(LAND_KIND_LABEL[p.landKind])}">${landKindSvg(p.landKind)}</span>`
+    ? `<span class="pop-kind-ic" data-tip="${esc(LAND_KIND_LABEL[p.landKind])}" data-kind="${p.landKind}">${landKindSvg(p.landKind)}</span>`
     : '';
-  /* Hand-off links removed: the map is already the map, and Street View is a
-     second trip out of the app for something the popup tells you anyway. */
+  /* The unit count belongs by the close button. In the chip row it read as
+     another land-type tag, sitting among pills that all describe the parcel as
+     a whole; here it is the one number about the dot itself. */
+  const units = unitBadgeCorner(p);
+  /* Deed and opening price are one fact about one lot - which parcel, at what. */
+  const nxt = nextRoundPrice(p, Date.now());
+  const openLine = nxt && nxt.discountPct > 0 ? ` · เปิด ${fmtMoneyNow(nxt.startPrice)}` : '';
+  const nameLine = [cfg.deed ? esc(p.deed) : '', openLine].filter(Boolean).join('');
   return {
-    html: `<div class="pop-box" data-selectable>
-      <div class="pop-tags">
+    html: `<div class="pop-box" data-selectable>${units}`
+      + `<div class="pop-tags">
         <span class="pop-tag">${STATUS[kind].th}</span>
-        <span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}${unitBadge(p)}
-      </div>
-      ${priceHtmlFull(p)}
-      <div class="pop-name">${cfg.deed ? esc(p.deed) : ""}</div>${rows}
+        <span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}
+      </div>`
+      + priceHtmlFull(p)
+      + `<div class="pop-name">${nameLine}</div>${rows}
     </div>`,
     bg,
   };

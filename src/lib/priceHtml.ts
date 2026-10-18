@@ -34,7 +34,12 @@ export function priceHtmlFull(p: Parcel, now = Date.now()): string {
     ? `<span class="pop-disc" title="รอบถัดไปลดจากราคาเปิด ${Math.round(next.discountPct)}%">${badge}</span>`
     : '';
 
-  return `<div class="pop-price"><span>${fmtMoneyNow(next.price)}</span>${tag}${was}</div>`;
+  return `<div class="pop-price flex-col">
+            <div class="flex">
+              <span>${fmtMoneyNow(next.price)}</span>
+              ${tag}
+            </div>${was}
+          </div>`;
 }
 
 /**

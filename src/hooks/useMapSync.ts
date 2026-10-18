@@ -36,9 +36,7 @@ export function useMapSync(): void {
   const labelNextDate = useApp(s => s.labelNextDate);
   const showLandKindIcon = useApp(s => s.showLandKindIcon);
   const priceBath = useApp(s => s.priceBath);
-  const priceSpace = useApp(s => s.priceSpace);
   const landOn = useApp(s => s.landOn);
-  const popupCfg = useApp(s => s.popupCfg);
   const drawDistMode = useApp(s => s.drawDistMode);
   const showCircleMeta = useApp(s => s.showCircleMeta);
   const overlays = useApp(s => s.overlays);
@@ -128,11 +126,30 @@ export function useMapSync(): void {
 
   /* the land-kind icon is baked into the label markup, so rebuild on toggle */
   /* In แสดงทุกจุด the visible popups are these labels, not the Popup class, so
-     they are what a money-format change has to redraw. refreshOpenPopups below
-     only reaches the click and hover boxes, which is why toggling the baht sign
-     or the comma spacing did nothing until the labels were rebuilt by hand. */
-  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelNextDate); },
-    [mapReady, showLandKindIcon, labelNextDate, priceBath, priceSpace]);
+     they are what a money-format change has to redraw. */
+  useEffect(() => { if (mapReady) syncParcelLabels(vis, labelNextDate); }, [mapReady, showLandKindIcon, labelNextDate]);
+
+  /* A store subscription rather than a dependency array.
+   *
+   * Both the popup and the label are HTML strings built by reading the store at
+   * call time, so React has nothing to re-render: something has to tell MapLibre
+   * to rebuild the markup. Listing the settings in a dep array means every
+   * setting that is not on that list silently goes stale, which is exactly what
+   * happened - the baht sign, the comma spacing and the land-kind icon all
+   * needed the popup closed and reopened before they showed. A subscription
+   * cannot forget a field. */
+  useEffect(() => {
+    if (!mapReady) return;
+    return useApp.subscribe((s, p) => {
+      const money = s.priceBath !== p.priceBath || s.priceSpace !== p.priceSpace;
+      const looks = s.showLandKindIcon !== p.showLandKindIcon;
+      const shape = s.popupCfg !== p.popupCfg || s.popColors !== p.popColors || s.reColor !== p.reColor;
+      if (money || looks || shape) {
+        refreshOpenPopups();
+        syncParcelLabels(vis, s.labelNextDate);
+      }
+    });
+  }, [mapReady]);
 
   /* the DOM labels are positioned in screen space, so they follow the camera */
   useEffect(() => {
@@ -173,7 +190,6 @@ map.off('resize', on);
 
   /* popups follow settings */
   useEffect(() => { if (popupMode === 'all') closeAllPopups(); }, [popupMode]);
-  useEffect(() => { if (mapReady) refreshOpenPopups(); }, [mapReady, popupCfg, popColors, reColor, showLandKindIcon, priceBath, priceSpace]);
 
   /* drawings: redraw whenever any draw-related state changes (incl. cursor preview) */
   useEffect(() => {

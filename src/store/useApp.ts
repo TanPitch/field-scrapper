@@ -212,7 +212,7 @@ export const useApp = create<AppState>(set => ({
   rpView: 'results',
   overlaySel: 'flood',
   setTab: 'map',
-  rightOpen: true,
+  rightOpen: false,
   leftOpen: true,
   settingsOpen: false,
   selectedId: null,
