@@ -12,7 +12,7 @@ import type {
 } from '../types';
 
 export const EMPTY_FILTERS: Filters = {
-  text: '', status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '',
+  text: '', status: [], minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '',
   provinces: [], tambons: [], amps: [], propertyTypes: [],
 };
 

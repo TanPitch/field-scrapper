@@ -120,7 +120,7 @@ if (mismatches.length) {
  * string the popup shows as the price must be the ladder's next-round price, and
  * a struck-through aside must only appear when a discount actually applies.
  * ---------------------------------------------------------------------- */
-const { priceHtmlFull, priceHtmlCompact } = await import("../src/lib/priceHtml.ts");
+const { priceHtmlFull, priceHtmlCompact, openPriceHtml } = await import("../src/lib/priceHtml.ts");
 const { nextRoundPrice: frontendNext } = await import("../src/lib/price.ts");
 /* FALLBACK_PARCELS, not the live collection: this block asserts behaviour over
    the seeded fixtures, and pulling in data/liveData would also create a cycle
@@ -144,11 +144,15 @@ for (const p of ALL_PARCELS) {
       else if (badge[1] !== `-${Math.round(next.discountPct)}`) {
         popProblems.push(`parcel ${p.id}: badge ${badge[1]}% != -${Math.round(next.discountPct)}`);
       }
-      if (!/class="pop-was"/.test(full)) popProblems.push(`parcel ${p.id}: discounted but no struck-through start price`);
+      /* The opening price moved beside the deed number, so it is checked where it
+         now lives - openPriceHtml, not inside priceHtmlFull. Asserting on
+         priceHtmlFull reported 274 phantom problems for a popup that was showing
+         the price correctly one line lower. */
+      if (!/class="pop-was"/.test(openPriceHtml(next))) popProblems.push(`parcel ${p.id}: discounted but no opening price`);
     } else if (badge && Number(badge[1]) === 0) {
       popProblems.push(`parcel ${p.id}: rendered a -0% badge`);
-    } else if (/class="pop-was"/.test(full)) {
-      popProblems.push(`parcel ${p.id}: struck-through start price with no discount`);
+    } else if (/class="pop-was"/.test(openPriceHtml(next))) {
+      popProblems.push(`parcel ${p.id}: opening price shown with no discount`);
     }
   }
 

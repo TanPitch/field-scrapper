@@ -7,7 +7,7 @@ import { useOutsideClose } from '../../hooks/useOutsideClose';
 import { convertShortInput, sizeFromWah, sizeToWah, toggleSizeMode, wahLabel, type SizeValue } from '../../lib/landSize';
 import { patchApp, toast, useApp } from '../../store/useApp';
 import type { Filters } from '../../types';
-import { Select, type SelectItem } from '../ui/Select';
+import { POP_KINDS } from '../../data/constants';
 import { Stepper } from '../ui/Stepper';
 import { btn, btnAcc, iconBtn } from '../ui/styles';
 
@@ -193,15 +193,11 @@ options must not read as "outside the dialog" and close it. */
   useOutsideClose([ref, { current: anchor }], () => { if (!busy) onClose(); }, true, true);
   const pos = useAboveBelow(ref, anchor, 400);
 
-  /* The four marker kinds, matching the colours used on the map. Order is what
-     the user reads top-to-bottom: live inventory first, history last. */
-  const statusItems: SelectItem[] = [
-    { v: '', l: 'ทุกสถานะ' },
-    { v: 'sale', l: 'กำลังขาย', dot: popColors.sale },
-    { v: 'sold', l: 'ขายแล้ว', dot: popColors.sold },
-    { v: 're', l: 'นำกลับมาขายใหม่', dot: popColors.re },
-    { v: 'inactive', l: 'หมดอายุประกาศ', dot: popColors.inactive },
-  ];
+  /* The marker kinds, matching the colours used on the map. Order is what the
+     user reads top-to-bottom: live inventory first, history last. Built from
+     POP_KINDS so a status added there shows up here without a second edit. */
+  const STATUS_CHIPS = POP_KINDS.map(([v, label, status]) =>
+    ({ v, label, color: popColors[v === 're' ? 're' : status] }));
   const provinceItems = useMemo(() => uniqueOf(p => p.province), []);
   /* tambon/amp lists narrow to the picked provinces so impossible combos are hidden */
   const inProvinces = useMemo(
@@ -215,7 +211,7 @@ options must not read as "outside the dialog" and close it. */
   const chipCount = fd.provinces.length + fd.tambons.length + fd.amps.length + fd.propertyTypes.length;
 
   const clearAll = () => {
-    setFd({ status: '', minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '', provinces: [], tambons: [], amps: [], propertyTypes: [] });
+    setFd({ status: [], minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '', provinces: [], tambons: [], amps: [], propertyTypes: [] });
     setSizeMin(sizeFromWah(null));
     setSizeMax(sizeFromWah(null));
   };
@@ -245,7 +241,32 @@ options must not read as "outside the dialog" and close it. */
         ตัวกรองข้อมูล<button className={`${iconBtn} ml-auto`} onClick={() => { if (!busy) onClose(); }}><X size={17} /></button>
       </div>
       <div className="px-3 pb-2 pt-0.5">
-        <div className={row}><span className={lab}>สถานะ</span><Select className="flex-1" value={fd.status} items={statusItems} onChange={v => upd('status', v as Draft['status'])} /></div>
+        {/* Toggles, not a dropdown. The useful question is "still on the market
+            and what came off it" - two kinds at once - and a single-value select
+            made that impossible without picking and un-picking. Painted with the
+            same dot colours the map markers use, so a filtered kind is recognisable
+            before the map is even looked at. */}
+        <div className={row}><span className={lab}>สถานะ</span>
+          <div className="flex flex-1 flex-wrap gap-1">
+            {STATUS_CHIPS.map(({ v, label, color }) => {
+              const on = fd.status.includes(v);
+              return (
+                <button key={v} type="button"
+                  onClick={() => upd('status', on ? fd.status.filter(x => x !== v) : [...fd.status, v])}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[10.5px] ${on
+                    ? 'border-accent bg-accent-dim text-accent'
+                    : 'border-line text-dim2 hover:border-line3'}`}>
+                  <span className="size-1.5 rounded-full" style={{ background: color }} />
+                  {label}
+                </button>
+              );
+            })}
+            {fd.status.length > 0 && (
+              <button type="button" className="rounded-full border border-line px-2 py-[3px] text-[10.5px] text-dim2"
+                onClick={() => upd('status', [])}>ล้าง</button>
+            )}
+          </div>
+        </div>
         <SizeRow label="ขนาด ≥" value={sizeMin} onChange={setSizeMin} />
         <SizeRow label="ขนาด ≤" value={sizeMax} onChange={setSizeMax} />
         <div className={row}><span className={lab}>ราคาต่ำสุด<br /><span className="text-[9px]">(บาท)</span></span><Stepper value={fd.minPrice} step={50000} sep onChange={v => upd('minPrice', v)} /></div>

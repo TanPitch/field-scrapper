@@ -220,8 +220,11 @@ export interface Filters {
   /* Filters on the marker kind, not the raw status: 're' (นำกลับมาขายใหม่) is a
      display distinction on top of a 'sale' lot, so it can never appear as a
      p.status value. Filtering on p.status would make that option match nothing.
-     '' means no status filter. */
-  status: '' | PopupKind;
+
+     A list, because the question a user actually asks is "show me what's still
+     on the market and what came off it" - which is two kinds, and a single-value
+     filter made them pick one and lose the other. Empty means no status filter. */
+  status: PopupKind[];
     minWah: number | null;
     maxWah: number | null;
     minPrice: number | null;

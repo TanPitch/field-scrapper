@@ -24,7 +24,7 @@ export function BottomPanel({ small }: { small: boolean }) {
   const panel = useRef<HTMLElement>(null);
   const search = useRef<HTMLInputElement>(null);
 
-  const hasFilters = !!(filters.status || filters.province || filters.minWah != null || filters.maxWah != null || filters.minPrice != null || filters.maxPrice != null
+  const hasFilters = !!(filters.status?.length || filters.province || filters.minWah != null || filters.maxWah != null || filters.minPrice != null || filters.maxPrice != null
     || filters.minElev != null || filters.maxElev != null || filters.tambons?.length || filters.amps?.length || filters.propertyTypes?.length);
   const onText = useRef(debounce((v: string) => patchApp({ filters: { ...useApp.getState().filters, text: v.trim() } }), 140)).current;
 

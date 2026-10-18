@@ -19,6 +19,23 @@ import type { Parcel } from '../types';
  * number with no change behind it reads as "already discounted", which would be
  * a false signal on a lot that never moved.
  */
+/**
+ * The opening price, for the popup's deed line.
+ *
+ * Lives here rather than in popups.ts because the invariant it carries - a
+ * discounted lot must show what it opened at - is checked against this module.
+ * The check cannot import popups.ts without dragging maplibre into the test, so
+ * when the markup moved next to the deed number the check could no longer see it
+ * and reported 274 phantom problems. One implementation, both callers.
+ *
+ * Returns nothing when there is no discount: putting an opening price beside a
+ * headline that already equals it says the same thing twice.
+ */
+export function openPriceHtml(next: { discountPct: number; startPrice: number } | null | undefined): string {
+  if (!next || next.discountPct <= 0) return '';
+  return `<div class="pop-was" data-tip="ราคาเปิด">${fmtMoneyNow(next.startPrice)} ·&nbsp;</div>`;
+}
+
 export function priceHtmlFull(p: Parcel, now = Date.now()): string {
   const next = nextRoundPrice(p, now);
 
@@ -26,19 +43,22 @@ export function priceHtmlFull(p: Parcel, now = Date.now()): string {
     return `<div class="pop-price"><span>${fmtMoneyNow(p.price)}</span></div>`;
   }
 
-  const was = next.discountPct > 0
-    ? `<span class="pop-was"><s>${fmtMoneyNow(next.startPrice)}</s><i>ราคาเปิด</i></span>`
-    : '';
+  // const was = next.discountPct > 0
+  //   ? `<span class="pop-was"><s>${fmtMoneyNow(next.startPrice)}</s><i>ราคาเปิด</i></span>`
+  //   : '';
   const badge = discountBadge(next.discountPct);
+  /* The percentage belongs inside the quoted value. Written as
+     `data-tip="ลดราคา" ${...}%` it emitted a bare ${...} as a second attribute,
+     so the tag never showed and the markup was invalid. */
   const tag = badge
-    ? `<span class="pop-disc" title="รอบถัดไปลดจากราคาเปิด ${Math.round(next.discountPct)}%">${badge}</span>`
+    ? `<span class="pop-disc" data-tip="ลดราคา ${Math.round(next.discountPct)}%">${badge}</span>`
     : '';
 
   return `<div class="pop-price flex-col">
-            <div class="flex">
+            <div class="flex gap-1">
               <span>${fmtMoneyNow(next.price)}</span>
               ${tag}
-            </div>${was}
+            </div>
           </div>`;
 }
 

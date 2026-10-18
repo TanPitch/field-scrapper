@@ -28,7 +28,7 @@ export interface RowSets {
 export function dataPass(p: Parcel, { filters: f, statusVisible }: Pick<RowInputs, 'filters' | 'statusVisible'>): boolean {
   if (!statusVisible[p.status]) return false;
   /* Filter on the marker kind, so 're' is reachable — see Filters.status. */
-  if (f.status && popupKind(p) !== f.status) return false;
+  if (f.status?.length && !f.status.includes(popupKind(p))) return false;
   if (f.province && p.province !== f.province) return false;
   if (f.provinces?.length && !f.provinces.includes(p.province)) return false;
   /* A condo unit has no land area, so it cannot be inside a land-area range.

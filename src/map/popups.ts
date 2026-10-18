@@ -3,7 +3,7 @@ import { STATUS } from '../data/constants';
 import { PARCEL_BY_ID } from '../data/liveData';
 import { fmtMoneyNow } from '../hooks/useMoney';
 import { esc, fmtRai, numDate } from '../lib/format';
-import { priceHtmlFull } from '../lib/priceHtml';
+import { openPriceHtml, priceHtmlFull } from '../lib/priceHtml';
 import { discountBadge, nextRoundPrice } from '../lib/price';
 import { shortPrice } from '../lib/landType';
 import { LAND_KIND_LABEL } from '../components/ui/LandKindIcon';
@@ -97,9 +97,8 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      a whole; here it is the one number about the dot itself. */
   const units = unitBadgeCorner(p);
   /* Deed and opening price are one fact about one lot - which parcel, at what. */
-  const nxt = nextRoundPrice(p, Date.now());
-  const openLine = nxt && nxt.discountPct > 0 ? ` · เปิด ${fmtMoneyNow(nxt.startPrice)}` : '';
-  const nameLine = [cfg.deed ? esc(p.deed) : '', openLine].filter(Boolean).join('');
+  const openLine = openPriceHtml(nextRoundPrice(p, Date.now()));
+  const nameLine = cfg.deed ? esc(p.deed) : '';
   return {
     html: `<div class="pop-box" data-selectable>${units}`
       + `<div class="pop-tags">
@@ -107,7 +106,11 @@ function popupContent(p: Parcel): { html: string; bg: string } {
         <span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}
       </div>`
       + priceHtmlFull(p)
-      + `<div class="pop-name">${nameLine}</div>${rows}
+      + `<div class="flex">`
+        + openLine
+        + `<div class="pop-name" data-tip="โฉนด">${nameLine}</div>
+        </div>
+        ${rows}
     </div>`,
     bg,
   };
