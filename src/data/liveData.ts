@@ -195,6 +195,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     parcelId: id,
     status,
     wah: size,
+    sizeUnit: p.sizeUnit ?? 'wa',
     price: lastPrice,
     perWah: land != null ? Math.round(lastPrice / land) : null,
     lng: f.geometry?.coordinates?.[0] ?? 0,

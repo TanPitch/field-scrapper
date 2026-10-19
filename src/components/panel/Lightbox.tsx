@@ -129,7 +129,7 @@ export function Lightbox() {
           <div className="mb-[3px] font-display text-[10px] font-semibold text-accent">{i + 1}/{p.imgs}</div>
           {cfg.name && <div className="mb-0.5 text-[13px] font-semibold">{p.name}</div>}
           {cfg.price && row('ราคา', fmt(p.price))}
-          {cfg.size && row('ขนาด', fmtRai(p.wah))}
+          {cfg.size && row('ขนาด', fmtRai(p.wah, p.sizeUnit))}
           {cfg.status && row('สถานะ', STATUS[popupKind(p)].th)}
           {cfg.deed && row('เลขโฉนด', p.deed)}
           {cfg.soldTs && p.soldTs && row('ขายออก', fdate(p.soldTs))}

@@ -79,10 +79,12 @@ export interface Parcel {
   lotId?: number;
   id: number;
   status: Status;
-  /** Land area in ตร.วา, or null where LED publishes square metres instead. A
-   *  condo unit has a floor area and no land area; rendering that as 0 invented
-   *  a zero-size plot and a zero price-per-wah that read as real numbers. */
+  /* LED writes a ห้องชุด floor area into the same rai/ngan/wa triple it uses for
+   * land, so `wah` now carries that figure rather than a dash. The unit is not
+   * recoverable from the number, so this says which one it is meant to be. */
   wah: number | null;
+  /** 'sqm' for a ห้องชุด, otherwise land measured in ตร.วา. */
+  sizeUnit?: string | null;
   price: number;
   /** Null for the same reason as `wah` — price per ตร.วา over no ตร.วา is not 0. */
   perWah: number | null;

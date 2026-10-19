@@ -27,16 +27,29 @@ export const numDate = (ts: number | null | undefined): string => {
  * doing its own `w % 100`: a separate modulo is how 9.400000000000006 survived
  * the table fix and reappeared in the detail panel.
  */
-export function fmtRai(w: number | null): string {
-  /* No land area - a condo unit LED publishes in square metres. "—" says the
-     figure is absent; "0 วา" says the plot is nothing. */
-  if (w == null) return '—';    const [r, n, q] = splitWah(w);
+/**
+ * Which unit a size figure is in. LED writes a ห้องชุด floor area into the same
+ * rai/ngan/wa triple it uses for land, so 188.02 is square metres on one row and
+ * square wa on the next, and nothing in the number says which. Rather than assert
+ * one and be wrong half the time, name both.
+ */
+export const sizeUnitLabel = (unit: string | null | undefined): string =>
+  unit === 'sqm' ? 'ตร.วา/ตร.ม.' : 'ตร.วา';
+
+export function fmtRai(w: number | null, unit: string | null | undefined = null): string {
+  /* No land area. "—" says the figure is absent; "0 วา" says the plot is nothing. */
+  if (w == null) return '—';
+  /* A ห้องชุด figure is floor area in square metres. Splitting 188.02 into
+     "1 งาน 88.02" invents a rai-and-ngan reading that carries no meaning for a
+     floor, so it is printed whole and the unit named instead. */
+  if (unit === 'sqm') return `${w} ${sizeUnitLabel(unit)}`;
+  const [r, n, q] = splitWah(w);
     const p: string[] = [];
     if (r) p.push(r + ' ไร่');
     if (n) p.push(n + ' งาน');
     /* Whole ตร.วา print without a decimal: "5" reads better than "5.0", and the
        trailing .0 was never information. */
-    if (q || !p.length) p.push(q + ' ตร.วา');
+    if (q || !p.length) p.push(q + ' ' + sizeUnitLabel(unit));
     return p.join(' ');
   }
 export const fmtRaiFromM2 = (m2: number): string => fmtRai(Math.round(m2 / 4));
