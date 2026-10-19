@@ -18,6 +18,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { router as usersRouter, requireAdmin, SESSION_COOKIE } from "./users.js";
+import { mapStatus as mapLotStatus } from "./mapStatus.js";
 
 const { Pool } = pg;
 
@@ -322,9 +323,16 @@ app.get("/api/parcels", async (req, res) => {
                   on the map. Computed rather than stored: it is a property of
                   the join, not a fact about the land. */
                (SELECT count(*)::int FROM auction_lots x WHERE x.parcel_id = p.id) AS lot_count
+/* Only parcels that actually carry a lot are published. ingest.js writes one
+   parcel per deed number, but LED sells a condominium building as a single
+   auction with one lot: the other ten "parcels" are the building's units, not
+   land. They resolved to real coordinates, so they drew markers, and each showed
+   an empty shell - no case, no deed, no price, no size. A row with no lot has
+   nothing to assert, so it is not data the map should claim to have. */
 FROM parcels p
           LEFT JOIN auction_lots l ON l.parcel_id = p.id
-         WHERE ($1::int IS NULL OR p.province_code = $1)
+         WHERE l.id IS NOT NULL
+           AND ($1::int IS NULL OR p.province_code = $1)
            AND ($2::bool IS NOT TRUE OR l.status = 'active')
          ORDER BY p.id`, [province, onlyActive]);
 
@@ -514,25 +522,11 @@ app.get("/api/parcels/:id", async (req, res) => {
  * closed, so that reason is used rather than guessing from the status alone:
  * a seizure revoked or a cancelled remainder is not a sale, and showing it as
  * "ขายแล้ว" would be a straightforward lie.
+ *
+ * The body lives in mapStatus.js so it can be tested - see the file for why
+ * that turned out to matter.
  */
-function mapStatus(status, closeReason, closeCode) {
-  /* The reason is LED's own enum, not prose. Its full set is null, sold,
-   * withdrawn and cancelled_remaining_rounds - 4524 / 600 / 321 / 348 lots - and
-   * the last two are both dead ends. They are reported as one `cancelled`
-   * because as a buying decision they are one answer; the detail panel still
-   * shows which of the two it was.
-   *
-   * Checked before the status tests, because LED leaves some of these lots
-   * flagged active and an active lot becomes กำลังขาย, which then advertises a
-   * next auction date for land that will not be auctioned again. Neither was
-   * sold either, so ขายแล้ว is equally a lie. */
-  if (closeReason === 'withdrawn' || closeReason === 'cancelled_remaining_rounds') return 'cancelled';
-  if (status === 'active') return 'sale';
-  if (status === 'inactive') return 'inactive';
-  if (closeCode === 1 || closeReason === 'sold') return 'sold';
-  /* Ended without a buyer: seizure revoked, or cancelled with rounds left. */
-  return 'inactive';
-}
+const mapStatus = mapLotStatus;
 
 /* ------------------------------------------------------- admin: data quality
  *
