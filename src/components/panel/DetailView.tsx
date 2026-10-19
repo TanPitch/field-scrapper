@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type R
 import { STATUS } from '../../data/constants';
 import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
-import { fdate, fmtRai, numDate } from '../../lib/format';
+import { fdate, fmtRai, numDate, sizeRowLabel } from '../../lib/format';
 import { popupKind } from '../../map/popups';
 import { patchApp, useApp } from '../../store/useApp';
 import { useLightbox } from '../../store/useLightbox';
@@ -240,7 +240,7 @@ export function DetailView() {
           ['ประเภททรัพย์', p.propertyType],
           ['หมายเลขคดี', p.caseNo],
           ['เลขที่โฉนด', p.deedNo],
-          ['ขนาดที่ดิน', `${fmtRai(p.wah, p.sizeUnit)}`],
+          [sizeRowLabel(p.sizeUnit), `${fmtRai(p.wah, p.sizeUnit)}`],
           ...tdRow,
           ['ระวาง', td?.rawang],
           ['หลักประกัน', fmt(p.collateral)],

@@ -28,13 +28,24 @@ export const numDate = (ts: number | null | undefined): string => {
  * the table fix and reappeared in the detail panel.
  */
 /**
- * Which unit a size figure is in. LED writes a ห้องชุด floor area into the same
- * rai/ngan/wa triple it uses for land, so 188.02 is square metres on one row and
- * square wa on the next, and nothing in the number says which. Rather than assert
- * one and be wrong half the time, name both.
+ * Which unit a size figure is in, and what the row is called.
+ *
+ * LED writes a ห้องชุด floor area into the same rai/ngan/wa triple it uses for
+ * land, so the number alone says nothing. The tempting test is "over 100 วา,
+ * therefore square metres" - a condo has no reason to respect the 100-วา ngan
+ * and so spills past it. Measured, that is wrong in both directions: 290 condo
+ * units come in under 100 วา and 3,150 land lots sit over it. It would mislabel
+ * 3,440 lots.
+ *
+ * LED names the type directly instead - ห้องชุด against ที่ดิน - so that is what
+ * is asked. It is exact, and it needs no threshold to defend.
  */
+export const isSqm = (unit: string | null | undefined): boolean => unit === 'sqm';
 export const sizeUnitLabel = (unit: string | null | undefined): string =>
-  unit === 'sqm' ? 'ตร.วา/ตร.ม.' : 'ตร.วา';
+  isSqm(unit) ? 'ตร.ม.' : 'ตร.วา';
+/** The row is about the room, not the plot, when the land is a ห้องชุด. */
+export const sizeRowLabel = (unit: string | null | undefined): string =>
+  isSqm(unit) ? 'ขนาดห้อง' : 'ขนาดที่ดิน';
 
 export function fmtRai(w: number | null, unit: string | null | undefined = null): string {
   /* No land area. "—" says the figure is absent; "0 วา" says the plot is nothing. */
@@ -42,7 +53,7 @@ export function fmtRai(w: number | null, unit: string | null | undefined = null)
   /* A ห้องชุด figure is floor area in square metres. Splitting 188.02 into
      "1 งาน 88.02" invents a rai-and-ngan reading that carries no meaning for a
      floor, so it is printed whole and the unit named instead. */
-  if (unit === 'sqm') return `${w} ${sizeUnitLabel(unit)}`;
+  if (isSqm(unit)) return `${w} ${sizeUnitLabel(unit)}`;
   const [r, n, q] = splitWah(w);
     const p: string[] = [];
     if (r) p.push(r + ' ไร่');

@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { STATUS } from '../data/constants';
 import { PARCEL_BY_ID } from '../data/liveData';
 import { fmtMoneyNow } from '../hooks/useMoney';
-import { esc, fmtRai, numDate } from '../lib/format';
+import { esc, fmtRai, numDate, sizeRowLabel } from '../lib/format';
 import { openPriceHtml, priceHtmlFull } from '../lib/priceHtml';
 import { discountBadge, nextRoundPrice } from '../lib/price';
 import { shortPrice } from '../lib/landType';
@@ -24,7 +24,7 @@ function popupContent(p: Parcel): { html: string; bg: string } {
   const kind = popupKind(p), cfg = s.popupCfg[kind];
   const row = (l: string, v: string) => `<div class="pop-row"><span>${l}</span><b>${v}</b></div>`;
   let rows = '';
-  if (cfg.size) rows += row('ขนาดที่ดิน', fmtRai(p.wah, p.sizeUnit));
+  if (cfg.size) rows += row(sizeRowLabel(p.sizeUnit), fmtRai(p.wah, p.sizeUnit));
   /* Land type sits between the size and the unit price: it is the answer to
      "what is this, and can I build on it", which is the next question after how
      big. It used to be a text chip in the header row, where it competed with the
