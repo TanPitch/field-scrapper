@@ -97,6 +97,15 @@ export async function getQuota(client, { date, limit = 20 } = {}) {
  * upcoming round. Idempotent: re-running updates priority and leaves done rows
  * alone.
  *
+ * "No coordinates" means none from *any* source - td_lat IS NULL AND dol_lat IS
+ * NULL, the same order the API reads them in (geom, then TD, then DOL). It used
+ * to test dol_lat alone, on the assumption that only DOL placed a point. TD does
+ * most of the work: 5,192 of 5,657 parcels carry a td_lat and six carry a
+ * dol_lat, so that predicate queued 5,651 parcels of which 5,186 already stood
+ * on the map. A queue that size is not a backlog, it is the whole database, and
+ * a worker would spend DOL's 20 calls a day re-resolving land that was never
+ * missing.
+ *
  * `only` narrows it to a set of parcel ids. It exists for the integration
  * tests, which run against the real dev database and would otherwise enqueue
  * every unresolved parcel in it - 5000 rows, 8.5 seconds, past bun's 5s default,
@@ -128,7 +137,7 @@ export async function enqueueUnresolved(client, { limit = 5000, only = null } = 
                           AND r.round_date >= CURRENT_DATE
                    ) - CURRENT_DATE END AS priority
               FROM parcels p
-             WHERE p.dol_lat IS NULL
+             WHERE p.td_lat IS NULL AND p.dol_lat IS NULL
               ${scope}
               LIMIT $1
         )

@@ -55,6 +55,36 @@ function ingest() {
     return r.status === 0;
 }
 
+/**
+ * Hand this pass's parcels to bot 2 by filling the coordinate queue.
+ *
+ * The queue is global and enqueueUnresolved is idempotent, so one whole-database
+ * pass after each province is correct and cheap, and it also picks up whatever
+ * earlier passes left unresolved. Scoping it to this province would need the
+ * province's parcel ids pulled back out of the database to say the same thing.
+ *
+ * Failure here must not turn a successful scrape into a failed one: the parcels
+ * are already written, and the next pass or the daily resolveCoordsCLI run will
+ * queue them. So it reports and moves on.
+ */
+async function fillCoordQueue() {
+    const url = process.env.DATABASE_URL;
+    if (!url) return null;
+    let client;
+    try {
+        const pg = (await import("pg")).default;
+        client = new pg.Client({ connectionString: url });
+        await client.connect();
+        const { enqueueUnresolved } = await import("./coordQueue.js");
+        return (await enqueueUnresolved(client)).length;
+    } catch (err) {
+        console.log(`      coord queue not filled: ${String(err.message).slice(0, 70)}`);
+        return null;
+    } finally {
+        await client?.end().catch(() => {});
+    }
+}
+
 async function runProvince(prov) {
     /* Set per-pass rather than mutating CONFIG, so a failed province cannot
      * leave the next one pointed at the wrong region. */
@@ -133,6 +163,11 @@ const main = async () => {
             fs.writeFileSync(ROWS, JSON.stringify(rows), "utf8");
 
             const ok = ingest();
+            /* Bot 2's work list, filled here rather than inside ingest: the
+             * scraper should not know a queue exists, and one call per province
+             * is the natural cadence. Only on a clean ingest - a half-written
+             * province has nothing worth resolving yet. */
+            const queued = ok ? await fillCoordQueue() : null;
             const entry = {
                 province: prov.text,
                 provinceId: prov.value,
@@ -140,12 +175,14 @@ const main = async () => {
                 totalPages,
                 parseErrors: errors.length,
                 ingested: ok,
+                queuedForCoords: queued,
                 seconds: +((Date.now() - started) / 1000).toFixed(1),
                 at: new Date().toISOString(),
             };
             manifest.push(entry);
             writeManifest(manifest);
-            console.log(`${rows.length} rows -> ${ok ? "ingested" : "INGEST FAILED"} (${entry.seconds}s)`);
+            console.log(`${rows.length} rows -> ${ok ? "ingested" : "INGEST FAILED"} (${entry.seconds}s)` +
+                (queued == null ? "" : `  |  ${queued} waiting on coordinates`));
             if (errors.length) console.log(`      ${errors.length} page-level error(s)`);
         } catch (err) {
             manifest.push({
