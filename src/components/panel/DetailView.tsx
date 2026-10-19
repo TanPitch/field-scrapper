@@ -320,7 +320,7 @@ export function DetailView() {
             onChange={v => setPicked(units[Number(v)])}
             items={units.map((u, i) => ({
               v: String(i),
-              l: `#${i + 1}/${units.length} · ${fmtRai(u.wah, u.sizeUnit)} วา · ${u.price > 0 ? fmt(u.price) : '-'}`,
+              l: `#${i + 1}/${units.length} · ${fmtRai(u.wah, u.sizeUnit)} · ${u.price > 0 ? fmt(u.price) : '-'}`,
             }))}
             className="min-w-0 flex-1 text-[11px]"
           />

@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { STATUS } from '../data/constants';
 import { PARCEL_BY_ID } from '../data/liveData';
 import { fmtMoneyNow } from '../hooks/useMoney';
-import { esc, fmtRai, numDate, sizeRowLabel } from '../lib/format';
+import { esc, fmtRai, isSqm, numDate, sizeRowLabel } from '../lib/format';
 import { openPriceHtml, priceHtmlFull } from '../lib/priceHtml';
 import { discountBadge, nextRoundPrice } from '../lib/price';
 import { shortPrice } from '../lib/landType';
@@ -30,7 +30,10 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      big. It used to be a text chip in the header row, where it competed with the
      status and pushed the unit price off a short popup. */
   if (landKindLabel(p)) rows += row('ประเภทที่ดิน', landKindLabel(p)!);
-  if (cfg.perWah) rows += row('ราคา/ตร.วา', fmtMoneyNow(p.perWah));
+  /* A ห้องชุด is sold per square metre of floor, so its price per ตร.วา would be
+     a division against the whole building's plot - a number that looks real and
+     means nothing. Hidden rather than shown as a dash. */
+  if (cfg.perWah && !isSqm(p.sizeUnit)) rows += row('ราคา/ตร.วา', fmtMoneyNow(p.perWah));
   // if (cfg.announce) rows += row('ประกาศขาย', fdate(p.announce));
   // if (cfg.soldTs && p.soldTs) rows += row('ขายออกแล้ว', fdate(p.soldTs));
   // if (cfg.resale && p.resell) {
@@ -99,11 +102,15 @@ function popupContent(p: Parcel): { html: string; bg: string } {
   /* Deed and opening price are one fact about one lot - which parcel, at what. */
   const openLine = openPriceHtml(nextRoundPrice(p, Date.now()));
   const nameLine = cfg.deed ? esc(p.deed) : '';
+  /* The agency is provenance, not a fact about the land, so it goes last and on
+     its own line where it cannot be read as another attribute of the parcel. In
+     the chip row it sat beside the status and the land-kind icon, where three
+     pills of equal weight competed for one line. */
+  const srcLine = `<div class="pop-src-row">${esc(p.dataSource)}</div>`;
   return {
     html: `<div class="pop-box" data-selectable>${units}`
       + `<div class="pop-tags">
-        <span class="pop-tag">${STATUS[kind].th}</span>
-        <span class="pop-src">${esc(p.dataSource)}</span>${kindBadge}
+        <span class="pop-tag">${STATUS[kind].th}</span>${kindBadge}
       </div>`
       + priceHtmlFull(p)
       + `<div class="flex">`
@@ -111,6 +118,7 @@ function popupContent(p: Parcel): { html: string; bg: string } {
         + `<div class="pop-name" data-tip="โฉนด">${nameLine}</div>
         </div>
         ${rows}
+        ${srcLine}
     </div>`,
     bg,
   };

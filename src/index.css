@@ -431,7 +431,6 @@ body.reduce-motion .spin-keep {
   opacity: 0.7;
 }
 /* data source + land-kind badges on the full popup */
-.pop-src,
 .pop-kind {
   font: 500 9.5px 'Noto Sans Thai', sans-serif;
   padding: 1px 7px;
@@ -439,6 +438,18 @@ body.reduce-motion .spin-keep {
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(0, 0, 0, 0.22);
   color: #fff;
+}
+/* The agency moved off the chip row to the foot of the popup, where it reads as
+   provenance rather than as one more attribute of the land. Plain text, no pill:
+   it is not competing for the status line any more, so it does not need to be
+   dressed like one. */
+.pop-src-row {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font: 500 9px 'Noto Sans Thai', sans-serif;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: right;
 }
 /* LandKind values. The two kinds that put something on the parcel carry the
    light pill so they read against the dark price line; 'empty' and
