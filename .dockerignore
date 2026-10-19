@@ -1,0 +1,13 @@
+# Docker - ignored, the image does not need them.
+node_modules
+test/node_modules
+dist
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+AUDIT.md
+out
+*.log
+.cache

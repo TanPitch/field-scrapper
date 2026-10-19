@@ -28,13 +28,27 @@ import { existsSync } from "node:fs";
  * Puppeteer normally launches the Chrome build it downloaded into its own cache.
  * That cache is empty on this machine, and the alternative - `npx puppeteer
  * browsers install chrome` - is a 150MB download for a bot that only reads a
- * public map. Chrome is already installed, so use it. PUPPETEER_EXECUTABLE_PATH
- * overrides, and if none of the usual places has a browser the call falls back
- * to whatever Puppeteer has cached.
+ * public map. Chrome is already installed, so use it.
+ *
+ * PUPPETEER_EXECUTABLE_PATH overrides everything, which is how a Docker image
+ * says which browser it has. The list below covers both platforms so the same
+ * code runs on this Windows box and on a Linux container:
+ *
+ *   Linux   /usr/bin/google-chrome, /usr/bin/chromium, /usr/bin/chromium-browser
+ *   Windows the two Program Files paths, and the per-user one
+ *
+ * If none of them exists the call falls back to whatever Puppeteer has cached,
+ * which is the right answer inside a Docker image built with
+ * `npx puppeteer browsers install chrome`. A browser that is not there is a
+ * clear error at launch, not a silent wrong-browser run.
  */
 const systemChrome = () => {
   const paths = [
     process.env.PUPPETEER_EXECUTABLE_PATH,
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
     "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
     `${process.env.LOCALAPPDATA}/Google/Chrome/Application/chrome.exe`,

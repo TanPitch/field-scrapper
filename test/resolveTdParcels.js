@@ -195,7 +195,16 @@ async function query(prov, deed, survey = "", tries = 3) {
         LANGUAGE: "TH",
         USER_ID: "2",
         BEGIN: "1",
-        END: "20",
+        /* The result list is CAPPED by BEGIN/END, and the cap is not a limit on
+         * matches - it is a limit on rows, one per parcel, and a bare CHANOD_NO
+         * returns every parcel in the province carrying that deed. One ขอนแก่น deed
+         * came back with 25 amphurs, and the one for our district was past the
+         * twentieth row, so it was never in the set we filtered. Every such parcel
+         * was then reported as "TD does not have it" when TD did.
+         *
+         * 20 was the old cap; tdLookup.js already raised it to 200 for exactly
+         * this reason and this copy of the request was never updated. */
+        END: "200",
         VISITOR_UUID: "0123456789abcdef0123456789abcdef",
         FLAG_DVALUE: "1",
     });
@@ -219,19 +228,36 @@ const client = new pg.Client({
 });
 await client.connect();
 
-/* Only parcels with no coordinate from any source, the same rule the queue uses.
- * This list was every parcel with a deed number, so a re-run re-queried the
- * province from scratch - 797 parcels in Phuket, most of them placed months ago,
- * at 400ms each. That is why it only ever got run once per province by hand.
- * Same order as the API: geom, then TD, then DOL. */
+/* Only parcels that still need work, and the two ways a parcel is done.
+ *
+ * 1. It has a coordinate from any source. geom, then TD, then DOL, the same
+ *    order the API reads them in. This list used to be every parcel with a deed
+ *    number, so a re-run re-queried the province from scratch - 797 in Phuket,
+ *    most of them placed months earlier, at 400ms each. That is why it could
+ *    only ever be run once per province by hand.
+ *
+ * 2. It was looked at recently and came back a dead end. Asking TD again
+ *    tomorrow about a deed it does not hold gains nothing, and there are 465
+ *    of these. The verdict is stamped with td_checked_at, so the sweep becomes
+ *    weekly instead of a daily re-scan of known dead ends - the same seven days
+ *    LED's own listings run on.
+ *
+ * pending_quota is deliberately not a dead end: the lookup never ran, so the
+ * answer is unknown, and it must be asked again as soon as there is allowance. */
+const DEAD_ENDS = "'no_result','district_mismatch','ambiguous','no_shape','error'";
+const RETRY_DAYS = Number(process.env.TD_RETRY_DAYS ?? 7);
+
 const where = [
     "d.td_code IS NOT NULL",
     "p.deed_number IS NOT NULL",
     "p.deed_number <> ''",
     "p.td_lat IS NULL",
     "p.dol_lat IS NULL",
+    /* Not a recent dead end. */
+    `NOT (p.dol_verdict IN (${DEAD_ENDS}) AND p.td_checked_at > now() - ($1 || ' days')::interval)`,
 ];
-const params = [];
+/* $1 is the retry window, so the province filter, if any, takes $2. */
+const params = [RETRY_DAYS];
 if (ONLY_PROV) { params.push(Number(ONLY_PROV)); where.push(`d.province_id = $${params.length}`); }
 
 const sql = `
@@ -259,6 +285,35 @@ console.log(`  [cfg] ${todo.length} parcels, ${WRITE ? "WRITE" : "dry run"}, ${D
 if (!todo.length) { console.log("  nothing to do"); await client.end(); process.exit(0); }
 
 const seenObjectId = new Set();
+
+/**
+ * File why a parcel could not be placed, so the next run can tell the cases
+ * apart instead of counting them all as "not found".
+ *
+ *   no_result        TD holds nothing under this deed number. A dead end.
+ *   district_mismatch TD holds it, but in another district. Our district is the
+ *                     one LED named, and taking TD's would put the marker on the
+ *                     wrong land.
+ *   ambiguous        TD holds more than one parcel in our district. A person
+ *                     has to say which.
+ *   no_shape         TD matched the parcel and gave no coordinates.
+ *   pending_quota    DOL was asked and the day's allowance was already spent.
+ *                     Worth retrying tomorrow, unlike the rest.
+ *   error            the request itself failed.
+ *
+ * Written to dol_verdict, which is the column the app already reads, and
+ * geo_note, which carries the detail. Before this, the branches that had no
+ * result and the ambiguous ones wrote nothing at all, so most of the backlog
+ * had no recorded reason and the next run could not learn from it.
+ */
+const fileReason = async (parcelId, verdict, note) => {
+    if (!WRITE) return;
+    await client.query(
+        `UPDATE parcels SET dol_verdict = $2, geo_note = $3, td_checked_at = now() WHERE id = $1`,
+        [parcelId, verdict, note],
+    );
+};
+
 for (const [i, p] of todo.entries()) {
     const rows = await query(
         { name: p.prov_name, td_province_code: p.td_province_code },
@@ -266,8 +321,18 @@ for (const [i, p] of todo.entries()) {
         p.td_land_no_hint ?? "",
     );
 
-    if (!Array.isArray(rows)) { stats.error++; continue; }
-    if (!rows.length) { stats.noResult++; await sleep(DELAY_MS); continue; }
+    if (!Array.isArray(rows)) {
+        stats.error++;
+        await fileReason(p.parcel_id, "error", String(rows?.error ?? "no rows returned"));
+        await sleep(DELAY_MS);
+        continue;
+    }
+    if (!rows.length) {
+        stats.noResult++;
+        await fileReason(p.parcel_id, "no_result", `TD has no parcel under deed ${p.deed_number}`);
+        await sleep(DELAY_MS);
+        continue;
+    }
 
     /* TD does not filter by district: AMPH_CODE is not a recognised parameter
      * (it returns total=0) and AMPHUR_CODE is accepted but ignored. A bare
@@ -287,7 +352,14 @@ for (const [i, p] of todo.entries()) {
   let verdict = null;
     let via = "td";
     if (byDistrict.length === 1) { stats.found++; r = byDistrict[0]; verdict = "match"; }
-    else if (byDistrict.length > 1) { stats.ambiguous++; ambiguous.push({ deed: p.deed_number, n: byDistrict.length, dist: want }); await sleep(DELAY_MS); continue; }
+    else if (byDistrict.length > 1) {
+        stats.ambiguous++;
+        ambiguous.push({ deed: p.deed_number, n: byDistrict.length, dist: want });
+        await fileReason(p.parcel_id, "ambiguous",
+            `TD returned ${byDistrict.length} parcels in ${want} for deed ${p.deed_number}`);
+        await sleep(DELAY_MS);
+        continue;
+    }
     else if (rows.length === 1) {
     /* One row, but not in the district our map resolved. Accepting it would put a
      * marker on the wrong district, so it is recorded as a mismatch instead. */
@@ -316,18 +388,18 @@ for (const [i, p] of todo.entries()) {
         }
         stats.districtMismatch++;
         districtMismatch.push({ deed: p.deed_number, want, got: rows.map((x) => x.AMPHUR_NAME) });
-        /* Two different problems wearing the same face. "TD never heard of this
-         * deed" is settled - retrying changes nothing. "DOL quota spent before we
-         * got here" is not: DOL addresses by province/amphur/parcel and may hold
-         * it, we just were not allowed to ask today. Filing both as no_result
-         * would put an unrun lookup next to a dead end, and the queue of work that
-         * might still succeed is the one worth seeing. */
-        if (WRITE) {
-            await client.query(
-                `UPDATE parcels SET dol_verdict = $2 WHERE id = $1`,
-                [p.parcel_id, dolStats.blocked ? "pending_quota" : "no_result"],
-            );
-        }
+        /* The verdict is the district disagreement, not the quota. The quota
+         * only decides whether DOL was asked as a second opinion; it is not why
+         * the parcel is unplaced, and filing it as pending_quota buried 270 real
+         * mismatches under a reason that meant something else. The quota goes in
+         * the note instead. */
+        const got = [...new Set(rows.map((x) => String(x.AMPHUR_NAME ?? "").trim()).filter(Boolean))];
+        await fileReason(
+            p.parcel_id,
+            "district_mismatch",
+            `TD has deed ${p.deed_number} in ${got.join(", ") || "an unnamed district"}, LED says ${want}` +
+            (dolStats.blocked ? "; DOL not tried, daily allowance spent" : ""),
+        );
         await sleep(DELAY_MS);
         continue;
     }
@@ -340,7 +412,16 @@ for (const [i, p] of todo.entries()) {
     if (pt) {
         utmE = pt[0]; utmN = pt[1];
         [lat, lng] = utmToLatLng(pt[0], pt[1]);
-    } else stats.noShape++;
+    } else {
+        stats.noShape++;
+        /* TD matched the parcel and gave no SHAPE, so there is no point to put
+         * on the map. The success path below would still write a coordinate of
+         * null and call it resolved, which hides the parcel from every later
+         * query that looks for a coordinate - including the one that decides
+         * what is left to do. */
+        await fileReason(p.parcel_id, "no_shape",
+            `TD matched deed ${p.deed_number} but returned no SHAPE`);
+    }
 
     if (objId != null) {
         if (seenObjectId.has(objId)) stats.shared++;
