@@ -2,6 +2,7 @@
 import { ALL_PARCELS } from '../data/liveData';
 import type { BBox, FilterArea, Filters, LngLat, Parcel, SortKey, SortState, Status } from '../types';
 import { closeRing, pip } from './geo';
+import { toSqWa } from './format';
 import { popupKind } from '../map/popups';
 
 export interface RowInputs {
@@ -34,8 +35,9 @@ export function dataPass(p: Parcel, { filters: f, statusVisible }: Pick<RowInput
   /* A condo unit has no land area, so it cannot be inside a land-area range.
      Left as a bare comparison, null coerces to 0 and a minWah of 1 วา would
      quietly keep every condo in the results. */
-  if (f.minWah != null && (p.wah == null || p.wah < f.minWah)) return false;
-  if (f.maxWah != null && (p.wah == null || p.wah > f.maxWah)) return false;
+  const w = toSqWa(p.wah, p.sizeUnit);
+  if (f.minWah != null && (w == null || w < f.minWah)) return false;
+  if (f.maxWah != null && (w == null || w > f.maxWah)) return false;
   if (f.tambons?.length && !f.tambons.includes(p.tambon)) return false;
   if (f.amps?.length && !f.amps.includes(p.amp)) return false;
   if (f.propertyTypes?.length && !f.propertyTypes.includes(p.propertyType)) return false;

@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProper
 import { COL_DEFS, PIN_W, ROW_H, STATUS } from '../../data/constants';
 import { useMoney } from '../../hooks/useMoney';
 import { useParcels } from '../../hooks/useParcels';
-import { fdate, splitWah } from '../../lib/format';
+import { fdate, splitWah, toSqWa } from '../../lib/format';
 import { parcelDot } from '../../lib/parcelColor';
 import { RichText, RichTextEditor } from '../ui/RichText';
 import { applyReorder, select, toggleColPin, togglePinRow } from '../../store/actions';
@@ -113,7 +113,7 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
       case 'no': return no ? caseNoOf(no) : '';
       case 'name': return p.name;
       case 'status': return <><span className="inline-block size-[7px] flex-none rounded-full" style={{ background: dot }} />&nbsp;{STATUS[p.status].th}</>;
-      case 'size': return splitWah(p.wah)[c.sub ?? 0];
+      case 'size': return splitWah(toSqWa(p.wah, p.sizeUnit))[c.sub ?? 0];
       case 'height': {
         /* Two different "no value" cases, and they must not look alike:
            a DEM that did not cover the point, versus a parcel we only know to

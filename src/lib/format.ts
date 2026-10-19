@@ -41,6 +41,23 @@ export const numDate = (ts: number | null | undefined): string => {
  * is asked. It is exact, and it needs no threshold to defend.
  */
 export const isSqm = (unit: string | null | undefined): boolean => unit === 'sqm';
+
+/**
+ * The same size in ตร.วา.
+ *
+ * 1 ไร่ = 400 ตร.วา = 1,600 ตร.ม., so one square metre is a quarter of a square wa.
+ * The bottom table's size column is headed ไร่ / งาน / ตร.วา, so a ห้องชุด has to
+ * be converted to sit in it truthfully - otherwise the column prints square
+ * metres under a heading that says square wa. Everywhere else the figure is left
+ * alone: the popup and the detail panel show what LED published, which is the
+ * unit they name.
+ *
+ * Filtering goes through this too. A size filter is stated in ตร.วา and applies
+ * to the column it filters, so comparing raw p.wah would exclude a 188.02 ตร.ม.
+ * unit from a "40 ตร.ว. and over" search while the table displays it as 47.
+ */
+export const toSqWa = (w: number | null, unit: string | null | undefined): number | null =>
+  w == null ? null : (isSqm(unit) ? w / 4 : w);
 export const sizeUnitLabel = (unit: string | null | undefined): string =>
   isSqm(unit) ? 'ตร.ม.' : 'ตร.วา';
 /** The row is about the room, not the plot, when the land is a ห้องชุด. */
