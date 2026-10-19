@@ -207,14 +207,20 @@ export async function claim(client, { max = 20 } = {}) {
 
     /* Hydrate the claims with what the lookup needs. Done after the claim so
        the FOR UPDATE SKIP LOCKED window stays short — holding row locks across
-       a join against four tables would serialise the workers. */
+       a join against four tables would serialise the workers.
+           *
+           * province_code is the กรมที่ดิน code, not LED's: the two agree for
+           * all but one province, where LED says 97 and กรมที่ดิน says 38, and
+           * asking for 97 returns nothing for every deed in it. It pairs with
+           * district_dol_code, which is already a กรมที่ดิน code. */
     if (rows.length) {
         const ids = rows.map((r) => r.parcel_id);
         const { rows: detail } = await client.query(
-            `SELECT p.id AS parcel_id, p.province_code, p.district_dol_code,
+            `SELECT p.id AS parcel_id, pr.dol_code AS province_code, p.district_dol_code,
                     p.deed_number, p.land_title, p.tumbol,
                     l.size_unit, l.size_rai, l.size_ngan, l.size_wa, l.asset_type
                FROM parcels p
+               JOIN provinces pr ON pr.code = p.province_code
                LEFT JOIN LATERAL (
                     SELECT size_unit, size_rai, size_ngan, size_wa, asset_type
                       FROM auction_lots

@@ -28,14 +28,35 @@ const ok = (over = {}) => ({
 
 /** Deterministic fixture: only this file's parcels are ever in the queue, and
  *  the day's quota starts empty. Keeps a run from stamping fake coordinates
- *  onto the real ingested parcels. */
+ *  onto the real ingested parcels.
+ *
+ *  The quota is emptied for the duration and put back afterwards. Zeroing it
+ *  for good would under-count the calls a real run has already made - the
+ *  ledger is the only thing standing between the bot and the service's daily
+ *  ceiling, and a test run that left it reading zero would let the next run
+ *  spend twenty more on top of twenty already spent. */
+let savedQuota = null;
+
 async function freshQueue() {
     await client.query(`DELETE FROM coord_queue`);
     await enqueueUnresolved(client, { only: made.parcels });
     await client.query(
         `DELETE FROM coord_queue WHERE parcel_id NOT IN (SELECT unnest($1::bigint[]))`,
         [made.parcels]);
+    if (savedQuota == null) {
+        const { rows } = await client.query(
+            `SELECT used, calls_ok, calls_failed FROM dol_quota_ledger WHERE quota_date = CURRENT_DATE`);
+        savedQuota = rows[0] ?? { used: 0, calls_ok: 0, calls_failed: 0 };
+    }
     await client.query(`UPDATE dol_quota_ledger SET used=0, calls_ok=0, calls_failed=0`);
+}
+
+/** Give the day's real quota back once the file is done with it. */
+async function restoreQuota() {
+    if (!savedQuota) return;
+    await client.query(
+        `UPDATE dol_quota_ledger SET used=$1, calls_ok=$2, calls_failed=$3 WHERE quota_date = CURRENT_DATE`,
+        [savedQuota.used, savedQuota.calls_ok, savedQuota.calls_failed]);
 }
 
 before(async () => {
@@ -118,7 +139,7 @@ after(async () => {
     await client.query(`DELETE FROM coord_queue WHERE parcel_id = ANY($1)`, [made.parcels]);
     await client.query(`DELETE FROM auction_lots WHERE id = ANY($1)`, [made.lots]);
     await client.query(`DELETE FROM parcels WHERE id = ANY($1)`, [made.parcels]);
-    await client.query(`UPDATE dol_quota_ledger SET used=0, calls_ok=0, calls_failed=0`);
+    await restoreQuota();
     await client.end();
 });
 

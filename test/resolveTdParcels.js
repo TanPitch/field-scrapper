@@ -219,7 +219,18 @@ const client = new pg.Client({
 });
 await client.connect();
 
-const where = ["d.td_code IS NOT NULL", "p.deed_number IS NOT NULL", "p.deed_number <> ''"];
+/* Only parcels with no coordinate from any source, the same rule the queue uses.
+ * This list was every parcel with a deed number, so a re-run re-queried the
+ * province from scratch - 797 parcels in Phuket, most of them placed months ago,
+ * at 400ms each. That is why it only ever got run once per province by hand.
+ * Same order as the API: geom, then TD, then DOL. */
+const where = [
+    "d.td_code IS NOT NULL",
+    "p.deed_number IS NOT NULL",
+    "p.deed_number <> ''",
+    "p.td_lat IS NULL",
+    "p.dol_lat IS NULL",
+];
 const params = [];
 if (ONLY_PROV) { params.push(Number(ONLY_PROV)); where.push(`d.province_id = $${params.length}`); }
 

@@ -20,6 +20,27 @@
  *     cleanly instead of retrying into a wall.
  */
 import puppeteer from "puppeteer";
+import { existsSync } from "node:fs";
+
+/**
+ * A browser to drive.
+ *
+ * Puppeteer normally launches the Chrome build it downloaded into its own cache.
+ * That cache is empty on this machine, and the alternative - `npx puppeteer
+ * browsers install chrome` - is a 150MB download for a bot that only reads a
+ * public map. Chrome is already installed, so use it. PUPPETEER_EXECUTABLE_PATH
+ * overrides, and if none of the usual places has a browser the call falls back
+ * to whatever Puppeteer has cached.
+ */
+const systemChrome = () => {
+  const paths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+    `${process.env.LOCALAPPDATA}/Google/Chrome/Application/chrome.exe`,
+  ].filter(Boolean);
+  return paths.find((p) => existsSync(p)) ?? null;
+};
 
 const DOL_API = "https://landsmaps.dol.go.th/apiService/LandsMaps/GetParcelByParcelNo/";
 const LANDMAPS = "https://landsmaps.dol.go.th/";
@@ -42,6 +63,7 @@ export async function createDolLookup({
 } = {}) {
     const browser = await puppeteer.launch({
         headless: true,
+        ...(systemChrome() ? { executablePath: systemChrome() } : {}),
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
     const page = await browser.newPage();
