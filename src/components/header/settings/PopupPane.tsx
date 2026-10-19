@@ -20,6 +20,7 @@ import {
 } from '../../../store/useApp';
 import { ColorButton } from '../../ui/ColorButton';
 import { Seg } from '../../ui/Seg';
+import { Select } from '../../ui/Select';
 import {
   btn,
   fl,
@@ -204,18 +205,21 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
 
       <div className={setSec}>ห้องชุด</div>
       <div className={frow}>
-        <span className={fl}>หน่วยที่แสดงบนจุด</span>
-        <Seg<CondoUnitOrder>
-          items={[
-            ['statusFirst', 'กำลังขายก่อน'],
-            ['sizeDesc', 'ใหญ่สุด'],
-            ['sizeAsc', 'เล็กสุด'],
-            ['priceAsc', 'ราคาต่ำสุด'],
-            ['priceDesc', 'ราคาสูงสุด'],
-            ['orderLabel', 'ลำดับแรก'],
-          ]}
+        <span className={fl}>จุดในแผนที่</span>
+        {/* Six labels, each long enough to wrap in a segmented control inside this
+            narrow panel. Select is the one already used for the unit cycler and
+            the pin forms, so the trigger stays readable and the list drops down. */}
+        <Select
           value={condoUnitOrder}
-          onChange={v => patchApp({ condoUnitOrder: v })}
+          items={[
+            { v: 'statusFirst', l: 'กำลังขาย' },
+            { v: 'sizeDesc', l: 'ใหญ่สุด' },
+            { v: 'sizeAsc', l: 'เล็กสุด' },
+            { v: 'priceAsc', l: 'ราคาต่ำสุด' },
+            { v: 'priceDesc', l: 'ราคาสูงสุด' },
+            { v: 'orderLabel', l: 'ลำดับแรก' },
+          ]}
+          onChange={v => patchApp({ condoUnitOrder: v as CondoUnitOrder })}
         />
       </div>
       <Hint>อาคารห้องชุดหนึ่งหลังคือที่ดินหนึ่งแปลง แต่ขายแยกเป็นหน่วยยอด จุดบนแผนที่จึงแสดงเพียงหน่วยเดียวแทนทั้งอาคาร และแผงรายละเอียดมีตัวเลือกสลับหน่วยยอด</Hint>
