@@ -131,8 +131,26 @@ function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], a
   return out;
 }
 
-function mapStatus(raw: string | null): Status {
-  return raw === 'sold' || raw === 'inactive' || raw === 'cancelled' ? raw : 'sale';
+/* A round that produced no sale at all - LED's own word for it, งดขาย.
+ * งดขายไม่มีผู้สู้ราคา is deliberately not one of these: no bidders still means the
+ * lot is being auctioned and the next round is a real chance. Only the flat
+ * งดขาย says the sale itself was called off. */
+export const noSaleRound = (r: SellRound): boolean => r.status.trim() === 'งดขาย';
+
+/* LED leaves a lot `active` after every one of its rounds has come back งดขาย.
+ * Nothing is being auctioned, so กำลังขาย would advertise a next date for land
+ * that is not going to market. The sibling lot in the same building usually
+ * carries close_reason=withdrawn, which already says the same thing - this
+ * catches the case where the surviving lot has no close reason of its own. */
+export const neverOnMarket = (rounds: SellRound[]): boolean => {
+  const dated = rounds.filter((r) => r.date != null);
+  return dated.length > 0 && dated.every(noSaleRound);
+};
+
+function mapStatus(raw: string | null, rounds: SellRound[]): Status {
+  if (raw === 'sold' || raw === 'inactive' || raw === 'cancelled') return raw;
+  if (raw === 'sale' && neverOnMarket(rounds)) return 'cancelled';
+  return 'sale';
 }
 
 /** One API feature -> a Parcel the rest of the app can render unchanged. */
@@ -158,29 +176,25 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
 
   const announceTs = isoTs(p.publishedDate as string | null) ?? now;
   const rounds = mapRounds((p.rounds as RoundRow[]) ?? []);
-  const status = mapStatus(p.status);
+  const status = mapStatus(p.status, rounds);
   const startPrice = (p.startPrice as number | null) ?? p.askingPrice;
   const { pts: hist, roundToHist } = mapHist(rounds, startPrice, announceTs, now);
   const lastPrice = hist.length ? hist[hist.length - 1].v : (p.askingPrice ?? 0);
 
-  /* ตร.ว. is null for condo lots, which LED publishes in ตร.ม. Showing them as
-     "— ตร.ว." is honest; converting square metres to square wa would be a
-     fabrication, since one is an area of land and the other a floor area. */
-  /* ตร.ว. is null for condo lots, which LED publishes in ตร.ม. Showing them as
-     "— ตร.ว." is honest; converting square metres to square wa would be a
-     fabrication, since one is an area of land and the other a floor area. It
-     used to be coerced back to 0 three lines below, which put a zero-size plot
-     and a zero price-per-wah in front of the user as if they were measurements.
-     Same for a lot whose area is genuinely 0: no area, no per-wah, not zero. */
-  const wah = p.sizeUnit === 'sqm' ? null : (p.wah ?? 0);
-  const land = wah != null && wah > 0 ? wah : null;
+  /* LED publishes a ห้องชุด floor area in the same rai/ngan/wa triple as land, so
+     30.35 means square metres on a condo unit. Printing a dash told the reader
+     nothing; showing the figure lets them judge it, and ห้องชุด in the row above
+     already says which unit is meant. What must not follow is dividing a
+     square-metre price by a square-wa divisor and printing ราคา/ตร.ว. */
+  const size = p.wah ?? null;
+  const land = p.sizeUnit === 'sqm' ? null : (size != null && size > 0 ? size : null);
 
   return {
     id,
     lotId: (p.lotId as number | null) ?? undefined,
     parcelId: id,
     status,
-    wah: land,
+    wah: size,
     price: lastPrice,
     perWah: land != null ? Math.round(lastPrice / land) : null,
     lng: f.geometry?.coordinates?.[0] ?? 0,

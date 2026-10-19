@@ -371,7 +371,10 @@ FROM parcels p
                 nextRoundPrice: toNum(r.next_round_price),
                 order: r.order_label, assetType: r.asset_type,
                 sizeUnit: r.size_unit,
-                wah: r.size_unit === 'sqm' ? null : sqWa(r.size_rai, r.size_ngan, r.size_wa),
+                /* LED puts a ห้องชุด floor area in the same rai/ngan/wa triple as
+                 * land, so the figure is sent either way; nulling it for condo
+                 * lots left the popup showing a dash for a size LED had given us. */
+                wah: sqWa(r.size_rai, r.size_ngan, r.size_wa),
                 askingPrice: toNum(r.start_price), askingSource: r.start_price_src,
                 status: mapStatus(r.status, r.close_reason, r.close_code),
                 nextRound: isoDate(r.next_round_date),
