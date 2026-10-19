@@ -70,9 +70,9 @@ frontend อ่าน → GET /api/parcels   (อ่าน td_lat ?? dol_lat)
 
 นี่คือช่องว่างที่ทำให้คิวว่าง และเป็นงานที่คุ้มที่สุด
 
-- [ ] **1.1** `ingest.js` เขียน parcel ปิดท้ายด้วยการเรียก `enqueueUnresolved` เฉพาะ `td_verdict IS NULL` (หรือ: job ที่คิวเติมเองหลัง ingest เสร็จ 1 จังหวัด — เลือกทางหลัง มันแยก concern กว่า)
-- [ ] **1.2** ตรวจว่าบอท 2 ไม่ re-queue งานที่ทำแล้ว
-- [ ] **1.3** `resolveCoordsCLI.js` รันเองโดยไม่ต้องแตะ argument
+- [x] **1.1** เติมคิวหลัง ingest ของแต่ละจังหวัด — ทำใน `backfillProvinces.js` ไม่ใช่ใน `ingest.js` เพราะ scraper ไม่ควรรู้ว่ามีคิวอยู่ และหนึ่งครั้งต่อจังหวัดคือจังหวะที่ถูกต้อง
+- [x] **1.2** ตรวจว่าบอท 2 ไม่ re-queue งานที่ทำแล้ว — **เจอบั๊กตอนทำ**: เดิมกรอง `dol_lat IS NULL` ซึ่งจะคิว 5,651 แถว (5,186 ใบนั้นมีพิกาดจาก TD อยู่แล้ว) เปลี่ยนเป็น `td_lat IS NULL AND dol_lat IS NULL`
+- [x] **1.3** `resolveCoordsCLI.js` รันเองโดยไม่ต้องแตะ argument — เขียนไว้แล้ว ไม่ต้องแก้
 
 **วิธีตรวจ:**
 ```bash
@@ -81,6 +81,10 @@ bun backfillProvinces.js 83           # บอท 1
 psql $DATABASE_URL -c "SELECT state, count(*) FROM coord_queue GROUP BY 1;"
 ```
 **เขียว:** `coord_queue` มีแถว `pending` มากกว่า 0 ทันทีหลังบอท 1 จบ
+
+**ผลวันที่ 19 ต.ค. 2569:** `pending 466` · ตรงกับ parcel ที่ไม่มีพิกาด 466 · พลาด 0 · เทสต์ 115 ผ่าน
+
+> ระวัง: `coordQueue.integration.test.js` ลบแถวใน `coord_queue` ที่ไม่ใช่ fixture ของมันทิ้ง ถ้ารันเทสต์แล้วคิวว่าง ให้รัน `resolveCoordsCLI.js` (หรือ `enqueueUnresolved`) อีกครั้ง
 
 **ทำไมต้องเป็น Phase 1:** ทุกอย่างหลังจากนี้พึ่งคิวที่ไม่เคยมีข้อมูล
 
