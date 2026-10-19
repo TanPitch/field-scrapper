@@ -452,10 +452,20 @@ export function DetailView() {
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t border-line text-[11.5px] ${cls}`}>
                 <div className="px-2 py-1.5">{i + 1}</div>
                 {/* The date is always shown — it is the one thing a reader needs
-                    to place the round. Only the status goes quiet. */}
+                    to place the round. Only a round LED has nothing to say
+                    about goes quiet. */}
                 <div className="px-2 py-1.5">{r.date != null ? numDate(r.date) : ''}</div>
                 <div className="px-2 py-1.5">
-                  {future ? '' : isPlaceholderStatus(r.status) ? '-' : roundStatus(r.status, p.id * 7 + i * 3)}
+                  {/* Whatever LED reported, shown. Blankness used to be decided by
+                      the date - any round dated in the future lost its status cell -
+                      and that hid real outcomes: LED publishes งดขาย against rounds
+                      that have not arrived yet and its own page shows all six, so we
+                      were showing 5 of 6 and 3 of 6 on those. A round is silent
+                      because LED has nothing to say about it, not because it is
+                      scheduled. Placeholder text is that signal, so it is the only
+                      thing that decides this now; a real label is shown whether the
+                      round has happened or not. */}
+                  {isPlaceholderStatus(r.status) ? (future ? '' : '-') : roundStatus(r.status, p.id * 7 + i * 3)}
                 </div>
               </div>
             );
