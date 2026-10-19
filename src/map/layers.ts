@@ -26,13 +26,20 @@ const radiusExpr = (pad: number): ExpressionSpecification =>
 const zoomFadeIcon = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8, 0.9] as ExpressionSpecification;
 const zoomFadeText = ['interpolate', ['exponential', 1.8], ['zoom'], 13, 0, 13.8, 1] as ExpressionSpecification;
 
-/** Resale parcels win over their status so "นำกลับมาขายใหม่" keeps its own colour. */
+/** Resale parcels win over their status so "นำกลับมาขายใหม่" keeps its own colour.
+ *
+ * Every status the app has must appear here. This expression used to name only
+ * sale, sold and inactive and fell through to white, so a cancelled lot drew a
+ * white marker that ignored the colour set for it in settings - the one symptom
+ * being "that colour will not change" on a control that works fine. */
 const statusColor = (c: Record<Status, string>, reColor: string): ExpressionSpecification =>
   ['case',
     ['all', ['==', ['get', 'status'], 'sale'], ['==', ['get', 'resell'], true]], reColor,
     ['match', ['get', 'status'],
       'sale', c.sale,
       'sold', c.sold,
+      're', reColor,
+      'cancelled', c.cancelled,
       /* Withdrawn from the listing. Muted, and the fallback below stays white so
          an unrecognised status is obvious rather than silently borrowed. */
       'inactive', c.inactive,

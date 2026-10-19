@@ -389,6 +389,13 @@ FROM parcels p
                 firstRoundDate: isoDate(r.first_round_date),
                 remark: r.remark,
                 imageCount: r.img_count ?? 0,
+                /* The unit badge the marker popup reads. The query already
+                   computes it as lot_count; without this in the payload it was
+                   computed and thrown away, p.lotCount was always undefined,
+                   and every condo building lost its xN in the popup while the
+                   detail panel - which counts the units client-side - showed it
+                   correctly. Two sources for one fact, and only one was fed. */
+                lotCount: r.lot_count ?? 0,
                 images: Array.isArray(r.img_paths) ? r.img_paths.filter(Boolean) : [],
                 rounds: Array.isArray(r.rounds) ? r.rounds : [],
                 // กรมธนารักย์ per-parcel appraisal, the authoritative one

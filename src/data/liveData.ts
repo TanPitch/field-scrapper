@@ -210,7 +210,8 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
        off this. Default 1 so an older server without the field behaves as one
        lot rather than as zero. */
     lotCount: p.lotCount ?? 1,
-    /* Every lot of one building shares this, so the panel can find its       siblings without guessing from coordinates. */
+    /* Every lot of one building shares this, so the panel can find its
+       siblings without guessing from coordinates. */
     parcelKey: p.parcelId != null ? String(p.parcelId) : undefined,
     /* LED's เลขที่โฉนด, not TD's landNo. Those are different fields and landNo is
        frequently a short fragment (a lot showed '94' where LED's was '72927'),
