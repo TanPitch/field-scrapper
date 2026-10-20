@@ -29,8 +29,9 @@ import pg from "pg";
 import { needsWork, RETRY_DAYS } from "./tdBacklog.js";
 import { loadCalibration, calibratedTransform } from "./tdCrs.js";
 import {
-    ledDistrict, ledProvince, tdRowMatchesDistrict,
+    ledDistrict, ledProvince,
 } from "./tdDict.js";
+import { normaliseTdRow, pickTdRow } from "./tdLookup.js";
 
 const EP =
     "https://assessprice.treasury.go.th/assessprice/ashx/Proxy.ashx?" +
@@ -56,12 +57,6 @@ const LIMIT = Number(arg("limit", 0)) || 0;
 const ONLY_PROV = arg("province");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/**
-const parseShape = (shape) => {
-    const m = /POINT\s*\(\s*([-\d.]+)[\s,]+([-\d.]+)/i.exec(String(shape ?? ""));
-    return m ? [Number(m[1]), Number(m[2])] : null;
-};
 
 /* ------------------------------------------------------------ DOL fallback
  *
@@ -302,28 +297,26 @@ for (const [i, p] of todo.entries()) {
      * เมืองบึงกาฬ. Taking rows[0] picks the wrong one, silently, and it looks
      * like a clean resolution.
      *
-     * So pick here, against the district LED and our map already resolved. Only
-     * fall back to a lone candidate; anything else is a genuine ambiguity and is
-     * reported rather than guessed.
+     * The subdistrict is what picks the right row out of them, and the district
+     * only breaks a tie. That is pickTdRow's job and it already does it, so it
+     * does it here rather than a second implementation of it. The tambon is not
+     * a parameter we ask TD with - it is a filter on what TD answers.
      *
-     * The comparison is against TD's own name for the district, taken from the
-     * dictionary, not against LED's. LED writes กิ่งอำเภอโคกโพธิ์ไชย where TD
+     * The district it compares against is TD's own name for the district, from
+     * the dictionary, not LED's. LED writes กิ่งอำเภอโคกโพธิ์ไชย where TD
      * writes โคกโพธิ์ไชย, and a district can be renamed outright between the two
      * systems, so comparing LED's string to TD's string rejects parcels that
      * were placed correctly. */
-    const want = a.tdDistrictName;
-    const byDistrict = want
-        ? rows.filter((r) => tdRowMatchesDistrict(r.AMPHUR_NAME, want))
-        : [];
+    const pick = pickTdRow(rows.map(normaliseTdRow), { tumbol: p.tumbol, amphur: a.tdDistrictName });
     let r = null;
   let verdict = null;
     let via = "td";
-    if (byDistrict.length === 1) { stats.found++; r = byDistrict[0]; verdict = "match"; }
-    else if (byDistrict.length > 1) {
+    if (pick.row) { stats.found++; r = pick.row; verdict = "match"; }
+    else if (pick.status === "ambiguous") {
         stats.ambiguous++;
-        ambiguous.push({ deed: p.deed_number, n: byDistrict.length, dist: want });
+        ambiguous.push({ deed: p.deed_number, n: pick.candidates, dist: a.tdDistrictName });
         await fileReason(p.parcel_id, "ambiguous",
-            `TD returned ${byDistrict.length} parcels in ${want} for deed ${p.deed_number}`);
+            `TD returned ${pick.candidates} parcels for deed ${p.deed_number} in ${a.tdDistrictName} / ${p.tumbol}`);
         await sleep(DELAY_MS);
         continue;
     }
@@ -359,7 +352,7 @@ for (const [i, p] of todo.entries()) {
             continue;
         }
         stats.districtMismatch++;
-        districtMismatch.push({ deed: p.deed_number, want, got: rows.map((x) => x.AMPHUR_NAME) });
+        districtMismatch.push({ deed: p.deed_number, want: a.tdDistrictName, got: rows.map((x) => x.AMPHUR_NAME) });
         /* The verdict is the district disagreement, not the quota. The quota
          * only decides whether DOL was asked as a second opinion; it is not why
          * the parcel is unplaced, and filing it as pending_quota buried 270 real
@@ -378,8 +371,8 @@ for (const [i, p] of todo.entries()) {
 
     if (rows.length > 1) stats.multiCandidate++;
 
-    const objId = r.OBJECTID != null ? Number(r.OBJECTID) : null;
-    const pt = parseShape(r.SHAPE);
+    const objId = r.raw?.OBJECTID != null ? Number(r.raw.OBJECTID) : null;
+    const pt = r.utmEasting != null ? [r.utmEasting, r.utmNorthing] : null;
     let utmE = null, utmN = null, srid = null;
     /* The transform expressions for this row's SRID. PostGIS does the
      * projection, using the calibration for that SRID. It used to be computed
@@ -388,7 +381,7 @@ for (const [i, p] of todo.entries()) {
     let tf = null;
     if (pt) {
         utmE = pt[0]; utmN = pt[1];
-        srid = r.SRID ?? 24048;
+        srid = r.utmSrid ?? 24048;
         /* The coordinate itself is written by PostGIS, below, using this row's
          * own SRID and the calibration for it. */
         const cal = await loadCalibration(client, { srid });
@@ -420,7 +413,7 @@ for (const [i, p] of todo.entries()) {
     }
     console.log(
         `    ${String(i + 1).padStart(4)}/${todo.length}  ${p.prov_name}/${p.district_name}  deed ${String(p.deed_number).padEnd(10)}` +
-        ` obj=${objId}  ${r.RAWANG ?? ""}  ${utmE != null ? `srid ${srid}` : "no shape"}`,
+        ` obj=${objId}  ${r.rawang ?? ""}  ${utmE != null ? `srid ${srid}` : "no shape"}`,
     );
 
     if (WRITE) {
@@ -443,8 +436,8 @@ for (const [i, p] of todo.entries()) {
                     td_verdict    = $12,
                     td_checked_at = now()
               WHERE id = $1`,
-            [p.parcel_id, objId, r.RAWANG ?? null, r.LAND_NO ?? null, r.SURVEY_NO ?? null,
-             r.DOL_NAME ?? null, Number(String(r.CURR_EVAPRICE ?? "").replace(/,/g, "")) || null,
+            [p.parcel_id, objId, r.rawang ?? null, r.landNo ?? null, r.surveyNo ?? null,
+             r.landOffice ?? null, r.evaPrice ?? null,
              utmE, utmN, srid, `resolved_via_${via}`, verdict],
         );
     }
