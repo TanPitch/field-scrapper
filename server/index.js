@@ -574,7 +574,7 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
                p.deed_number, p.land_title, p.td_status, p.dol_status, p.td_verdict, p.dol_verdict,
                p.td_rawang, p.td_lat, p.td_lon, p.dol_lat, p.dol_lon,
                p.td_object_id, p.td_eva_price, p.dol_office, p.dol_land_type,
-               p.geo_status, p.tambon_match,
+               p.geo_status, p.tambon_match, p.geo_note,
                l.size_rai, l.size_ngan, l.size_wa, l.start_price, l.case_no, l.case_year,
                d.name AS district_ref, d.td_code, d.td_province_code, d.td_match_method, d.td_note
           FROM parcels p
@@ -595,6 +595,10 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
     count(*) FILTER (WHERE td_verdict = 'district_mismatch')                      AS mismatch,
     count(*) FILTER (WHERE dol_verdict = 'pending_quota')                         AS waiting_dol,
     count(*) FILTER (WHERE td_verdict = 'no_result' OR dol_verdict = 'no_result')  AS dead_end,
+     count(*) FILTER (WHERE dol_verdict = 'tambon_mismatch')                     AS wrong_tambon,
+     count(*) FILTER (WHERE dol_verdict = 'district_mismatch')                   AS wrong_district,
+     count(*) FILTER (WHERE dol_verdict = 'ambiguous')                           AS ambiguous,
+     count(*) FILTER (WHERE dol_verdict = 'area_mismatch')                       AS wrong_area,
     count(*) FILTER (WHERE td_verdict IS NULL AND dol_verdict IS NULL)            AS never_tried,
     count(*) FILTER (WHERE deed_number IS NULL OR deed_number = '')               AS no_deed,
     count(*)                                                                        AS total

@@ -27,6 +27,8 @@ interface Gap {
   size_wa: number | null;
   case_no: string | null;
   case_year: string | null;
+  /** Why the resolver could not place it, in words. */
+  geo_note: string | null;
 }
 
 interface Summary {
@@ -35,6 +37,10 @@ interface Summary {
   waiting_dol: number;
   dead_end: number;
   never_tried: number;
+  wrong_tambon: number;
+  wrong_district: number;
+  ambiguous: number;
+  wrong_area: number;
   no_deed: number;
   total: number;
 }
@@ -52,7 +58,8 @@ interface Summary {
  * unresolvable by construction and labelling it "no result" would read as
  * "we looked and it was not there".
  */
-type GapKind = 'no_deed' | 'never_tried' | 'waiting_dol' | 'dead_end' | 'district_mismatch' | 'other';
+type GapKind = 'no_deed' | 'never_tried' | 'waiting_dol' | 'dead_end' | 'district_mismatch'
+  | 'tambon_mismatch' | 'ambiguous' | 'area_mismatch' | 'other';
 
 const GAP_KIND: Record<GapKind, { th: string; cls: string }> = {
   no_deed: { th: 'ไม่มีเลขโฉนด', cls: 'text-err' },
@@ -60,6 +67,9 @@ const GAP_KIND: Record<GapKind, { th: string; cls: string }> = {
   waiting_dol: { th: 'รอ DOL', cls: 'text-warn' },
   dead_end: { th: 'TD/DOL ไม่มี', cls: 'text-dim2' },
   district_mismatch: { th: 'อำเภอไม่ตรง', cls: 'text-warn' },
+  tambon_mismatch: { th: 'ตำบลไม่ตรง', cls: 'text-warn' },
+  ambiguous: { th: 'TD มีหลายแปลง', cls: 'text-warn' },
+  area_mismatch: { th: 'ขนาดไม่ตรง', cls: 'text-err' },
   other: { th: 'อื่น ๆ', cls: 'text-dim2' },
 };
 
@@ -67,6 +77,10 @@ function gapKind(g: Gap): GapKind {
   if (!g.deed_number) return 'no_deed';
   if (g.td_verdict === 'match' || g.dol_verdict === 'match') return 'other';
   if (g.dol_verdict === 'pending_quota') return 'waiting_dol';
+  if (g.dol_verdict === 'tambon_mismatch') return 'tambon_mismatch';
+  if (g.dol_verdict === 'ambiguous') return 'ambiguous';
+  if (g.dol_verdict === 'area_mismatch') return 'area_mismatch';
+  if (g.dol_verdict === 'district_mismatch') return 'district_mismatch';
   if (g.td_verdict === 'district_mismatch') return 'district_mismatch';
   if (g.td_verdict === 'no_result' || g.dol_verdict === 'no_result') return 'dead_end';
   if (g.td_verdict == null && g.dol_verdict == null) return 'never_tried';
@@ -145,6 +159,10 @@ export function CoordGapsPane() {
           <span className="text-warn">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.mismatch}</span>
           <span className="text-dim2">รอ DOL (โควตาหมด)</span><span className="font-display">{summary.waiting_dol}</span>
           <span className="text-dim2">TD กับ DOL ไม่มี</span><span className="font-display">{summary.dead_end}</span>
+          <span className="text-warn">ตำบลไม่ตรง</span><span className="font-display text-warn">{summary.wrong_tambon}</span>
+          <span className="text-warn">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.wrong_district}</span>
+          <span className="text-warn">TD มีหลายแปลง</span><span className="font-display text-warn">{summary.ambiguous}</span>
+          <span className="text-err">ขนาดไม่ตรง</span><span className="font-display text-err">{summary.wrong_area}</span>
           <span className="text-dim2">ยังไม่ได้ตรวจ</span><span className="font-display">{summary.never_tried}</span>
           <span className="text-dim2">ไม่มีเลขโฉนด</span><span className="font-display">{summary.no_deed}</span>
         </div>
@@ -197,7 +215,10 @@ export function CoordGapsPane() {
             const kind = gapKind(g);
             return (
               <tr key={g.id} className="border-b border-line/40 align-top">
-                <td className={`py-1.5 pr-2 text-[10.5px] ${GAP_KIND[kind].cls}`}>{GAP_KIND[kind].th}</td>
+                <td className={`py-1.5 pr-2 text-[10.5px] ${GAP_KIND[kind].cls}`}>
+                  {GAP_KIND[kind].th}
+                  {g.geo_note && <div className="mt-0.5 text-[10px] leading-[1.4] text-dim2">{g.geo_note}</div>}
+                </td>
                 <td className="py-1.5 pr-2">
                   {g.province_name ?? '-'}
                   <div className="text-[10px] text-dim2">
