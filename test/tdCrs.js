@@ -22,7 +22,7 @@ const { Client } = pg;
 /** Load the calibration for one source, preferring a province-specific row. */
 export async function loadCalibration(client, { sourceKey = "td_assessprice", srid, provinceCode } = {}) {
     const { rows } = await client.query(
-        `SELECT d_lat_m, d_lon_m, scope, basis_points, residual_max_m, notes
+        `SELECT srid, d_lat_m, d_lon_m, scope, basis_points, residual_max_m, notes
            FROM crs_calibration
           WHERE source_key = $1 AND ($2::int IS NULL OR srid = $2)
        ORDER BY (scope = $3) DESC NULLS LAST, basis_points DESC NULLS LAST
@@ -42,6 +42,10 @@ export async function loadCalibration(client, { sourceKey = "td_assessprice", sr
  * `calibrated: false` so the caller can surface it.
  */
 export function calibratedTransform(cal, geomExpr, extraOffsetM = 0) {
+    /* The SRID comes from the calibration row, which is selected with it, so a
+     * row for 24047 is transformed as 24047. It used to be hardcoded to 24048
+     * here because the query did not select srid at all, so a 24047 row would
+     * have been transformed as 24048 - a 6 degree error, 618 km. */
     const base = `ST_Transform(ST_SetSRID(${geomExpr}, ${cal?.srid ?? 24048}), 4326)`;
     if (!cal) return { latExpr: `ST_Y(${base})`, lonExpr: `ST_X(${base})`, calibrated: false, geomExpr: base };
 
@@ -114,6 +118,37 @@ if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1]
     console.log(`${rows.length - uncorrected} carry the correction, ${uncorrected} do not`);
     if (uncorrected > 0) {
         console.log("run:  bun tdCrs.js --apply     (backfills td_lat / td_lon / geom)");
+    }
+
+    /* ---- --apply: recompute every coordinate from its own UTM pair ---------
+     *
+     * Each row is transformed with the SRID it carries and the calibration for
+     * that SRID, which is what tdEnrich.js writes. Recomputing rather than
+     * nudging is what makes this safe to run twice.
+     *
+     * This is not a cosmetic repair. A row whose SRID is 24048 but which was
+     * inverted as though it were 24047 has its longitude 6 degrees out - 618 km
+     * - and no amount of shifting the stored value would bring it back. Only
+     * projecting it with its own SRID does. */
+    if (process.argv.includes("--apply")) {
+        const { rows: srids } = await client.query(
+            `SELECT DISTINCT td_srid FROM parcels WHERE td_utm_e IS NOT NULL AND td_srid IS NOT NULL`);
+        for (const { td_srid: srid } of srids) {
+            const cal = await loadCalibration(client, { srid });
+            const pt = `ST_MakePoint(td_utm_e, td_utm_n)`;
+            const tf = calibratedTransform(cal, pt);
+            const { rowCount } = await client.query(
+                `UPDATE parcels SET
+                    td_lat = ${tf.latExpr},
+                    td_lon = ${tf.lonExpr},
+                    geom  = (${tf.geomExpr})::geography
+                  WHERE td_utm_e IS NOT NULL AND td_srid = $1
+                    AND (td_lat IS DISTINCT FROM ${tf.latExpr}
+                      OR td_lon IS DISTINCT FROM ${tf.lonExpr})`,
+                [srid]);
+            console.log(`  srid ${srid}: ${rowCount} parcel(s) recomputed` +
+                (tf.calibrated ? "" : "  (no calibration row - UNCORRECTED)"));
+        }
     }
     await client.end();
 }

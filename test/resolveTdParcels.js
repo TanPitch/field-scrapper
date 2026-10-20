@@ -27,6 +27,7 @@
  */
 import pg from "pg";
 import { needsWork, RETRY_DAYS } from "./tdBacklog.js";
+import { loadCalibration, calibratedTransform } from "./tdCrs.js";
 import {
     ledDistrict, ledProvince, tdRowMatchesDistrict,
 } from "./tdDict.js";
@@ -57,74 +58,6 @@ const ONLY_PROV = arg("province");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Inverse WGS84 / UTM zone 47N, which is what TD reports as SRID 24047.
- * Verified against live Phuket results: TD's SHAPE POINT (430452.96 870052.40)
- * lands at 7.870667, 98.369107.
- */
-function utmToLatLng(easting, northing, zone = 47) {
-    /* Datum correction, measured rather than assumed.
-     *
-     * TD reports SRID 24047 and hands back a projected coordinate. Inverting it
-     * as WGS84 / UTM 47N lands every parcel about 310 m off, in the same
-     * direction every time: -0.00279 latitude, +0.00307 longitude against the
-     * true position on LED and DOL.
-     *
-     * Measured on nine deeds across three provinces - ภูเก็ต, ปราจีนบุรี,
-     * ขอนแก่น - spanning 8N to 16N and 98E to 102E. The delta is constant to five
-     * decimal places across that range, so it is a translation rather than a
-     * projection difference, and a constant is the right correction.
-     *
-     * What 24047 actually is was not verified against an EPSG registry; this is
-     * fitted, not authoritative. Revisit if a parcel ever lands in the wrong
-     * province, which would mean the shift is regional after all.
-     *
-     * A second, much smaller correction was measured by eye afterwards: TD's own
-     * web map draws its pin a few metres off the parcel it represents, so
-     * aligning to LED and DOL left the dot visibly apart from TD's. -0.00008
-     * lat and +0.00005 lng - about 9 m south, 5 m east - brings the two into
-     * agreement. That reference is TD's renderer rather than ground truth, so
-     * this trades a little accuracy on LED and DOL for matching what the user
-     * sees on the official site. Folded into the same constants rather than
-     * applied separately, since from here it is one correction. */
-    const DATUM_LAT = -0.00271;
-    const DATUM_LNG = 0.00302;
-    const [lat, lng] = utmToWgs84(easting, northing, zone);
-    return [lat - DATUM_LAT, lng - DATUM_LNG];
-}
-
-function utmToWgs84(easting, northing, zone = 47) {
-    const a = 6378137;
-    const f = 1 / 298.257223563;
-    const k0 = 0.9996;
-    const e2 = f * (2 - f);
-    const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
-    const M = northing / k0;
-    const mu = M / (a * (1 - e2 / 4 - (3 * e2 ** 2) / 64 - (5 * e2 ** 3) / 256));
-    const phi1 =
-        mu +
-        ((3 * e1) / 2 - (27 * e1 ** 3) / 32) * Math.sin(2 * mu) +
-        ((21 * e1 ** 2) / 16 - (55 * e1 ** 4) / 32) * Math.sin(4 * mu) +
-        ((151 * e1 ** 3) / 96) * Math.sin(6 * mu) +
-        ((1097 * e1 ** 4) / 512) * Math.sin(8 * mu);
-    const ep2 = e2 / (1 - e2);
-    const C1 = ep2 * Math.cos(phi1) ** 2;
-    const T1 = Math.tan(phi1) ** 2;
-    const Nn = a / Math.sqrt(1 - e2 * Math.sin(phi1) ** 2);
-    const R1 = (a * (1 - e2)) / (1 - e2 * Math.sin(phi1) ** 2) ** 1.5;
-    const D = (easting - 500000) / (Nn * k0);
-    const lat =
-        phi1 -
-        (Nn * Math.tan(phi1)) / R1 *
-            (D ** 2 / 2 -
-                ((5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * ep2) * D ** 4) / 24 +
-                ((61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * ep2 - 3 * C1 ** 2) * D ** 6) / 720);
-    const lon =
-        (D - ((1 + 2 * T1 + C1) * D ** 3) / 6 +
-            ((5 - 2 * C1 + 28 * T1 - 3 * C1 ** 2 + 8 * ep2 + 24 * T1 ** 2) * D ** 5) / 120) /
-        Math.cos(phi1);
-    return [lat * 180 / Math.PI, (zone * 6 - 183) + lon * 180 / Math.PI];
-}
-
 const parseShape = (shape) => {
     const m = /POINT\s*\(\s*([-\d.]+)[\s,]+([-\d.]+)/i.exec(String(shape ?? ""));
     return m ? [Number(m[1]), Number(m[2])] : null;
@@ -434,10 +367,22 @@ for (const [i, p] of todo.entries()) {
 
     const objId = r.OBJECTID != null ? Number(r.OBJECTID) : null;
     const pt = parseShape(r.SHAPE);
-    let lat = null, lng = null, utmE = null, utmN = null;
+    let utmE = null, utmN = null, srid = null;
+    /* The transform expressions for this row's SRID. PostGIS does the
+     * projection, using the calibration for that SRID. It used to be computed
+     * here by a hand-rolled UTM inverse with the zone hardcoded to 47, which
+     * put every 24048 row 6 degrees out - 618 km, in the Andaman Sea. */
+    let tf = null;
     if (pt) {
         utmE = pt[0]; utmN = pt[1];
-        [lat, lng] = utmToLatLng(pt[0], pt[1]);
+        srid = r.SRID ?? 24048;
+        /* The coordinate itself is written by PostGIS, below, using this row's
+         * own SRID and the calibration for it. */
+        const cal = await loadCalibration(client, { srid });
+        tf = calibratedTransform(cal, `ST_MakePoint($8::double precision, $9::double precision)`);
+        if (!tf.calibrated) {
+            console.warn(`  ! no crs_calibration row for srid ${srid} - writing UNCORRECTED coordinates`);
+        }
     } else {
         stats.noShape++;
         /* TD matched the parcel and gave no SHAPE, so there is no point to put
@@ -462,7 +407,7 @@ for (const [i, p] of todo.entries()) {
     }
     console.log(
         `    ${String(i + 1).padStart(4)}/${todo.length}  ${p.prov_name}/${p.district_name}  deed ${String(p.deed_number).padEnd(10)}` +
-        ` obj=${objId}  ${r.RAWANG ?? ""}  ${Number.isFinite(lat) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : "no shape"}`,
+        ` obj=${objId}  ${r.RAWANG ?? ""}  ${utmE != null ? `srid ${srid}` : "no shape"}`,
     );
 
     if (WRITE) {
@@ -477,15 +422,17 @@ for (const [i, p] of todo.entries()) {
                     td_utm_e      = COALESCE($8, td_utm_e),
                     td_utm_n      = COALESCE($9, td_utm_n),
                     td_srid       = COALESCE($10, td_srid),
-                    td_lat        = COALESCE($11, td_lat),
-                    td_lon        = COALESCE($12, td_lon),
-                    td_status     = $13,
-                    td_verdict    = $14,
+                    td_lat        = CASE WHEN $8::double precision IS NULL THEN td_lat
+                                ELSE ${tf.latExpr} END,
+                    td_lon        = CASE WHEN $8::double precision IS NULL THEN td_lon
+                                ELSE ${tf.lonExpr} END,
+                    td_status     = $11,
+                    td_verdict    = $12,
                     td_checked_at = now()
               WHERE id = $1`,
             [p.parcel_id, objId, r.RAWANG ?? null, r.LAND_NO ?? null, r.SURVEY_NO ?? null,
              r.DOL_NAME ?? null, Number(String(r.CURR_EVAPRICE ?? "").replace(/,/g, "")) || null,
-             utmE, utmN, r.SRID ?? null, lat, lng, `resolved_via_${via}`, verdict],
+             utmE, utmN, srid, `resolved_via_${via}`, verdict],
         );
     }
     await sleep(DELAY_MS);
