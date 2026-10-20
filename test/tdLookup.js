@@ -286,13 +286,13 @@ export async function createResilientLookup({ delayMs = 400, log = () => {}, ren
 
     const lookup = async (parcel) => {
         if (calls >= renewEvery) await renew();
-        let res = await inner.lookup(parcel);
+        let res = await inner(parcel);
         calls++;
         if (!res.found && res.status === "not_found") {
             /* Empty. Renew and ask once more before believing it - a dead session
              * and a deed the register does not hold look the same from here. */
             await renew();
-            res = await inner.lookup(parcel);
+            res = await inner(parcel);
             calls++;
         }
         return res;
