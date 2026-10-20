@@ -1,3 +1,5 @@
+import { normaliseName } from "./tdDict.js";
+
 /* areaMatch.js - match LED districts against TD districts and report the gaps.
  *
  * LED and TD renumber districts independently, and LED sometimes misses one
@@ -39,23 +41,11 @@ const LED = "https://asset.led.go.th/newbidreg";
 const UA =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36";
 
-/**
- * Strip the decorations the two sites add to the same place, so "อำเภอเกาะกูด"
- * and "เกาะกูด" compare equal. LED uses อำเภอ for islands and เขต in Bangkok;
- * TD writes เมืองN or nothing at all.
- */
-function normalise(name) {
-    let s = (name ?? "").trim();
-    s = s.replace(/^(อำเภอ|เขต|กรุงเทพมหานคร)\s*/u, "");
-    s = s.replace(/^เมือง(?=[ก-๙])/u, "");
-    s = s.replace(/\s+/gu, "");
-    return s;
-}
 
 /** Dice coefficient over bigrams - cheap and good enough to rank candidates. */
 function similarity(a, b) {
-    const A = normalise(a);
-    const B = normalise(b);
+    const A = normaliseName(a);
+    const B = normaliseName(b);
     if (!A || !B) return 0;
     if (A === B) return 1;
     if (A.length < 2 || B.length < 2) return A === B ? 1 : 0;

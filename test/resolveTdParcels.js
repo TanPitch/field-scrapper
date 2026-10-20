@@ -26,6 +26,9 @@
  *   DATABASE_URL=... bun resolveTdParcels.js --limit=50 --write # small batch
  */
 import pg from "pg";
+import {
+    ledDistrict, ledProvince, tdRowMatchesDistrict,
+} from "./tdDict.js";
 
 const EP =
     "https://assessprice.treasury.go.th/assessprice/ashx/Proxy.ashx?" +
@@ -263,7 +266,7 @@ if (ONLY_PROV) { params.push(Number(ONLY_PROV)); where.push(`d.province_id = $${
 const sql = `
   SELECT p.id AS parcel_id, p.deed_number, p.tumbol, p.province_name,
          d.code AS led_district, d.name AS district_name, d.td_code,
-         pr.name AS prov_name, pr.dol_code AS prov_dol,
+         pr.code AS led_province, pr.name AS prov_name, pr.dol_code AS prov_dol,
          d.td_province_code, p.td_object_id
     FROM parcels p
     JOIN districts d ON d.id = (SELECT id FROM districts dd
@@ -314,9 +317,50 @@ const fileReason = async (parcelId, verdict, note) => {
     );
 };
 
+/**
+ * The walk: LED name -> LED number -> TD number -> TD name.
+ *
+ * Everything TD is asked and everything it is compared against now comes out
+ * of the dictionaries, so both sides of every comparison are in the same
+ * vocabulary. The old code compared TD's AMPHUR_NAME against LED's district
+ * name, which fails wherever the two services spell a place differently - LED
+ * writes กิ่งอำเภอโคกโพธิ์ไชย where TD writes โคกโพธิ์ไชย, and a district can
+ * be renamed outright between the systems.
+ *
+ * The search is sent with TD's province NAME as well as TD's province code,
+ * because the request carries both and only the code was ever filled in.
+ */
+const area = (p) => {
+    const d = ledDistrict(p.led_district);
+    const prov = ledProvince(p.led_province);
+    const tdProv = d?.tdProvinceCode ?? prov?.tdCode ?? null;
+    const tdProvName = d?.tdProvinceName ?? prov?.tdName ?? null;
+    const tdDistName = d?.tdDistrictName ?? null;
+    return {
+        tdProvinceCode: tdProv,
+        tdProvinceName: tdProvName,
+        tdDistrictCode: d?.tdDistrictCode ?? null,
+        tdDistrictName: tdDistName,
+        /* What LED called it, kept for the note so a human can see both. */
+        ledDistrictName: d?.name ?? p.district_name ?? null,
+        known: !!(d?.tdDistrictCode && tdProv && tdProvName),
+    };
+};
+
 for (const [i, p] of todo.entries()) {
+    const a = area(p);
+    if (!a.known) {
+        /* No dictionary entry for this district, so there is no way to ask TD
+         * in its own terms. Say so rather than asking with LED's name and
+         * reading the answer as a verdict on the land. */
+        stats.error++;
+        await fileReason(p.parcel_id, "error",
+            `no LED->TD mapping for district ${p.led_district} (${p.district_name})`);
+        await sleep(DELAY_MS);
+        continue;
+    }
     const rows = await query(
-        { name: p.prov_name, td_province_code: p.td_province_code },
+        { name: a.tdProvinceName, td_province_code: a.tdProvinceCode },
         p.deed_number,
         p.td_land_no_hint ?? "",
     );
@@ -343,10 +387,16 @@ for (const [i, p] of todo.entries()) {
      *
      * So pick here, against the district LED and our map already resolved. Only
      * fall back to a lone candidate; anything else is a genuine ambiguity and is
-     * reported rather than guessed. */
-    const want = String(p.district_name ?? "").trim();
+     * reported rather than guessed.
+     *
+     * The comparison is against TD's own name for the district, taken from the
+     * dictionary, not against LED's. LED writes กิ่งอำเภอโคกโพธิ์ไชย where TD
+     * writes โคกโพธิ์ไชย, and a district can be renamed outright between the two
+     * systems, so comparing LED's string to TD's string rejects parcels that
+     * were placed correctly. */
+    const want = a.tdDistrictName;
     const byDistrict = want
-        ? rows.filter((r) => String(r.AMPHUR_NAME ?? "").trim() === want)
+        ? rows.filter((r) => tdRowMatchesDistrict(r.AMPHUR_NAME, want))
         : [];
     let r = null;
   let verdict = null;
@@ -367,7 +417,7 @@ for (const [i, p] of todo.entries()) {
   }
     else {
         /* TD could not place this one. Fall through to DOL. */
-        const d = await dolLookup(p.td_province_code, p.td_code, p.deed_number);
+        const d = await dolLookup(a.tdProvinceCode, a.tdDistrictCode, p.deed_number);
         if (d) {
             via = "dol";
             stats.found++;
@@ -397,7 +447,7 @@ for (const [i, p] of todo.entries()) {
         await fileReason(
             p.parcel_id,
             "district_mismatch",
-            `TD has deed ${p.deed_number} in ${got.join(", ") || "an unnamed district"}, LED says ${want}` +
+            `TD has deed ${p.deed_number} in ${got.join(", ") || "an unnamed district"}, LED says ${a.ledDistrictName} (TD ${a.tdDistrictCode})` +
             (dolStats.blocked ? "; DOL not tried, daily allowance spent" : ""),
         );
         await sleep(DELAY_MS);
