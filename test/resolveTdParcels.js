@@ -96,8 +96,11 @@ async function dolHeaders() {
 
 const dolStats = { tried: 0, resolved: 0, quota: 0, none: 0, error: 0, blocked: false };
 
-async function dolLookup(tdProv, tdAmphur, parcelNo) {
+async function dolLookup(dolProv, dolAmphur, parcelNo) {
     if (dolStats.tried >= DOL_DAILY_LIMIT) { dolStats.blocked = true; return null; }
+    /* Without a กรมที่ดิน province and district the URL would be /null/null/...,
+     * which the service answers "not found" for. Say so instead. */
+    if (dolProv == null || dolAmphur == null) { dolStats.none++; return null; }
     dolStats.tried++;
     try {
         const r = await fetch(`${DOL}/LandsMaps/GetParcelByParcelNo/${tdProv}/${tdAmphur}/${parcelNo}`, {
@@ -174,7 +177,7 @@ if (ONLY_PROV) { params.push(Number(ONLY_PROV)); where.push(`d.province_id = $${
 
 const sql = `
   SELECT p.id AS parcel_id, p.deed_number, p.tumbol, p.province_name,
-         d.code AS led_district, d.name AS district_name, d.td_code,
+         d.code AS led_district, d.name AS district_name, d.td_code, d.dol_code,
          pr.code AS led_province, pr.name AS prov_name, pr.dol_code AS prov_dol,
          d.td_province_code, p.td_object_id
     FROM parcels p
@@ -249,6 +252,11 @@ const area = (p) => {
         tdProvinceCode: tdProv,
         tdProvinceName: tdProvName,
         tdDistrictCode: d?.tdDistrictCode ?? null,
+        /* กรมที่ดิน's own codes, for the กรมที่ดิน lookup. They are not TD's:
+         * 113 districts number them differently, and the province differs too -
+         * บึงกาฬ is 97 on LED and 38 for กรมที่ดิน. */
+        dolProvinceCode: p.prov_dol ?? null,
+        dolDistrictCode: p.dol_district ?? null,
         tdDistrictName: tdDistName,
         /* What LED called it, kept for the note so a human can see both. */
         ledDistrictName: d?.name ?? p.district_name ?? null,
@@ -319,14 +327,19 @@ for (const [i, p] of todo.entries()) {
         await sleep(DELAY_MS);
         continue;
     }
-    else if (rows.length === 1) {
-    /* One row, but not in the district our map resolved. Accepting it would put a
-     * marker on the wrong district, so it is recorded as a mismatch instead. */
-    stats.found++; stats.districtUnverified++; r = rows[0]; verdict = "district_mismatch";
-  }
     else {
+    /* No row in our district. It used to take the lone row TD did return and
+     * place the parcel on it, in a different district - the comment above this
+     * branch said it would not, and the code did. A deed number is not unique
+     * within a province, so a lone row in the wrong district is a different
+     * parcel that happens to share the number, and placing the marker on it
+     * puts the land in the wrong place with no sign anything was wrong.
+     *
+     * So it falls through to the same path as any other district mismatch:
+     * กรมที่ดิน gets asked, and if it cannot place it either the parcel is
+     * recorded as unplaced rather than placed on the wrong land. */
         /* TD could not place this one. Fall through to DOL. */
-        const d = await dolLookup(a.tdProvinceCode, a.tdDistrictCode, p.deed_number);
+        const d = await dolLookup(a.dolProvinceCode, a.dolDistrictCode, p.deed_number);
         if (d) {
             via = "dol";
             stats.found++;

@@ -20,6 +20,7 @@ import { LocalImageStore, planImageBudget } from "./imageStore.js";
 import { loadTambonResolver, loadAreaGrades } from "./tambonResolver.js";
 import { ProvenanceRecorder, SOURCE } from "./provenance.js";
 import { parseGroupSaleRemark } from "./groupSale.js";
+import { ledDistrictByName } from "./tdDict.js";
 
 const { Client } = pg;
 
@@ -133,6 +134,12 @@ async function ensureDistrict(client, provinceCode, dolCode, name) {
             [int(provinceCode), nm],
         );
         if (byName.rows[0]) return byName.rows[0].id;
+        /* Not filed under this province. Resolve it globally before giving up and
+         * synthesising a row, because a synthesised row is a district nobody
+         * checked - and the lookup that failed here is the same one that used to
+         * drop สระแก้ว's parcels outright. */
+        const byGlobal = await resolveDistrict(client, int(provinceCode), nm);
+        if (byGlobal) return byGlobal.id;
     }
 
     const byDol = await client.query(
@@ -225,6 +232,42 @@ async function areaValuation(ctx, provinceCode, amphurDolCode, tambonName) {
     return { tambon: hit, grade: grade ?? null };
 }
 
+/**
+ * Find the district a scraped row names, globally.
+ *
+ * A lookup scoped to the scraped province is not enough, because LED does not
+ * always file a district under the province it belongs to. The dropdown for
+ * ปราจีนบุรี also lists สระแก้ว's districts, and it spells the district seat
+ * "สระแก้ว" where the สระแก้ว dropdown spells it "เมืองสระแก้ว". A name scoped
+ * to the scraped province therefore misses, and the parcel is dropped with
+ * nothing but a counter to show for it.
+ *
+ * The way out is the global code. The district dictionary maps every LED code -
+ * whichever dropdown listed it - onto one กรมธนารักย์ district, and the
+ * districts table carries that code, so the second lookup is exact.
+ *
+ * The province-scoped lookup still goes first: it is right whenever LED filed
+ * the district where it belongs, and it is the one that disambiguates the ten
+ * names in this country that two provinces share.
+ */
+const resolveDistrict = async (client, provinceCode, name) => {
+    const nm = txt(name);
+    if (!nm) return null;
+    const local = await client.query(
+        `SELECT id, dol_code, province_id FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
+        [provinceCode, nm],
+    );
+    if (local.rows[0]) return local.rows[0];
+    const dd = ledDistrictByName(nm);
+    if (!dd?.tdDistrictCode) return null;
+    const global = await client.query(
+        `SELECT id, dol_code, province_id FROM districts
+          WHERE td_province_code = $1 AND td_code = $2 LIMIT 1`,
+        [Number(dd.tdProvinceCode), Number(dd.tdDistrictCode)],
+    );
+    return global.rows[0] ?? null;
+};
+
 /* --------------------------------------------------------------- parcels */
 
 /** One auction row can list several deeds; each becomes its own parcel. */
@@ -242,16 +285,18 @@ async function upsertParcels(client, lot, provinceCode, dolCode, stats, ctx) {
        provinces.id (001_core.sql). The column name is misleading: joining it to
        provinces.id reports every district as orphaned. districts.code is the
        4-digit LED amphurId (provinceCode + dolCode), also not the internal id. */
-    const district = await client.query(
-        `SELECT id, dol_code FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
-        [provinceCode, txt(a.amphur)],
-    );
-    const effectiveDol = int(dolCode) ?? (district.rows[0] ? district.rows[0].dol_code : null);
+    const district = await resolveDistrict(client, provinceCode, a.amphur);
+    const effectiveDol = int(dolCode) ?? (district ? district.dol_code : null);
     if (effectiveDol === null) {
         stats.skippedNoDistrict++;
         return out;
     }
-    const districtId = district.rows[0]?.id ?? null;
+    const districtId = district ? district.id : null;
+    /* The province the district really belongs to, which is not always the one
+     * LED filed it under. A parcel in สระแก้ว listed under ปราจีนบุรี's code
+     * belongs to สระแก้ว, and every join downstream - the districts join, the
+     * valuation, the TD province - is keyed on this. */
+    const parcelProvince = district ? district.province_id : provinceCode;
 
     /* Area-level appraisal: resolve the tambon name to its official code, then
        read the bracket. Cheap and offline, so a lot gets a price range on the
@@ -293,7 +338,7 @@ async function upsertParcels(client, lot, provinceCode, dolCode, stats, ctx) {
                                eva_price_at = COALESCE(EXCLUDED.eva_price_at, parcels.eva_price_at)
                  RETURNING id, (xmax = 0) AS inserted`,
                 [
-                    provinceCode, effectiveDol, String(deed),
+                    parcelProvince, effectiveDol, String(deed),
                     title.code, title.raw,
                     txt(a.tumbol), txt(a.amphur), txt(a.city),
                     condo ? "condo unit number is not a land parcel number" : null,
@@ -500,11 +545,8 @@ export async function ingest(lots, { client, imageStore = null, imageBudget = 30
     const districtOf = async (lot, provinceCode) => {
         const a = lot.address ?? {};
         if (!provinceCode || !a.amphur) return null;
-        const r = await client.query(
-            `SELECT dol_code FROM districts WHERE province_id = $1 AND name = $2 LIMIT 1`,
-            [provinceCode, a.amphur],
-        );
-        return r.rows[0]?.dol_code ?? null;
+        const d = await resolveDistrict(client, provinceCode, a.amphur);
+        return d?.dol_code ?? null;
     };
 
     /* Seed reference data once, so the dol_code lookup has something to resolve
