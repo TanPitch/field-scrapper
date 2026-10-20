@@ -8,7 +8,7 @@
  * two agree - which means the coordinate on the map belongs to the land LED
  * described, and not to another parcel that happens to share the deed number.
  */
-import { createTdLookup, pickTdRow } from "./tdLookup.js";
+import { createResilientLookup, pickTdRow } from "./tdLookup.js";
 import { dictionaries as dictionariesRef } from "./tdDict.js";
 import { loadCalibration, calibratedTransform } from "./tdCrs.js";
 import { Client } from "pg";
@@ -28,7 +28,7 @@ const { rows } = await db.query(
     WHERE p.td_lat IS NOT NULL AND p.td_verdict = 'match'
     ORDER BY random() LIMIT $1`, [N]);
 
-const lookup = await createTdLookup({ delayMs: 400, log: () => {} });
+const lookup = await createResilientLookup({ delayMs: 400, log: () => {} });
 const dictionaries = dictionariesRef;
 let pass = 0, fail = 0, noRow = 0;
 const failures = [];

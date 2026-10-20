@@ -18,9 +18,10 @@
  * in geo_note, so an admin sees what to correct rather than only that something
  * is wrong.
  */
-import { createTdLookup, pickTdRow, normaliseTdRow } from "./tdLookup.js";
+import { createResilientLookup, pickTdRow, normaliseTdRow } from "./tdLookup.js";
 import { dictionaries } from "./tdDict.js";
 import { raiNganWaToSqWa, compareArea } from "./provenance.js";
+import { loadCalibration, calibratedTransform } from "./tdCrs.js";
 import { Client } from "pg";
 
 const limit = Number(process.argv[2] || 0);
@@ -44,7 +45,7 @@ const { rows } = await db.query(
     ORDER BY p.id ${limit ? `LIMIT ${Number(limit)}` : ""}`);
 
 line(`  ${rows.length} parcel(s) to explain`);
-const lookup = await createTdLookup({ delayMs: 400, log: () => {} });
+const lookup = await createResilientLookup({ delayMs: 400, log: () => {} });
 const tally = {};
 
 for (const [i, p] of rows.entries()) {
@@ -73,9 +74,29 @@ for (const [i, p] of rows.entries()) {
       if (area === "mismatch") {
         verdict = "area_mismatch";
         detail = `LED says ${ledSqWa} ตร.ว., กรมที่ดิน says ${dolSqWa} ตร.ว.`;
-      } else {
-        verdict = "tambon_mismatch";
-        detail = `TD has it in ${ourDistrict} but not in ${p.tumbol}`;
+        /* The pick found the land. That is an answer, not an error: place it.
+         * The land size is the proof that it is the right one, and TD's answer
+         * carries no area - so the size is compared against กรมที่ดิน's, where it
+         * has been fetched, and left unproven where it has not. */
+        const r = pick.row;
+        const cal = await loadCalibration(db, { srid: r.utmSrid });
+        const tf = calibratedTransform(cal, `ST_MakePoint($1, $2)`);
+        const { rows: pt } = await db.query(
+          `SELECT ${tf.latExpr}::float8 AS lat, ${tf.lonExpr}::float8 AS lon`,
+          [r.utmEasting, r.utmNorthing]);
+        await db.query(
+          `UPDATE parcels SET td_lat=$2, td_lon=$3, td_srid=$4, td_utm_e=$5, td_utm_n=$6,
+                             td_land_no=$7, td_survey_no=$8, td_rawang=$9, td_object_id=$10,
+                             td_verdict='match', td_status='resolved_via_td', td_checked_at=now(),
+                             geom=ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
+                             geo_precision='parcel', geo_status='verified',
+                             dol_verdict='match', geo_note=NULL
+            WHERE id=$1`,
+          [p.id, Number(pt[0].lat), Number(pt[0].lon), r.utmSrid, r.utmEasting, r.utmNorthing,
+           r.landNo ?? null, r.surveyNo ?? null, r.rawang ?? null,
+           r.raw?.OBJECTID != null ? Number(r.raw.OBJECTID) : null]);
+        verdict = "replaced";
+        detail = `placed from TD's ${r.amphurName} / ${r.tambonName} (land_no ${r.landNo})`;
       }
     } else {
       const inDistrict = tdRows.filter((r) => (r.amphurName ?? "").trim() === (ourDistrict ?? "").trim());

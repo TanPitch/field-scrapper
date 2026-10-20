@@ -257,3 +257,48 @@ export function pickTdRow(rows, { tumbol, amphur }) {
     return { row: null, status: "no_location_match", candidates: rows.length };
 }
 
+
+/**
+ * A lookup that keeps its session alive.
+ *
+ * The service issues an ASP.NET session and drops it after a while. Once it is
+ * gone, every request answers with an empty result - which looks exactly like
+ * "this deed is not in the register". Nothing errors, nothing warns. A run that
+ * asked 289 parcels in one session therefore decided all 289 were dead ends when
+ * most of them were simply never asked, because the session had gone.
+ *
+ * This wraps the transport: the session is renewed every `renewEvery` calls, and
+ * an empty answer is retried once on a fresh session before it is believed. A
+ * genuine miss is empty twice; a dead session is empty once.
+ */
+export async function createResilientLookup({ delayMs = 400, log = () => {}, renewEvery = 25 } = {}) {
+    let inner = null;
+    let calls = 0;
+
+    const renew = async () => {
+        if (inner) { try { await inner.close(); } catch { /* already gone */ } }
+        inner = await createTdLookup({ delayMs, log });
+        calls = 0;
+        return inner;
+    };
+
+    await renew();
+
+    const lookup = async (parcel) => {
+        if (calls >= renewEvery) await renew();
+        let res = await inner.lookup(parcel);
+        calls++;
+        if (!res.found && res.status === "not_found") {
+            /* Empty. Renew and ask once more before believing it - a dead session
+             * and a deed the register does not hold look the same from here. */
+            await renew();
+            res = await inner.lookup(parcel);
+            calls++;
+        }
+        return res;
+    };
+    lookup.setProvince = (code) => inner.setProvince(code);
+    lookup.close = async () => { if (inner) await inner.close(); };
+    lookup.renew = renew;
+    return lookup;
+}

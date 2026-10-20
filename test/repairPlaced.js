@@ -14,7 +14,7 @@
  * TD has no daily allowance, so this costs nothing but time. The กรมที่ดิน
  * allowance is not touched.
  */
-import { createTdLookup, pickTdRow } from "./tdLookup.js";
+import { createResilientLookup, pickTdRow } from "./tdLookup.js";
 import { loadCalibration, calibratedTransform } from "./tdCrs.js";
 import { dictionaries } from "./tdDict.js";
 import { Client } from "pg";
@@ -36,7 +36,7 @@ const { rows } = await db.query(
     ORDER BY p.id ${limit ? `LIMIT ${Number(limit)}` : ""}`);
 
 line(`  ${rows.length} placed parcel(s) to check`);
-const lookup = await createTdLookup({ delayMs: 400, log: () => {} });
+const lookup = await createResilientLookup({ delayMs: 400, log: () => {} });
 let same = 0, moved = 0, withdrawn = 0, noRow = 0, failed = 0;
 
 for (const [i, p] of rows.entries()) {
