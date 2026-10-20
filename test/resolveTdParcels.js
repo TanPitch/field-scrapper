@@ -26,6 +26,7 @@
  *   DATABASE_URL=... bun resolveTdParcels.js --limit=50 --write # small batch
  */
 import pg from "pg";
+import { needsWork, RETRY_DAYS } from "./tdBacklog.js";
 import {
     ledDistrict, ledProvince, tdRowMatchesDistrict,
 } from "./tdDict.js";
@@ -231,36 +232,11 @@ const client = new pg.Client({
 });
 await client.connect();
 
-/* Only parcels that still need work, and the two ways a parcel is done.
- *
- * 1. It has a coordinate from any source. geom, then TD, then DOL, the same
- *    order the API reads them in. This list used to be every parcel with a deed
- *    number, so a re-run re-queried the province from scratch - 797 in Phuket,
- *    most of them placed months earlier, at 400ms each. That is why it could
- *    only ever be run once per province by hand.
- *
- * 2. It was looked at recently and came back a dead end. Asking TD again
- *    tomorrow about a deed it does not hold gains nothing, and there are 465
- *    of these. The verdict is stamped with td_checked_at, so the sweep becomes
- *    weekly instead of a daily re-scan of known dead ends - the same seven days
- *    LED's own listings run on.
- *
- * pending_quota is deliberately not a dead end: the lookup never ran, so the
- * answer is unknown, and it must be asked again as soon as there is allowance. */
-const DEAD_ENDS = "'no_result','district_mismatch','ambiguous','no_shape','error'";
-const RETRY_DAYS = Number(process.env.TD_RETRY_DAYS ?? 7);
-
-const where = [
-    "d.td_code IS NOT NULL",
-    "p.deed_number IS NOT NULL",
-    "p.deed_number <> ''",
-    "p.td_lat IS NULL",
-    "p.dol_lat IS NULL",
-    /* Not a recent dead end. */
-    `NOT (p.dol_verdict IN (${DEAD_ENDS}) AND p.td_checked_at > now() - ($1 || ' days')::interval)`,
-];
-/* $1 is the retry window, so the province filter, if any, takes $2. */
+/* Only parcels that still need work. The rule itself, and the NULL trap that
+ * used to hide a third of the backlog, live in tdBacklog.js - see the note
+ * there for why it is not written inline. */
 const params = [RETRY_DAYS];
+const where = [needsWork];
 if (ONLY_PROV) { params.push(Number(ONLY_PROV)); where.push(`d.province_id = $${params.length}`); }
 
 const sql = `
