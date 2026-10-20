@@ -225,15 +225,26 @@ export function normaliseTdRow(row) {
 export function pickTdRow(rows, { tumbol, amphur }) {
     if (!rows?.length) return { row: null, status: "not_found" };
     const norm = (s) => String(s ?? "").replace(/\s+/g, "").trim();
-    const wantT = norm(tumbol);
+    /* LED writes the subdistrict with a locality in brackets - "ในเมือง (ศิลา)"
+     * and "หน้าเมือง(ตลาดหน้าเมือง)" - and TD knows the same place under the
+     * bracketed name: "ศิลา" and "ตลาดหน้าเมือง" are both in TD's list for those
+     * deeds, while the unbracketed form is not. So all three readings count -
+     * the whole string, the bracketed part, and the string without the bracket -
+     * or those parcels never match. */
+    const wantTs = new Set([norm(tumbol)]);
+    const paren = /\(([^)]*)\)/.exec(String(tumbol ?? ""));
+    if (paren) {
+        wantTs.add(norm(paren[1]));
+        wantTs.add(norm(String(tumbol).replace(/\s*\([^)]*\)/g, "")));
+    }
     const wantA = norm(amphur);
     // "เมือง" must match "เมืองขอนแก่น"; equal or one contained in the other
     const ampOk = (got) => !wantA || !got
         || norm(got) === wantA || norm(got).startsWith(wantA) || wantA.startsWith(norm(got));
 
-    if (!wantT) return { row: null, status: "no_tambon_hint", candidates: rows.length };
+    if (!norm(tumbol)) return { row: null, status: "no_tambon_hint", candidates: rows.length };
 
-    let pool = rows.filter((r) => norm(r.tambonName) === wantT);
+    let pool = rows.filter((r) => wantTs.has(norm(r.tambonName)));
     if (pool.length === 1) return { row: pool[0], status: "matched" };
 
     if (pool.length > 1) {
