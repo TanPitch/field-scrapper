@@ -73,6 +73,40 @@ export async function createTdLookup({ delayMs = 700, log = () => {} } = {}) {
      * @param {{deed_number:string, province_code:number|string}} parcel
      * @returns {Promise<object>} normalised result
      */
+    /**
+     * Post any body to the service with this session.
+     *
+     * The parcel search answers with a rate and no area, and the map on the site
+     * does show the size, so the area has to come from somewhere else - another
+     * stored procedure, another search key, or the map identification. Asking
+     * those questions needs the session, and a plain post without one gets a stub
+     * back: the office name and a phone number, and nothing else.
+     */
+    const post = async (params) => {
+        const body = {
+            PERIODS: PERIOD,
+            LANGUAGE: "TH",
+            USER_ID: "2",
+            DEVICE_TYPE: "desktop",
+            OS: "Windows",
+            COUNTRY: null,
+            VISITOR_UUID: jar.get("VISITOR_UUID") ?? "b104bccbd4f1c6c3b2c05dad3a929eb6",
+            CSRF_TOKEN: csrf ?? "",
+            BEGIN: 1,
+            END: 200,
+            ...params,
+        };
+        const r = await axios.post(
+            `${ENDPOINT}?&request.preventCache=${Date.now()}`,
+            JSON.stringify(body),
+            base(),
+        );
+        remember(r);
+        calls++;
+        const text = typeof r.data === "string" ? r.data : JSON.stringify(r.data);
+        try { return JSON.parse(text); } catch { return { success: false, total: 0, message: "not json" }; }
+    };
+
     const lookup = async (parcel) => {
         if (delayMs && calls > 0) await sleep(delayMs);
 
@@ -142,6 +176,7 @@ export async function createTdLookup({ delayMs = 700, log = () => {} } = {}) {
     };
 
     lookup.calls = () => calls;
+    lookup.post = post;
     lookup.setProvince = (code) => jar.set("PROV_CODE", String(code).padStart(2, "0"));
     lookup.close = () => {};
     return lookup;
