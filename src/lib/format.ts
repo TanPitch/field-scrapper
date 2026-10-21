@@ -80,7 +80,16 @@ export function fmtRai(w: number | null, unit: string | null | undefined = null)
     if (q || !p.length) p.push(q + ' ' + sizeUnitLabel(unit));
     return p.join(' ');
   }
-export const fmtRaiFromM2 = (m2: number): string => fmtRai(Math.round(m2 / 4));
+/**
+ * A drawn area, in square metres, as land area.
+ *
+ * Under one ไร่ - four square metres - the figure is in square metres, because
+ * rounding it to whole ตร.ว. printed "0 ตร.ว." for a shape of one and a half
+ * square metres, which says less than nothing. A ตร.ว. is four square metres, so
+ * the sub-ไร่ sizes have no ตร.ว. to be printed in.
+ */
+export const fmtRaiFromM2 = (m2: number): string =>
+  m2 < 4 ? `${Number(m2.toFixed(2))} ตร.ม.` : fmtRai(Math.round(m2 / 4));
 /* Rounded to 4dp, then trailing zeros dropped.
    w % 100 is exact in binary for the values we handle, but the value reaching
    here has usually been through a division (size in sqm converted, or a
@@ -101,8 +110,16 @@ export const splitWah = (w: number | null): [number, number, number] => {
   return [rai, ngan, wa];
 };
 
+/**
+ * A drawn length.
+ *
+ * Below a kilometre the unit is centimetres. A shape a person measures is
+ * usually a building or a boundary, and rounding 1.5 m to "2 ม." throws away
+ * the half that was the point of measuring it. A kilometre is the natural cut:
+ * past it, metres and kilometres read better than centimetres do.
+ */
 export const fmtDist = (m: number): string =>
-  m < 1000 ? Math.round(m) + ' ม.'
+  m < 1000 ? Math.round(m * 100) + ' ซม.'
     : m < 10000 ? Math.round(m).toLocaleString('en-US') + ' ม.'
       : (m / 1000).toFixed(2).replace(/\.?0+$/, '') + ' กม.';
 

@@ -309,11 +309,17 @@ export function pickTdRow(rows, { tumbol, amphur }) {
 export async function createResilientLookup({ delayMs = 400, log = () => {}, renewEvery = 25 } = {}) {
     let inner = null;
     let calls = 0;
+    let province = null;
 
     const renew = async () => {
         if (inner) { try { await inner.close(); } catch { /* already gone */ } }
         inner = await createTdLookup({ delayMs, log });
         calls = 0;
+        /* The province rides in a cookie, and a new session starts with an empty
+         * jar. Without putting it back the query asks every province for the
+         * province's own default - which returns rows, and rows from the wrong
+         * place, and no error to say so. */
+        if (province != null) inner.setProvince(province);
         return inner;
     };
 
@@ -332,7 +338,10 @@ export async function createResilientLookup({ delayMs = 400, log = () => {}, ren
         }
         return res;
     };
-    lookup.setProvince = (code) => inner.setProvince(code);
+    lookup.setProvince = (code) => {
+        province = code;
+        if (inner) inner.setProvince(code);
+    };
     lookup.close = async () => { if (inner) await inner.close(); };
     lookup.renew = renew;
     return lookup;
