@@ -18,7 +18,7 @@
  * in geo_note, so an admin sees what to correct rather than only that something
  * is wrong.
  */
-import { createResilientLookup, pickTdRow, normaliseTdRow } from "./tdLookup.js";
+import { createResilientLookup, pickTdRow } from "./tdLookup.js";
 import { dictionaries } from "./tdDict.js";
 import { raiNganWaToSqWa, compareArea } from "./provenance.js";
 import { loadCalibration, calibratedTransform } from "./tdCrs.js";
@@ -58,7 +58,9 @@ for (const [i, p] of rows.entries()) {
   try {
     lookup.setProvince(ourProvince);
     const td = await lookup({ deed_number: p.deed_number, province_code: ourProvince });
-    const tdRows = (td.rows ?? []).map(normaliseTdRow);
+    /* createTdLookup already normalises the rows. Normalising them again
+     * reads fields that are not there and leaves every one of them null. */
+    const tdRows = td.rows ?? [];
     const pick = pickTdRow(tdRows, { tumbol: p.tumbol, amphur: ourDistrict });
 
     if (!tdRows.length) {
