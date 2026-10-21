@@ -85,55 +85,69 @@ for (const [i, p] of rows.entries()) {
   const pick = pickTdRow(tdRows, { tumbol: p.tumbol, amphur: p.district_name });
 
   let verdict, detail, placed = false;
+  const r = pick.row;
 
-  if (!pick.row) {
-    const inDistrict = tdRows.filter((r) => String(r.amphurName ?? "").trim() === String(p.district_name ?? "").trim());
-    if (inDistrict.length > 1) {
-      verdict = "ambiguous";
-      detail = `TD has ${inDistrict.length} parcels in ${p.district_name} for deed ${p.deed_number}`;
-    } else if (inDistrict.length === 1) {
-      verdict = "tambon_mismatch";
-      detail = `TD has it in ${p.district_name} / ${inDistrict[0].tambonName}, LED says ${p.tumbol}`;
-    } else if (tdRows.length) {
-      verdict = "district_mismatch";
-      detail = `TD has deed ${p.deed_number} in ${[...new Set(tdRows.map((r) => r.amphurName))].join(", ")}, LED says ${p.district_name}`;
-    } else {
-      verdict = "no_result";
-      detail = `TD has no parcel under deed ${p.deed_number} in province ${p.td_province_code}`;
-    }
-  } else {
-    const r = pick.row;
+  /* A row in our district whose subdistrict name differs from LED's is still
+   * the likeliest candidate: TD may file the land under a different sub-place
+   * than LED does. The area settles it, and the area is free - the cadastre
+   * publishes it. Same area means the same land with a different name for it;
+   * a different area means it is a different parcel and the answer is no. */
+  let candidate = r;
+  if (!candidate) {
+    const inDistrict = tdRows.filter((x) => String(x.amphurName ?? "").trim() === String(p.district_name ?? "").trim());
+    if (inDistrict.length === 1) candidate = inDistrict[0];
+  }
+  if (!candidate) {
+    const inProvince = tdRows.filter((x) => String(x.raw?.CHANGWAT_CODE ?? "") === String(p.td_province_code));
+    if (inProvince.length === 1) candidate = inProvince[0];
+  }
+
+  if (candidate) {
     const isCondo = /ห้องชุด/.test(String(p.asset_type ?? ""));
     const ledSqWa = raiNganWaToSqWa(p.size_rai, p.size_ngan, p.size_wa);
     const cad = await officialArea({
       chanod: p.deed_number,
       provinceCode: String(p.td_province_code),
-      amphurName: r.amphurName,
-      tumbonName: r.tambonName,
+      amphurName: candidate.amphurName,
+      tumbonName: candidate.tambonName,
     });
-    if (!isCondo && cad.found && cad.sqWa != null && ledSqWa != null) {
-      const diff = Math.abs(cad.sqWa - ledSqWa);
-      if (diff > Math.max(1, ledSqWa * 0.05)) {
-        verdict = "area_mismatch";
-        detail = `LED says ${ledSqWa} ตร.ว., the cadastre says ${cad.area} (${cad.sqWa} ตร.ว.)`;
-      } else {
-        verdict = "match";
-        detail = `placed; LED ${ledSqWa} ตร.ว. matches the cadastre ${cad.area}`;
-        placed = true;
-      }
-    } else {
+    const sameDistrict = String(candidate.amphurName ?? "").trim() === String(p.district_name ?? "").trim();
+    const areaAgrees = cad.found && cad.sqWa != null && ledSqWa != null &&
+      Math.abs(cad.sqWa - ledSqWa) <= Math.max(1, ledSqWa * 0.05);
+
+    if (r) {
+      /* The subdistrict matched, so this is the land LED described. */
       verdict = "match";
       detail = isCondo
-        ? `placed from TD's ${r.amphurName}/${r.tambonName} (a ห้องชุด: LED's room size is not the land's)`
-        : `placed from TD's ${r.amphurName}/${r.tambonName}` + (cad.found ? `; cadastre area ${cad.area}` : "");
+        ? `placed from TD's ${candidate.amphurName}/${candidate.tambonName} (a ห้องชุด: LED's room size is not the land's)`
+        : `placed from TD's ${candidate.amphurName}/${candidate.tambonName}` +
+          (cad.found ? `; cadastre area ${cad.area} against LED ${ledSqWa} ตร.ว.` : "");
       placed = true;
+    } else if (areaAgrees) {
+      /* Same land, different sub-place name. */
+      verdict = "match";
+      detail = `placed from TD's ${candidate.amphurName}/${candidate.tambonName}: the cadastre area ${cad.area} (${cad.sqWa} ตร.ว.) agrees with LED's ${ledSqWa} ตร.ว.` +
+        (sameDistrict ? `, and it is in our district ${p.district_name}` : `, but in ${candidate.amphurName} and LED says ${p.district_name}`);
+      placed = true;
+    } else if (sameDistrict) {
+      verdict = "tambon_mismatch";
+      detail = `TD has one parcel in ${p.district_name} / ${candidate.tambonName}, LED says ${p.tumbol}` +
+        (cad.found ? `; the cadastre area is ${cad.area} (${cad.sqWa} ตร.ว.) against LED ${ledSqWa} ตร.ว.` : "");
+    } else {
+      verdict = "district_mismatch";
+      detail = `TD has deed ${p.deed_number} in ${candidate.amphurName}, LED says ${p.district_name}` +
+        (cad.found ? `; the cadastre area is ${cad.area} (${cad.sqWa} ตร.ว.) against LED ${ledSqWa} ตร.ว.` : "");
     }
+  } else if (tdRows.length) {
+    verdict = "ambiguous";
+    detail = `TD has ${tdRows.length} parcels for deed ${p.deed_number} and none in ${p.district_name}`;
+  } else {
+    verdict = "no_result";
+    detail = `TD has no parcel under deed ${p.deed_number} in province ${p.td_province_code}`;
   }
 
   if (placed) {
-    const r = pick.row;
-    const cad = null;
-    await place(p, r, cad);
+    await place(p, candidate, null);
   } else {
     await db.query(
       `UPDATE parcels SET dol_verdict=$2, geo_note=$3, td_checked_at=now() WHERE id=$1`,
