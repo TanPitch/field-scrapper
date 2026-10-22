@@ -353,7 +353,7 @@ async function upsertParcels(client, lot, provinceCode, dolCode, stats, ctx) {
                 ],
             );
             if (r.rows[0].inserted) stats.parcelsNew++;
-            out.push({ id: r.rows[0].id, valuation, title, tumbol: txt(a.tumbol) });
+            out.push({ id: r.rows[0].id, valuation, title, tumbol: txt(a.tumbol), deed: String(deed) });
         }
     }
     return out;
@@ -383,7 +383,25 @@ const LOT_UPSERT_COLUMNS = [
     "deed_number", "plot_no", "group_lot_count", "group_total_price", "last_seen",
 ];
 
-async function upsertLot(client, lot, parcelId, stats) {
+/* The deed number a lot carries.
+ *
+ * One LED row can name several deeds - "45722,45727-9" - and the fan-out makes
+ * a parcel for each. The lot's natural key is built from the deed number, so a
+ * lot stamped with the whole list collapses them all onto one row: the first
+ * parcel keeps the lot and every other parcel is left with no lot at all, and
+ * so with no case number, no size and no price - a row on the map with nothing
+ * behind it. Stamping each lot with its own parcel's number gives each one its
+ * own row.
+ *
+ * A row that names one deed is stamped with LED's own string, which for a
+ * condominium listing is the building's deed rather than the unit's.
+ */
+export function lotDeedNumber(a, parcelDeed) {
+    const many = (a.deeds?.numbers?.length ?? 0) > 1;
+    return many ? txt(parcelDeed) : txt(a.number ?? a.deeds?.numbers?.[0]);
+}
+
+async function upsertLot(client, lot, parcelId, stats, parcelDeed = null) {
     const p = lot.bid?.price ?? {};
     const a = lot.address ?? {};
     const life = lot.lifecycle ?? {};
@@ -415,7 +433,8 @@ async function upsertLot(client, lot, parcelId, stats) {
         /* LED facts, stored on the lot rather than only reached through the
            parcel. For a condominium listing the deed number is the building and
            addr_no is the unit, so it is the pair that identifies the asset. */
-        txt(a.number ?? a.deeds?.numbers?.[0]), txt(a.addr_no),
+        lotDeedNumber(a, parcelDeed),
+        txt(a.addr_no),
         /* Group-sale note, when present. Both numbers are LED's, kept so the
            row can be checked against what actually landed — see groupSale.js.
            Null for a lot sold on its own. */
@@ -571,7 +590,7 @@ export async function ingest(lots, { client, imageStore = null, imageBudget = 30
         if (!parcels.length) continue;
 
         for (const parcel of parcels) {
-            const lotId = await upsertLot(client, lot, parcel.id, stats);
+            const lotId = await upsertLot(client, lot, parcel.id, stats, parcel.deed);
             if (!lotId) continue;
             await upsertRounds(client, lotId, lot);
             stats.rounds += (lot.bid?.rounds ?? []).filter((r) => r.statusCode !== null || r.date).length;

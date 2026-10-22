@@ -49,7 +49,13 @@ const { rows: todo } = await db.query(`
                                    AND dd.dol_code = p.district_dol_code LIMIT 1)
     LEFT JOIN LATERAL (SELECT * FROM auction_lots WHERE parcel_id = p.id ORDER BY id LIMIT 1) l ON true
    WHERE p.td_lat IS NULL AND p.dol_lat IS NULL
-     AND p.land_title LIKE 'น.ส.3ก%'
+     /* The title is matched on LED's own wording, not on our normalised code.
+        A 3-3 title reads "น.ส. 3 ก เลขที่" and sometimes "ตามสำเนา น.ส. 3 ก
+        เลขที่", and the second normalises to ตามสำเนาโฉนด - which reads as a
+        plain deed and sent the parcel to the โฉนด layer. 77 parcels were
+        3-3 titles searched as deeds. */
+     AND (p.land_title_raw ~ '3\\s*ก' OR p.land_title IN ('น.ส.3ก.','น.ส.3เลขที่'))
+     AND COALESCE(l.asset_type, '') NOT LIKE 'ห้องชุด%'
    ORDER BY p.id${LIMIT ? ` LIMIT ${LIMIT}` : ""}`);
 
 line(`  ${todo.length} น.ส.3ก. parcel(s) to place, ${WRITE ? "WRITE" : "dry run"}`);
