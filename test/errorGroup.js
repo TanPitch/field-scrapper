@@ -80,4 +80,32 @@ for (const [label, test] of [
   if (group.length > per) line(`     ...and ${group.length - per} more`);
 }
 
+/* The ones with nothing to compare are a different failure, and they need a
+ * different kind of looking at: LED published no size at all, or published a
+ * size with its sub-parts zeroed. The first kind cannot be searched for by case
+ * number at all - there is no case number - so it has to be found by browsing the
+ * district on the LED site. */
+line(`\n================= NOTHING TO COMPARE AGAINST =================`);
+const { rows: bare } = await db.query(`
+  SELECT p.id, p.deed_number, p.tumbol, p.district_name, p.province_name, p.geo_note, p.dol_verdict,
+         l.case_no, l.case_year, l.order_number, l.order_sub, l.asset_type, l.remark,
+         l.size_rai, l.size_ngan, l.size_wa, l.start_price, l.published_date, l.first_round_date
+    FROM parcels p
+    JOIN districts d ON d.id = (SELECT id FROM districts dd
+                                 WHERE dd.province_id = p.province_code
+                                   AND dd.dol_code = p.district_dol_code LIMIT 1)
+    LEFT JOIN LATERAL (SELECT * FROM auction_lots WHERE parcel_id = p.id ORDER BY id LIMIT 1) l ON true
+   WHERE p.td_lat IS NULL AND p.dol_lat IS NULL AND p.td_utm_e IS NOT NULL
+     AND (l.size_rai IS NULL OR l.size_wa IS NULL OR l.size_wa = 0 OR l.case_no IS NULL)
+   ORDER BY (l.case_no IS NULL) DESC, p.id`);
+for (const r of bare) {
+  const noCase = !r.case_no;
+  line(`     ${String(r.id).padStart(5)} ${String(r.deed_number).padEnd(8)} ` +
+    `${noCase ? "NO CASE NUMBER - browse the district on the LED site" : `case ${r.case_no}/${r.case_year} order ${r.order_number}-${r.order_sub}`}` +
+    `   ${r.province_name}/${r.district_name}/${r.tumbol ?? "-"}` +
+    `   size ${r.size_rai ?? "-"}-${r.size_ngan ?? "-"}-${r.size_wa ?? "-"}` +
+    `   ${r.asset_type ?? "-"}${r.remark ? `   remark: ${r.remark}` : ""}`);
+}
+line(`     ${bare.length} in total`);
+
 await db.end();
