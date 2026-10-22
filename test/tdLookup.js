@@ -177,6 +177,28 @@ export async function createTdLookup({ delayMs = 700, log = () => {} } = {}) {
 
     lookup.calls = () => calls;
     lookup.post = post;
+
+    /**
+     * A น.ส.3ก. title number, searched on the layer that holds them.
+     *
+     * The wire format is NS3A_ID in the body with PARCEL_LAYER=NS3K. The same
+     * number sent to the PARCEL layer answers with rows, and every one of them
+     * is a different piece of land - a 3-3 number is not a deed number, and the
+     * PARCEL layer holds no 3-3 titles. The reply carries the shape, the sheet,
+     * the land number and the place, but no area: the area comes from the map
+     * layer (tdCadastre.ns3kRows).
+     */
+    lookup.ns3k = async (ns3aId, provinceCode) => {
+        const p = await post({
+            SP: "GIS5_Q_PARCEL",
+            PARCEL_LAYER: "NS3K",
+            NS3A_ID: String(ns3aId),
+            PROV_CODE: String(provinceCode ?? "").padStart(2, "0"),
+        });
+        if (!p?.success || !Array.isArray(p.data)) return [];
+        return p.data.map(normaliseTdRow);
+    };
+
     lookup.setProvince = (code) => jar.set("PROV_CODE", String(code).padStart(2, "0"));
     lookup.close = () => {};
     return lookup;
@@ -198,7 +220,10 @@ export async function createTdLookup({ delayMs = 700, log = () => {} } = {}) {
 export function layerForTitle(landTitle, assetType = "") {
     const t = String(landTitle ?? "").replace(/\s+/g, "");
     if (/ห้องชุด/.test(String(assetType ?? ""))) return { layer: "CONDO", key: "name", supported: false };
-    if (/^น\.?ส\.?3ก/.test(t)) return { layer: "NS3K", key: "ns3a", supported: false };
+    /* NS3K is solved: NS3A_ID in the body with PARCEL_LAYER=NS3K. A น.ส.3ก.
+     * number on the PARCEL layer answers with rows, and every one is a different
+     * piece of land. */
+    if (/^น\.?ส\.?3ก/.test(t)) return { layer: "NS3K", key: "ns3a", supported: true };
     return { layer: "PARCEL", key: "chanod", supported: true };
 }
 
@@ -342,6 +367,8 @@ export async function createResilientLookup({ delayMs = 400, log = () => {}, ren
         province = code;
         if (inner) inner.setProvince(code);
     };
+    lookup.post = (params) => inner.post(params);
+    lookup.ns3k = (ns3aId, provinceCode) => inner.ns3k(ns3aId, provinceCode);
     lookup.close = async () => { if (inner) await inner.close(); };
     lookup.renew = renew;
     return lookup;

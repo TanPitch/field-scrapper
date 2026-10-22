@@ -43,15 +43,48 @@ const get = async (url) => {
   try { return JSON.parse(t); } catch { return { __raw: t.slice(0, 300) }; }
 };
 
+/**
+ * One query against one layer of the map service.
+ *
+ * The service will not list its layers without a token, but it will serve any
+ * layer's rows, so the layer numbers are the ones the layers are known by:
+ *
+ *   0, 1   โฉนด        PARCEL - CHANOD_NO, the deed number
+ *   2, 3   น.ส.3ก.      NS3K   - NS3A_ID, the 3-3 title number
+ *   4      สำนักงานที่ดิน
+ *
+ * The NS3K layers are the reason this is generic. A น.ส.3ก. number sent to a
+ * PARCEL layer looks like a hit and is entirely wrong, and the PARCEL layers
+ * hold no 3-3 titles at all.
+ */
+export async function queryLayer(layer, where) {
+  const q = await get(
+    `${PROXY}${SVC}/${layer}/query?where=${encodeURIComponent(where)}&outFields=*&returnGeometry=true&f=json`);
+  return (q.features ?? []).map((f) => ({ ...f.attributes, __layer: layer }));
+}
+
 /** Rows the cadastre holds for a deed number, whatever the district. */
 export async function cadastreRows(chanod) {
   const out = [];
   for (const layer of [0, 1]) {
-    const q = await get(
-      `${PROXY}${SVC}/${layer}/query?where=${encodeURIComponent(`CHANOD_NO=${chanod}`)}&outFields=*&returnGeometry=true&f=json`);
-    for (const f of (q.features ?? [])) out.push({ ...f.attributes, __layer: layer, __geometry: f.geometry });
+    const rows = await queryLayer(layer, `CHANOD_NO=${chanod}`);
+    for (const r of rows) out.push(r);
   }
   return out;
+}
+
+/**
+ * The น.ส.3ก. parcels of one province carrying one 3-3 title number.
+ *
+ * The number is not unique - a 3-3 number is held by several parcels in a
+ * province - so the province is part of the question and the area is the
+ * answer.
+ */
+export async function ns3kRows(ns3aId, provinceCode) {
+  const where = provinceCode
+    ? `NS3A_ID=${ns3aId} AND CHANGWAT_CODE='${provinceCode}'`
+    : `NS3A_ID=${ns3aId}`;
+  return queryLayer(2, where);
 }
 
 /**
