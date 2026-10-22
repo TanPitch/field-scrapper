@@ -585,6 +585,13 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
                ) l ON true
          WHERE (${where.join(" OR ")})
            AND ($1::int IS NULL OR p.province_code = $1)
+           /* Only a parcel the map actually shows can be a gap the admin has to
+              close. ingest.js makes a parcel for every deed number LED names,
+              and for a condominium that is one parcel per unit of the same
+              auction - they carry no lot, the API does not publish them, and
+              nobody has ever seen them. Listing them here put 97 rows of
+              nothing in front of the admin. */
+           AND EXISTS (SELECT 1 FROM auction_lots x WHERE x.parcel_id = p.id)
          ORDER BY p.province_code, p.district_dol_code, p.deed_number NULLS FIRST
          LIMIT $2 OFFSET $3`,
         [params[0] ?? null, limit, offset]);
