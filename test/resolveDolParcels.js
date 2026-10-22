@@ -88,18 +88,27 @@ async function noteOutcome(ok) {
     );
 }
 
-const where = ["p.deed_number IS NOT NULL", "p.deed_number <> ''", "d.td_code IS NOT NULL"];
+const where = ["p.deed_number IS NOT NULL", "p.deed_number <> ''", "d.dol_code IS NOT NULL"];
 if (!ALL) where.push("p.td_status IS DISTINCT FROM 'resolved'");
 const params = [];
 
+/* Specific parcels, for a spot check that spends only a few of the day's
+ * twenty. The ids are comma separated: --ids=9363,10585 */
+const ids = (process.argv.find((a) => a.startsWith("--ids=")) ?? "").slice(6)
+    .split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
+if (ids.length) {
+    where.push(`p.id = ANY($${params.length + 1}::bigint[])`);
+    params.push(ids);
+}
+
 const sql = `
   SELECT p.id AS parcel_id, p.deed_number, p.province_name, p.tumbol,
-         d.name AS district_name, d.td_province_code, d.td_code
+         d.name AS district_name, d.td_province_code, d.dol_code
     FROM parcels p
     JOIN districts d
       ON d.province_id = p.province_code AND d.dol_code = p.district_dol_code
    WHERE ${where.join(" AND ")}
-   ORDER BY d.td_province_code, d.td_code, p.deed_number`;
+   ORDER BY d.td_province_code, d.dol_code, p.deed_number`;
 
 let todo = (await client.query(sql, params)).rows;
 if (LIMIT) todo = todo.slice(0, LIMIT);
@@ -129,7 +138,7 @@ for (const p of todo) {
     const res = await reserveQuota();
     if (!res) { stats.quotaSpent++; break; }
 
-    const amph = String(p.td_code).padStart(2, "0");
+    const amph = String(p.dol_code).padStart(2, "0");
     let j = null;
     try {
         const r = await fetch(`${BASE}/LandsMaps/GetParcelByParcelNo/${p.td_province_code}/${amph}/${p.deed_number}`, {
@@ -202,6 +211,13 @@ for (const p of todo) {
     );
 
     if (WRITE) {
+        /* DOL reports the ตร.วา in two parts: wa and subwa, the subwa being
+         * the hundredths. The size check above already adds them, and the
+         * stored figure has to be the same number it checked - storing the
+         * whole part alone wrote 2 for a parcel of 2.90. */
+        const dolWa = row.wa != null
+            ? Number(row.wa) + (Number(row.subwa ?? 0) || 0) / 10
+            : null;
         await client.query(
             `UPDATE parcels
                 SET dol_lat      = $2,
@@ -217,7 +233,7 @@ for (const p of todo) {
             [p.parcel_id,
              row.parcellat != null ? Number(row.parcellat) : null,
              row.parcellon != null ? Number(row.parcellon) : null,
-             row.rai ?? null, row.ngan ?? null, row.wa ?? null,
+             row.rai ?? null, row.ngan ?? null, dolWa,
              row.landoffice ?? null, row.parcel_type ?? null],
         );
     }
