@@ -30,33 +30,19 @@ const ok = (over = {}) => ({
  *  the day's quota starts empty. Keeps a run from stamping fake coordinates
  *  onto the real ingested parcels.
  *
- *  The quota is emptied for the duration and put back afterwards. Zeroing it
- *  for good would under-count the calls a real run has already made - the
- *  ledger is the only thing standing between the bot and the service's daily
- *  ceiling, and a test run that left it reading zero would let the next run
- *  spend twenty more on top of twenty already spent. */
-let savedQuota = null;
-
+ *  The quota is emptied for the duration and the whole file runs inside a
+ *  transaction, so the empty allowance does not outlive it. Zeroing it for good
+ *  would under-count the calls a real run has already made - the ledger is the
+ *  only thing standing between the bot and the service's daily ceiling, and a
+ *  test run that left it reading zero would let the next run spend twenty more
+ *  on top of twenty already spent. */
 async function freshQueue() {
     await client.query(`DELETE FROM coord_queue`);
     await enqueueUnresolved(client, { only: made.parcels });
     await client.query(
         `DELETE FROM coord_queue WHERE parcel_id NOT IN (SELECT unnest($1::bigint[]))`,
         [made.parcels]);
-    if (savedQuota == null) {
-        const { rows } = await client.query(
-            `SELECT used, calls_ok, calls_failed FROM dol_quota_ledger WHERE quota_date = CURRENT_DATE`);
-        savedQuota = rows[0] ?? { used: 0, calls_ok: 0, calls_failed: 0 };
-    }
     await client.query(`UPDATE dol_quota_ledger SET used=0, calls_ok=0, calls_failed=0`);
-}
-
-/** Give the day's real quota back once the file is done with it. */
-async function restoreQuota() {
-    if (!savedQuota) return;
-    await client.query(
-        `UPDATE dol_quota_ledger SET used=$1, calls_ok=$2, calls_failed=$3 WHERE quota_date = CURRENT_DATE`,
-        [savedQuota.used, savedQuota.calls_ok, savedQuota.calls_failed]);
 }
 
 before(async () => {
@@ -88,6 +74,10 @@ before(async () => {
         `DELETE FROM auction_lots
           WHERE parcel_id IN (SELECT id FROM parcels WHERE ${FIXTURE})`);
     await client.query(`DELETE FROM parcels WHERE ${FIXTURE}`);
+
+    /* From here on everything runs inside a transaction, so the fixtures, the
+     * queue and the quota row are all rolled back at the end of the file. */
+    await client.query("BEGIN");
 
     await client.query(`INSERT INTO provinces (code, name, dol_code)
                        VALUES (40, 'ขอนแก่น', 40) ON CONFLICT (code) DO NOTHING`);
@@ -133,13 +123,18 @@ before(async () => {
 
 after(async () => {
     if (!client) return;
-    await client.query(
-        `DELETE FROM field_provenance
-          WHERE entity_type='parcel' AND entity_id = ANY($1)`, [made.parcels]);
-    await client.query(`DELETE FROM coord_queue WHERE parcel_id = ANY($1)`, [made.parcels]);
-    await client.query(`DELETE FROM auction_lots WHERE id = ANY($1)`, [made.lots]);
-    await client.query(`DELETE FROM parcels WHERE id = ANY($1)`, [made.parcels]);
-    await restoreQuota();
+    /* Everything this file did is undone by the rollback: the fixtures, the
+     * queue it emptied, the ledger it zeroed.
+     *
+     * The ledger mattered. This file ran `UPDATE dol_quota_ledger SET used=0`
+     * with no WHERE clause, which wiped every day's record of how many of the
+     * service's twenty daily calls had been spent - so the next run would have
+     * spent twenty more on top of twenty already spent. The quota row for
+     * 2026-10-20 read zero for a day when twenty calls had really been made.
+     *
+     * A transaction is the whole fix: the tests need a clean queue and an empty
+     * allowance to exercise the rules, and neither has to survive them. */
+    await client.query("ROLLBACK");
     await client.end();
 });
 
@@ -234,11 +229,16 @@ test("a parcel that already has coordinates is never re-queried", async () => {
 
 test("spendQuota refuses to go past the limit", async () => {
     await client.query(`UPDATE dol_quota_ledger SET used=20`);
+    /* A constraint violation aborts the whole transaction, and this file runs
+     * inside one so that its footprint is undone. A savepoint keeps the abort
+     * local: the transaction survives, and everything after it still runs. */
+    await client.query(`SAVEPOINT before_the_violation`);
     await assert.rejects(
         () => spendQuota(client, { ok: true }),
         /dol_quota_within_limit|violates check constraint/i,
         "the ledger CHECK must reject an over-quota write",
     );
+    await client.query(`ROLLBACK TO SAVEPOINT before_the_violation`);
     await freshQueue();
 });
 

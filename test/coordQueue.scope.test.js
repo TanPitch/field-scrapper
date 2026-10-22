@@ -14,6 +14,16 @@ const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 /* One connection for the whole file — a pg Client cannot connect twice. */
 await client.connect();
 
+/* Everything below runs inside a transaction, so the file's footprint is undone
+ * when it ends.
+ *
+ * It used to reach for the highest parcel id and wipe its coordinates. That is
+ * a real parcel: parcel 14509 lost its coordinate that way, and because the
+ * restore put back only the coordinates and not the note, the row was left
+ * half-erased. Two files doing it at once made it worse — one could read the
+ * other's wiped state and put back nothing at all. */
+await client.query("BEGIN");
+
 /* Snapshot the columns the predicate reads, so each test puts back what it found. */
 const park = async (id) => {
   const { rows } = await client.query(
@@ -80,4 +90,9 @@ test("a parcel DOL already placed is NOT queued", async () => {
   }
 });
 
-afterAll(async () => { await client.end(); });
+afterAll(async () => {
+  /* Undo the file's footprint: the parcel it emptied, the queue rows it made.
+   * Nothing it did outlives it. */
+  await client.query("ROLLBACK");
+  await client.end();
+});

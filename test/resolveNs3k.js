@@ -51,10 +51,11 @@ const { rows: todo } = await db.query(`
    WHERE p.td_lat IS NULL AND p.dol_lat IS NULL
      /* The title is matched on LED's own wording, not on our normalised code.
         A 3-3 title reads "น.ส. 3 ก เลขที่" and sometimes "ตามสำเนา น.ส. 3 ก
-        เลขที่", and the second normalises to ตามสำเนาโฉนด - which reads as a
-        plain deed and sent the parcel to the โฉนด layer. 77 parcels were
-        3-3 titles searched as deeds. */
-     AND (p.land_title_raw ~ '3\\s*ก' OR p.land_title IN ('น.ส.3ก.','น.ส.3เลขที่'))
+        เลขที่" or "น.ส. 3 เลขที่", and the two with ตามสำเนา normalise to
+        ตามสำเนาโฉนด - which reads as a plain deed and sent the parcel to the
+        โฉนด layer. 80 parcels were 3-3 titles searched as deeds. */
+     AND p.land_title_raw NOT LIKE '%โฉนด%'
+     AND p.land_title_raw ~ '3\\s*(ก|เลขที่)'
      AND COALESCE(l.asset_type, '') NOT LIKE 'ห้องชุด%'
    ORDER BY p.id${LIMIT ? ` LIMIT ${LIMIT}` : ""}`);
 
