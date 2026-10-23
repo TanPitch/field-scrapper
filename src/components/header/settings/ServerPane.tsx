@@ -1,7 +1,9 @@
 import { AlertTriangle, CheckCircle2, CircleDashed, Loader2, Play } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type ApiStatus } from '../../../lib/api';
-import { frow, fl, setSec } from '../../ui/styles';
+import { patchApp, useApp } from '../../../store/useApp';
+import { fl, frow, setSec } from '../../ui/styles';
+import { Stepper } from '../../ui/Stepper';
 import { useTipProps } from '../../ui/Tip';
 
 /** One scraper pass, as /api/status reports it. */
@@ -35,6 +37,16 @@ const hhmm = (iso: string | null) => {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 };
 
+/** yyyy/mm/dd hh:mm — what a log file looks like, instead of toLocaleString's
+ *  locale-dependent long form. */
+const stamp = (iso: string | null) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 /**
  * Live scraper and API state.
  *
@@ -51,6 +63,7 @@ export function ServerPane() {
   const [st, setSt] = useState<ApiStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const logLimit = useApp(s => s.logLimit);
 
   const load = useCallback(async () => {
     const r = await api.get<ApiStatus>('/api/status');
@@ -70,7 +83,7 @@ export function ServerPane() {
   }, [load]);
 
   const running: Pass[] = st?.bot.runningPasses ?? [];
-  const recent = st?.recent ?? [];
+  const recent = (st?.recent ?? []).slice(0, logLimit);
   const td = st?.backlog.td;
 
   return (
@@ -167,38 +180,43 @@ export function ServerPane() {
         </>
       )}
 
-      {/* recent history */}
-      <div className="mt-3 text-[10px] font-semibold uppercase tracking-[.1em] text-dim">ประวัติงานล่าสุด</div>
+      {/* recent history — one entry per pass: a date-stamped, single-line header
+          (the headline a person scans for) over the wrapped detail. Capped at
+          logLimit newest entries; the list scrolls on its own so the header
+          counts above it never scroll away. */}
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex-1 text-[10px] font-semibold uppercase tracking-[.1em] text-dim">ประวัติงานล่าสุด</div>
+        <span className="text-[10px] text-dim2">แสดง {logLimit} รายการ</span>
+        <Stepper compact value={logLimit} step={5} onChange={(v: number | null) => patchApp({ logLimit: Math.max(5, Math.min(100, v ?? 20)) })} />
+      </div>
       {recent.length === 0 ? (
         <div className="py-2 text-[10.5px] text-dim2">
           {loading ? 'กำลังโหลด…' : 'ยังไม่มีประวัติการทำงาน — ลองรัน cd test; bun scrapeLED.js'}
         </div>
       ) : (
-        /* Capped: 27 runs already, and the list grows forever. Scroll rather
-           * than paginate - the newest is what anyone reads, and it stays at top. */
-        <div className="max-h-56 overflow-y-auto pr-1">
-        {recent.map(r => (
-        <div key={r.id} className={`${frow} !border-b-0`}>
-          <span className={fl}>
-            {r.outcome === 'failed'
-              ? <CircleDashed size={11} className="mr-1 inline text-[#FF8B7D]" />
-              : <CheckCircle2 size={11} className="mr-1 inline text-[#6BD07C]" />}
-            {stageTh(r.stage)}
-            {r.province ? ` · ${r.province}` : ''}
-            {r.notes ? <span className="ml-1 text-[10px] text-dim2">{r.notes}</span> : null}
-          </span>
-          <span className="flex items-center gap-2 font-display text-[10.5px] text-dim2">
-            {r.lotsSeen != null && <span>{r.lotsSeen} แปลง</span>}
-            {r.lotsNew != null && r.lotsNew !== r.lotsSeen && <span>ใหม่ {r.lotsNew}</span>}
-            {r.errors > 0 && (
-              <span className="text-[#FF8B7D]">พลาด {r.errors}</span>
-            )}
-            {r.lastStep && <span className="max-w-52 truncate">{r.lastStep}</span>}
-            <span>{secs(r.durationS)}</span>
-            <span>{hhmm(r.finishedAt)}</span>
-          </span>
-        </div>
-        ))}
+        <div className="max-h-[420px] overflow-y-auto pr-1">
+          {recent.map(r => (
+            <div key={r.id} className="border-b border-line/40 py-1.5">
+              <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
+                {r.outcome === 'failed'
+                  ? <CircleDashed size={11} className="flex-none text-[#FF8B7D]" />
+                  : <CheckCircle2 size={11} className="flex-none text-[#6BD07C]" />}
+                <span className="font-display text-dim2">{stamp(r.finishedAt ?? r.startedAt)}</span>
+                <b className="font-semibold">{stageTh(r.stage)}</b>
+                {r.province && <span>{r.province}</span>}
+                {r.lotsSeen != null && <span className="text-[#6BD07C]">{r.lotsSeen} แปลง</span>}
+                {r.lotsNew != null && <span>ใหม่ {r.lotsNew}</span>}
+                {r.errors > 0 && <span className="text-[#FF8B7D]">พลาด {r.errors}</span>}
+                {r.notes && <span className="text-dim2">{r.notes}</span>}
+                <span className="ml-auto font-display text-[10.5px] text-dim2">{secs(r.durationS)}</span>
+              </div>
+              {r.lastStep && (
+                <div className="mt-0.5 whitespace-normal font-display text-[10.5px] leading-[1.5] text-dim">
+                  {r.lastStep}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

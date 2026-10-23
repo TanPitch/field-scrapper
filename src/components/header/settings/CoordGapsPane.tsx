@@ -63,15 +63,15 @@ type GapKind = 'no_deed' | 'never_tried' | 'waiting_dol' | 'dead_end' | 'distric
   | 'tambon_mismatch' | 'ambiguous' | 'area_mismatch' | 'other';
 
 const GAP_KIND: Record<GapKind, { th: string; cls: string }> = {
-  no_deed: { th: 'ไม่มีเลขโฉนด', cls: 'text-err' },
-  never_tried: { th: 'ยังไม่ได้ตรวจ', cls: 'text-dim2' },
+  no_deed: { th: 'ไม่มีเลขโฉนด', cls: 'text-warn' },
+  never_tried: { th: 'ยังไม่ได้ตรวจ', cls: 'text-warn' },
   waiting_dol: { th: 'รอ DOL', cls: 'text-warn' },
-  dead_end: { th: 'TD/DOL ไม่มี', cls: 'text-dim2' },
+  dead_end: { th: 'TD/DOL ไม่มี', cls: 'text-warn' },
   district_mismatch: { th: 'อำเภอไม่ตรง', cls: 'text-warn' },
   tambon_mismatch: { th: 'ตำบลไม่ตรง', cls: 'text-warn' },
   ambiguous: { th: 'TD มีหลายแปลง', cls: 'text-warn' },
-  area_mismatch: { th: 'ขนาดไม่ตรง', cls: 'text-err' },
-  other: { th: 'อื่น ๆ', cls: 'text-dim2' },
+  area_mismatch: { th: 'ขนาดไม่ตรง', cls: 'text-ewarnrr' },
+  other: { th: 'อื่น ๆ', cls: 'text-warn' },
 };
 
 function gapKind(g: Gap): GapKind {
@@ -115,9 +115,16 @@ export function CoordGapsPane() {
   const [big, setBig] = useState(false);
   useEffect(() => {
     if (!big) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBig(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      /* Capture on window, ahead of the settings drawer's document-level
+         Escape handler: minimising the pane should not close the whole
+         settings panel the user opened it from. */
+      e.stopPropagation();
+      setBig(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [big]);
 
   const load = useCallback(async () => {
@@ -136,10 +143,10 @@ export function CoordGapsPane() {
     const v = edit[g.id];
     if (!v) return;
     const lat = Number(v.lat), lon = Number(v.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { toast('กรอกพิกาดให้ถูกต้อง', 'warn'); return; }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { toast('กรอกพิกัดให้ถูกต้อง', 'warn'); return; }
     const r = await api.patch(`/api/admin/coord-gaps/${g.id}`, { td_lat: lat, td_lon: lon, td_status: 'resolved' });
     if (!r.ok) { toast(r.error ?? 'บันทึกไม่สำเร็จ', 'warn'); return; }
-    toast(`บันทึกพิกาดแล้ว — ${g.deed_number ?? g.id}`);
+    toast(`บันทึกพิกัดแล้ว — ${g.deed_number ?? g.id}`);
     void load();
   };
 
@@ -165,21 +172,31 @@ export function CoordGapsPane() {
       {err && <p className="text-[12px] text-err">เข้าถึงข้อมูลไม่ได้: {err}</p>}
       {summary && (
         <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] leading-[1.7]">
-          <span className="text-dim2">ทั้งหมด</span><span className="font-display">{summary.total}</span>
-          <span className="text-dim2">จับคู่แล้ว</span><span className="font-display">{summary.matched}</span>
-          <span className="text-warn">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.mismatch}</span>
-          <span className="text-dim2">รอ DOL (โควตาหมด)</span><span className="font-display">{summary.waiting_dol}</span>
-          <span className="text-dim2">TD กับ DOL ไม่มี</span><span className="font-display">{summary.dead_end}</span>
-          <span className="text-warn">ตำบลไม่ตรง</span><span className="font-display text-warn">{summary.wrong_tambon}</span>
-          <span className="text-warn">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.wrong_district}</span>
-          <span className="text-warn">TD มีหลายแปลง</span><span className="font-display text-warn">{summary.ambiguous}</span>
-          <span className="text-err">ขนาดไม่ตรง</span><span className="font-display text-err">{summary.wrong_area}</span>
-          <span className="text-dim2">ยังไม่ได้ตรวจ</span><span className="font-display">{summary.never_tried}</span>
-          <span className="text-dim2">ไม่มีเลขโฉนด</span><span className="font-display">{summary.no_deed}</span>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <span className="text-dim2">ทั้งหมด</span><span className="font-display">{summary.total}</span>
+            <span className="text-dim2">จับคู่แล้ว</span><span className="font-display">{summary.matched} ({(100 *summary.matched/summary.total).toFixed(2)}%)</span>
+            {/* <span className="text-dim2">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.mismatch}</span> */}
+            <span className="text-dim2">ไม่มีทั้ง TD และ DOL</span><span className="font-display">{summary.dead_end}</span>
+            <span className="text-dim2">ตำบลไม่ตรง</span><span className="font-display text-warn">{summary.wrong_tambon}</span>
+            <span className="text-dim2">อำเภอไม่ตรง</span><span className="font-display text-warn">{summary.wrong_district}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <span className="text-dim2">รอ DOL (โควตาหมด)</span><span className="font-display">{summary.waiting_dol}</span>
+            <span className="text-dim2">TD มีหลายแปลง</span><span className="font-display text-warn">{summary.ambiguous}</span>
+            <span className="text-dim2">ขนาดไม่ตรง</span><span className="font-display text-err">{summary.wrong_area}</span>
+            <span className="text-dim2">ยังไม่ได้ตรวจสอบ</span><span className="font-display">{summary.never_tried}</span>
+            <span className="text-dim2">ไม่มีเลขโฉนด</span><span className="font-display">{summary.no_deed}</span>
+          </div>
         </div>
       )}
 
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+      {/* In fullscreen this row sticks to the top of the frame, so the filter
+          the user picked stays visible while three hundred rows scroll under
+          it. Full-bleed (-mx/px) so the sticky surface reads as the pane's own
+          header bar rather than a floating card. */}
+      <div className={`${big
+        ? 'sticky top-0 z-[2] -mx-3 bg-panel px-3 pb-2 pt-3'
+        : 'mb-2'} flex flex-wrap items-center gap-1.5`}>
         <input
           className={`${inp} min-w-0 flex-1`}
           value={q}
@@ -219,7 +236,7 @@ export function CoordGapsPane() {
             <th className="py-1 pr-2 font-medium">จังหวัด / อำเภอ</th>
             <th className="py-1 pr-2 font-medium">เลขโฉนด</th>
             <th className="py-1 pr-2 font-medium">ขนาด (ตร.วา)</th>
-            <th className="py-1 pr-2 font-medium">พิกาด (lat, lng)</th>
+            <th className="py-1 pr-2 font-medium">พิกัด (lat, lng)</th>
           </tr>
         </thead>
         <tbody>
@@ -231,7 +248,11 @@ export function CoordGapsPane() {
               <tr key={g.id} className="border-b border-line/40 align-top">
                 <td className={`py-1.5 pr-2 text-[10.5px] ${GAP_KIND[kind].cls}`}>
                   {GAP_KIND[kind].th}
-                  {g.geo_note && <div className="mt-0.5 text-[10px] leading-[1.4] text-dim2">{g.geo_note}</div>}
+                  {/* The resolver's own note ("TD has deed …") is what an admin
+                      needs while hand-fixing rows, but three hundred wrapped
+                      explanations make the normal pane unreadable — so the
+                      note shows only in fullscreen. */}
+                  {big && g.geo_note && <div className="mt-0.5 text-[10px] leading-[1.4] text-dim2">{g.geo_note}</div>}
                 </td>
                 <td className="py-1.5 pr-2">
                   {g.province_name ?? '-'}
@@ -246,7 +267,7 @@ export function CoordGapsPane() {
                   {g.deed_number ?? <span className="text-err">ไม่มี</span>}
                   {g.case_no && <div className="text-[10px] text-dim2">{g.case_no}/{g.case_year}</div>}
                 </td>
-                <td className="py-1.5 pr-2 font-display">{size(g)}</td>
+                <td className="py-1.5 pr-2 font-display whitespace-nowrap">{size(g)}</td>
                 <td className="py-1.5 pr-2">
                   {has && !v && <span className="font-display">{num(g.td_lat)}, {num(g.td_lon)}</span>}
                   {!has && !v && <span className="text-dim2">-</span>}
@@ -281,7 +302,11 @@ export function CoordGapsPane() {
 
   if (big) {
     return createPortal((
-      <div className="fixed inset-0 z-[120] overflow-y-auto bg-panel p-3">
+      /* data-portal: the settings drawer's outside-click handler skips
+         [data-portal] targets, so a click anywhere in this frame no longer
+         closes the drawer that hosts the pane — it used to read as "click
+         anything and it all vanished". */
+      <div data-portal className="fixed inset-0 z-[120] overflow-y-auto bg-panel p-3">
         <button
           className="fixed right-3 top-3 z-[121] inline-flex size-[31px] cursor-pointer items-center justify-center rounded-lg border border-line2 bg-panel text-dim transition hover:text-ink"
           onClick={() => setBig(false)}

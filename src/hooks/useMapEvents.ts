@@ -110,7 +110,7 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
         const { lng, lat } = map.unproject(e.point);
         const text = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         navigator.clipboard?.writeText(text).then(
-            () => toast(`คัดลอกพิกาดแล้ว: ${text}`),
+            () => toast(`คัดลอกพิกัดแล้ว: ${text}`),
             () => toast(text, 'warn'),
         );
     };
