@@ -206,6 +206,11 @@ body.reduce-motion .spin-keep {
 .maplibregl-ctrl-attrib a {
   color: #98a095;
 }
+/* The collapsed ⓘ shares the tray's dark surface, which turns the control into
+   a dark chip on a dark map edge. Give the button its own light surface. */
+.maplibregl-ctrl-attrib-button {
+  background-color: rgba(241, 243, 238, 0.9) !important;
+}
 .maplibregl-ctrl-scale {
   background: rgba(10, 12, 10, 0.55) !important;
   border-color: #3a403a !important;

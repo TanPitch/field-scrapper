@@ -113,14 +113,15 @@ export const splitWah = (w: number | null): [number, number, number] => {
 /**
  * A drawn length.
  *
- * Below a kilometre the unit is centimetres. A shape a person measures is
- * usually a building or a boundary, and rounding 1.5 m to "2 ม." throws away
- * the half that was the point of measuring it. A kilometre is the natural cut:
- * past it, metres and kilometres read better than centimetres do.
+ * Below a tenth of a metre the unit is centimetres; from there to a kilometre
+ * the unit is metres at a tenth ("0.1–999.9 ม."), then kilometres. A shape a
+ * person measures is usually a building or a boundary, and rounding 1.5 m to
+ * "2 ม." throws away the half that was the point of measuring it — the same
+ * reasoning keeps one decimal in metres and two in kilometres.
  */
 export const fmtDist = (m: number): string =>
-  m < 1000 ? Math.round(m * 100) + ' ซม.'
-    : m < 10000 ? Math.round(m).toLocaleString('en-US') + ' ม.'
+  m < 0.1 ? Math.round(m * 100) + ' ซม.'
+    : m < 1000 ? (Math.round(m * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' ม.'
       : (m / 1000).toFixed(2).replace(/\.?0+$/, '') + ' กม.';
 
 export interface MoneyOpts { bath: boolean; space: boolean }

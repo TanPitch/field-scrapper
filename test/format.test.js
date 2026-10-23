@@ -2,26 +2,31 @@
  *
  *   bun test format.test.js
  *
- * Both of these used to throw away the measurement: a 1.5 m line printed "2 ม."
- * and a 1.5 square metre shape printed "0 ตร.ว.". The unit is now chosen to
- * suit the size, which is the only part of the job the reader cares about.
+ * The unit is chosen to suit the size, which is the only part of the job the
+ * reader cares about: centimetres for anything under a hand's width, metres
+ * at a tenth from there to a kilometre, kilometres past that.
  */
 import { test, expect } from "bun:test";
 import { fmtDist, fmtRaiFromM2 } from "../src/lib/format.ts";
 
 test("a short length is in centimetres", () => {
-  expect(fmtDist(1.5)).toBe("150 ซม.");
-  expect(fmtDist(1.3)).toBe("130 ซม.");
-  expect(fmtDist(0.8)).toBe("80 ซม.");
   expect(fmtDist(0)).toBe("0 ซม.");
+  expect(fmtDist(0.05)).toBe("5 ซม.");
+  expect(fmtDist(0.099)).toBe("10 ซม.");
 });
 
-test("a length past a kilometre is in metres, then kilometres", () => {
-  expect(fmtDist(1000)).toBe("1,000 ม.");
-  expect(fmtDist(1500)).toBe("1,500 ม.");
-  expect(fmtDist(9999)).toBe("9,999 ม.");
-  expect(fmtDist(10000)).toBe("10 กม.");
+test("decimetres to a kilometre are metres at a tenth", () => {
+  expect(fmtDist(0.1)).toBe("0.1 ม.");
+  expect(fmtDist(1.5)).toBe("1.5 ม.");
+  expect(fmtDist(80)).toBe("80 ม.");
+  expect(fmtDist(123.45)).toBe("123.5 ม.");
+  expect(fmtDist(999.95)).toBe("1,000 ม.");
+});
+
+test("a kilometre and past is kilometres", () => {
+  expect(fmtDist(1000)).toBe("1 กม.");
   expect(fmtDist(12345)).toBe("12.35 กม.");
+  expect(fmtDist(123450)).toBe("123.45 กม.");
 });
 
 test("a short area is in square metres, not a rounded zero", () => {

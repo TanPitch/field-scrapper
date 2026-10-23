@@ -194,10 +194,10 @@ export function ServerPane() {
           {loading ? 'กำลังโหลด…' : 'ยังไม่มีประวัติการทำงาน — ลองรัน cd test; bun scrapeLED.js'}
         </div>
       ) : (
-        <div className="max-h-[420px] overflow-y-auto pr-1">
+        <div className="max-h-[640px] overflow-y-auto pr-1">
           {recent.map(r => (
             <div key={r.id} className="border-b border-line/40 py-1.5">
-              <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
                 {r.outcome === 'failed'
                   ? <CircleDashed size={11} className="flex-none text-[#FF8B7D]" />
                   : <CheckCircle2 size={11} className="flex-none text-[#6BD07C]" />}
