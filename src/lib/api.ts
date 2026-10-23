@@ -144,6 +144,8 @@ export interface ApiParcelProps {
   caseNoRaw: string | null;
   caseYear: number | null;
   order: string | null;
+  /** LED group sale: parcels auctioned as one lot (see groupOf in actions). */
+  groupCount: number;
   assetType: string | null;
   sizeUnit: string | null;
   /** Square wa. Null for condo lots, which are in ตร.ม. */

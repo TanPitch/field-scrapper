@@ -234,6 +234,13 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     deedNo: p.deed ?? p.landNo ?? '',
     court: p.court ?? '',
     caseNo: p.caseNo ?? '',
+    /* Group-sale key + text, carried through so select() can auto-select the
+       parcels that sell together and the detail panel can show the note. */
+    caseNoRaw: p.caseNoRaw ?? null,
+    caseYear: p.caseYear ?? null,
+    order: p.order ?? '',
+    groupCount: p.groupCount ?? 1,
+    remark: p.remark ?? '',
     plaintiff: p.plaintiff ?? '',
     defendant: p.defendant ?? '',
     possessor: p.owner ?? '',

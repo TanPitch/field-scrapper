@@ -1,5 +1,5 @@
 import { BASEMAPS, DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER } from '../data/constants';
-import { PARCEL_BY_ID, diagnoseParcels } from '../data/liveData';
+import { PARCEL_BY_ID, ALL_PARCELS, diagnoseParcels } from '../data/liveData';
 import { getMap, hasLayer } from '../map/mapRef';
 import { closeClickPopup, closeHoverPopup, getClickPopId, getHoverPopId, openClickPopup, setPopupDismissHandler } from '../map/popups';
 import type { BasemapId, ColKey, Overlay, OverlayId, RightView } from '../types';
@@ -34,6 +34,24 @@ export function setRpView(v: RightView): void {
 }
 export function showRight(v: RightView): void { patchApp({ rpView: v, rightOpen: true }); }
 
+/**
+ * Parcels that sell as one lot with `id` — LED's group sale ("ขายรวม").
+ *
+ * The group identity is case + year + sale order inside one province, which is
+ * what LED numbers a run of consecutive ลำดับการขาย by; groupCount is the
+ * plated check ("รวม N แปลง"). Requiring the count re-derives the group on the
+ * client rather than trusting the count alone: a single missing sibling on a
+ * stale payload shows as a smaller ring than LED Word sold, which a human will
+ * notice, instead of popping siblings silently.
+ */
+function groupOf(id: number): number[] {
+  const p = PARCEL_BY_ID.get(id);
+  if (!p?.caseNoRaw || (p.groupCount ?? 1) <= 1) return [id];
+  const key = (q: typeof p) => [q.province, q.caseNoRaw, q.caseYear ?? '', q.order ?? ''].join('|');
+  const siblings = ALL_PARCELS.filter((q) => (q.groupCount ?? 1) > 1 && key(q) === key(p));
+  return siblings.length > 1 ? siblings.map((q) => q.id) : [id];
+}
+
 export function select(id: number, { fly = true }: { fly?: boolean } = {}): void {
 const p = PARCEL_BY_ID.get(id);
     /* Silent failure is what made this look like "clicking does nothing": the
@@ -48,8 +66,15 @@ const p = PARCEL_BY_ID.get(id);
       return;
     }
   const map = getMap();
-  patchApp({ selectedId: id, rpView: 'detail', rightOpen: true, pinSel: String(id) });
-  if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], id]);
+  const group = groupOf(id);
+  patchApp({ selectedId: id, groupIds: group, rpView: 'detail', rightOpen: true, pinSel: String(id) });
+  /* A group sale rings every parcel that sells together, not just the one the
+     pointer happened to land on — that is the entire point of the label. */
+  if (map && hasLayer('parcels-halo')) {
+    map.setFilter('parcels-halo', group.length > 1
+      ? ['match', ['get', 'id'], group, true, false]
+      : ['==', ['get', 'id'], id]);
+  }
   if (getHoverPopId() === id) closeHoverPopup();
   if (getApp().popupMode === 'active') openClickPopup(p);
   if (fly && map) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
@@ -61,7 +86,7 @@ export function deselect(): void {
      popup's own close event, which calls back into here; by then there is
      nothing selected and the handler stops. Clearing it after the close would
      re-enter deselect() and recurse. */
-  patchApp({ selectedId: null, pinSel: null });
+  patchApp({ selectedId: null, groupIds: [], pinSel: null });
   if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], -1]);
   closeClickPopup();
 }

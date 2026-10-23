@@ -1,4 +1,4 @@
-import { Calendar, ImageOff, MapPin, ScanEye } from 'lucide-react';
+import { Calendar, ImageOff, Link2, MapPin, ScanEye } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { STATUS } from '../../data/constants';
@@ -168,6 +168,9 @@ export function DetailView() {
   const highlightSold = useApp(s => s.highlightSoldRounds);
   const rowOrder = useApp(s => s.detailRowOrder);
   const rowHidden = useApp(s => s.detailRowHidden);
+  /* Parcels the court is selling with this one (LED group sale); select() fills
+     and clears it around every selection. */
+  const groupIds = useApp(s => s.groupIds);
   /* Which unit of a condominium building this panel is showing.
      null means "whatever the map picked", which is the representative unit, so
      opening a dot shows the same unit the user clicked rather than whichever
@@ -372,6 +375,25 @@ export function DetailView() {
           </span>
         )}
       </DetTop>
+
+      {/* Group sale ("ขายรวม"): the siblings are already ringed on the map and
+          auto-selected — see groupOf() in actions.ts. The chip names them, so
+          the selection reads in the panel as well as on the map. */}
+      {groupIds.length > 1 && (
+        <div className="mt-1.5 rounded-[9px] border border-line2 bg-panel2 px-2.5 py-1.5 text-[11px] leading-[1.7]">
+          <div className="flex items-center gap-1.5 font-semibold text-accent">
+            <Link2 size={12} className="flex-none" />
+            ขายรวมกลุ่ม {groupIds.length} แปลง — จะขายรวมกันในนัดนี้
+          </div>
+          <div className="text-[10.5px] text-dim2">
+            {groupIds
+              .map((gid) => PARCEL_BY_ID.get(gid)?.deedNo)
+              .filter(Boolean)
+              .join(', ')}
+          </div>
+          {p.remark && <div className="mt-0.5 text-[10px] text-dim2">{p.remark}</div>}
+        </div>
+      )}
 
       {/* <DetName>{p.name}</DetName> */}
 

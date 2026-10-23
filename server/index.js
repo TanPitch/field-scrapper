@@ -289,7 +289,7 @@ app.get("/api/parcels", async (req, res) => {
                l.start_price, l.start_price_src, l.status, l.next_round_date,
                l.closed_at, l.close_reason, l.close_code, l.committee_price, l.led_price,
                l.officer_price, l.expert_price, l.published_date,
-               l.first_round_date, l.bid_security, l.remark,
+               l.first_round_date, l.bid_security, l.remark, l.group_lot_count,
                l.court, l.plaintiff, l.defendant, l.owner, l.legal_exec_dept,
                /* There is no "collateral" column in this schema — the amount LED
                   publishes against the lot is bid_security, and a spouse
@@ -371,6 +371,10 @@ FROM parcels p
                    is the server's word to check against. */
                 nextRoundPrice: toNum(r.next_round_price),
                 order: r.order_label, assetType: r.asset_type,
+                /* LED's own "รวม N แปลง" for a group sale (migration 014) — how
+                   many parcels are auctioned as one lot this sale order. The
+                   client regroups siblings and highlights them all. */
+                groupCount: toNum(r.group_lot_count) ?? 1,
                 sizeUnit: r.size_unit,
                 /* LED puts a ห้องชุด floor area in the same rai/ngan/wa triple as
                  * land, so the figure is sent either way; nulling it for condo
