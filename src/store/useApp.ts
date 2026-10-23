@@ -58,14 +58,14 @@ export interface AppState {
   accentColor: string;
   cascade: Cascade;
   gkey: string;
-    restrict: boolean;
-    override: boolean;
-    /**
-     * Highlight, in the detail panel's round table, the round a lot sold at and
-     * every round after it. On by default: those rounds are dead, and a plain
-     * list of dates does not make that obvious. The user can turn it off.
-     */
-    highlightSoldRounds: boolean;
+  restrict: boolean;
+  override: boolean;
+  /**
+   * Highlight, in the detail panel's round table, the round a lot sold at and
+   * every round after it. On by default: those rounds are dead, and a plain
+   * list of dates does not make that obvious. The user can turn it off.
+   */
+  highlightSoldRounds: boolean;
   statusVisible: Record<Status, boolean>;
   /** Kept for backwards-compat with saved state; `re` now lives in popColors. */
   reColor: string;
@@ -141,8 +141,11 @@ export interface AppState {
   searchLimit: number;
   /** How many run-log lines the server pane keeps visible. */
   logLimit: number;
-  /** Account fields, synced to the server account via useSettingsSync. */
-  /** Admin sees the hidden management tabs (ผู้ใช้ทั้งหมด, ข้อมูลที่ยังหาไม่เจอ). */
+  /** Ring around the selected parcel (and its dashed group-sale siblings).
+   *  Empty = follow the theme accent. */
+  ringColor: string;
+  /* Account fields, synced to the server account via useSettingsSync. The
+     admin sees the hidden management tabs (ผู้ใช้ทั้งหมด, ข้อมูลที่ยังหาไม่เจอ). */
   role: 'user' | 'admin';
   signedIn: boolean;
   userName: string;
@@ -171,7 +174,7 @@ export const useApp = create<AppState>(set => ({
   chartTodayLine: true,
   chartForecast: true,
   chartForecastSolid: false,
-  condoUnitOrder: "statusFirst",
+  condoUnitOrder: 'statusFirst',
   persistMapView: true,
   lastView: null,
   sectionsCollapsed: true,
@@ -256,6 +259,7 @@ export const useApp = create<AppState>(set => ({
   markerSize: 'normal',
   searchLimit: 8,
   logLimit: 20,
+  ringColor: '',
   role: 'admin',
   signedIn: false,
   userName: 'fieldscrapper',
