@@ -146,13 +146,18 @@ export async function enqueueUnresolved(client, { limit = 5000, only = null } = 
         ON CONFLICT (parcel_id) DO UPDATE
             SET priority = EXCLUDED.priority,
                 priority_at = EXCLUDED.priority_at,
-                -- a resolved parcel is never reopened; one that failed goes
-                -- back to pending only once its backoff has elapsed
+                -- a resolved parcel is never reopened; a failed or skipped one
+                -- goes back to pending once its backoff has elapsed; and an
+                -- inflight one whose claim lease has expired — the worker died
+                -- between fixing itself and writing anything — is revived by
+                -- the same rule. claim() stamps that lease, and this call is
+                -- the someone who must run it: every ingest pass and every
+                -- resolve run makes one, so the queue heals itself.
                 state = CASE WHEN coord_queue.state = 'done' THEN 'done'
-                             WHEN coord_queue.state IN ('failed','skipped')
+                             WHEN coord_queue.state IN ('failed','skipped','inflight')
                                   AND coord_queue.next_attempt_at <= now() THEN 'pending'
                              ELSE coord_queue.state END,
-                next_attempt_at = CASE WHEN coord_queue.state IN ('failed','skipped')
+                next_attempt_at = CASE WHEN coord_queue.state IN ('failed','skipped','inflight')
                                            AND coord_queue.next_attempt_at <= now()
                                       THEN now() ELSE coord_queue.next_attempt_at END
         RETURNING parcel_id, priority, state`,
@@ -182,7 +187,14 @@ export async function claim(client, { max = 20 } = {}) {
     const { rows } = await client.query(
         `UPDATE coord_queue q
             SET state = 'inflight',
-                attempts = q.attempts + 1
+                attempts = q.attempts + 1,
+                /* the claim doubles as a crash lease: if the worker dies
+                   between claiming and finishing, nothing would ever move these
+                   rows out of 'inflight' again — with a stamped expiry, the
+                   next enqueue call (which every run makes) puts them back.
+                   It must stay comfortably longer than one run, and short
+                   enough that a next-day run clears a same-day crash. */
+                next_attempt_at = now() + interval '2 hours'
            FROM (SELECT c.parcel_id FROM coord_queue c
                   WHERE c.state = 'pending' AND c.next_attempt_at <= now()
                   ORDER BY c.priority ASC, c.parcel_id ASC

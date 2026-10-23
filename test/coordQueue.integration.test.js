@@ -213,6 +213,59 @@ test("claim orders by soonest auction round", async () => {
     assert.ok(priorities[0] < 10, "the urgent parcels should lead the queue");
 });
 
+test("an abandoned inflight row rejoins the queue once its lease expires", async () => {
+    await freshQueue();
+    /* Earlier end-to-end tests may already have resolved some fixtures, so the
+     * test rebuilds its own crash scene instead of assuming queue depth: every
+     * fixture becomes coordinate-less and the queue is filled fresh. */
+    await client.query(
+        `UPDATE parcels
+            SET td_lat=NULL, td_lon=NULL, dol_lat=NULL, dol_lon=NULL
+          WHERE id = ANY($1::bigint[])`, [made.parcels]);
+    await freshQueue();
+
+    const [victim, peerA, peerB] = made.parcels;
+
+    /* Three rows holding what a killed run leaves behind: synthetic claims
+     * with claim()'s stamped lease — the first one's already expired, the
+     * other two are live for another two hours. */
+    await client.query(
+        `UPDATE coord_queue
+            SET state = 'inflight', attempts = attempts + 1,
+                next_attempt_at = now() - interval '1 minute'
+          WHERE parcel_id = $1`, [victim]);
+    await client.query(
+        `UPDATE coord_queue
+            SET state = 'inflight', attempts = attempts + 1,
+                next_attempt_at = now() + interval '2 hours'
+          WHERE parcel_id = ANY($1::bigint[])`, [[peerA, peerB]]);
+    const { rows: [held] } = await client.query(
+        `SELECT state FROM coord_queue WHERE parcel_id = $1`, [victim]);
+    assert.equal(held.state, "inflight",
+        "before any enqueue runs, the crashed claim must still be held, not up for grabs");
+
+    /* every ingest pass and every resolve run calls this — it is the recovery
+     * hook, no separate janitor */
+    await enqueueUnresolved(client, { only: made.parcels });
+    const { rows: aftermath } = await client.query(
+        `SELECT parcel_id, state FROM coord_queue
+          WHERE parcel_id = ANY($1::bigint[])`, [[victim, peerA, peerB]]);
+    /* parcel ids come back from bigint columns as strings (made.parcels holds
+     * them that way too) — key the map by string or every lookup misses */
+    const stateOf = new Map(aftermath.map((r) => [String(r.parcel_id), r.state]));
+    assert.equal(stateOf.get(String(victim)), "pending",
+        "the expired lease must put the crashed claim back in the queue");
+    assert.equal(stateOf.get(String(peerA)), "inflight",
+        "a live lease must survive the same enqueue call");
+    assert.equal(stateOf.get(String(peerB)), "inflight",
+        "same for the other live one");
+
+    /* and the revived row is claimable again */
+    const re = await claim(client, { max: 3 });
+    assert.ok(re.claimed.some((c) => c.parcel_id === victim),
+        "the revived row must be claimable again");
+});
+
 test("a parcel that already has coordinates is never re-queried", async () => {
     await freshQueue();
     const [target] = made.parcels;
