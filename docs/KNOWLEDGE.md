@@ -415,12 +415,13 @@ no fix is needed — this is here so nobody "discovers" it again.
 - sizes live in `auction_lots` (`size_rai/size_ngan/size_wa`), **not** on the
   parcel row — check the lot row before recording;
 - the script refuses to store when the hand size disagrees with LED (wrong-land
-  read protection, e.g. deed 88022 was flagged at a 10× gap: LED 0-0-0.90 vs
-  hand-read 0-0-9);
-- when the user has re-checked and LED's own row is the wrong one, record with
+  read protection: deed 88022's first read came back 0-0-9 against LED's
+  0-0-0.90 — a 10× flag; the second read put it at 0-0-0.9, exactly LED's row —
+  LED was right and the decimal point was the first read's mistake);
+- when a re-check ever shows LED's own row is the wrong one, record with
   **no size args** — the check is skipped and the note carries the DOL size and
-  the reason. 88022's resolution (2026-10-23): DOL shows 0-0-9, confirmed twice
-  by the user; the LED row 0-0-0.90 stays as stored, never mutated;
+  the reason (that path exists for the rare case; 88022 did not turn out to be
+  one — the sizes agree);
 - a size that is left out is not checked — nothing downstream can tell hand
   reads from automated ones either way;
 - only `match` verdicts are user-facing; mismatches and no_result stay in the

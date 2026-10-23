@@ -91,10 +91,11 @@ bun recordDolPoint.js <parcelId> <lat> <lon> <r> <n> <wa> "<note>"
 
 The script refuses a hand point whose size disagrees with LED. Omitting the
 size skips the check — the note carries the DOL size and the reason; that is
-the path for rows where LED's own row is wrong (88022: DOL 0-0-9, LED row
-0-0-0.90 wrong, kept unchanged). น.ส.3ก. deeds (4265, 4266 in ขอนแก่น) are
-absent from TD, DOL and the NS3K layer — parked on purpose, `geo_note`
-explains.
+the escape path for rows where LED's own row turns out to be wrong (rare:
+88022 first read 0-0-9 vs LED 0-0-0.90, but the re-read gave 0-0-0.9 matching
+LED — the flag was a decimal misread, not bad LED data). น.ส.3ก. deeds
+(4265, 4266 in ขอนแก่น) are absent from TD, DOL and the NS3K layer — parked
+on purpose, `geo_note` explains.
 
 ## Docker server (DB + images live there, 2026-10-23)
 

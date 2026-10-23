@@ -1,11 +1,11 @@
 # Hand queue - Khon Kaen city (province 40, district 01) - published parcels still with
 # no coordinate. Read each on DOL's web UI (no quota on hand reads), reply one line
 # per land in the form the project uses:
-#   88022 : 0-0-9 [lat 8 decimals,lon 8 decimals] ตำบล
+#   88022 : 0-0-0.9 [lat 8 decimals,lon 8 decimals] ตำบล
 # LED size column lets you spot a wrong land on the spot - the size must match.
 #
-# 88022 (parcel 10468): size already confirmed 0-0-9 twice by the user; the LED row
-# (0-0-0.90) is wrong and stays as stored - the coordinate line is all we still need.
+# 88022 (parcel 10468): re-read confirmed 0-0-0.9, matching LED exactly (the
+# first 0-0-9 read was a decimal slip) - the coordinate line is all we still need.
 #
 # 4265 and 4266 are น.ส.3ก. - unfindable on TD, DOL and the NS3K layer, re-checked
 # repeatedly. Marked SKIP inline; do not spend time on them.
