@@ -6,7 +6,8 @@ import { useMoney } from '../../hooks/useMoney';
 import { useParcels } from '../../hooks/useParcels';
 import { fdate, splitWah, toSqWa } from '../../lib/format';
 import { parcelDot } from '../../lib/parcelColor';
-import { RichText, RichTextEditor } from '../ui/RichText';
+import { RichText } from '../ui/RichText';
+import { MarkEditor } from '../ui/MarkEditor';
 import { applyReorder, select, toggleColPin, togglePinRow } from '../../store/actions';
 import { useAnnotations } from '../../store/useAnnotations';
 import { patchApp, useApp } from '../../store/useApp';
@@ -210,7 +211,7 @@ case 'roundLast': {
           <div
             key={i} data-td data-selectable
             {...(c.key === 'saleBy' ? useTipProps(cellTip(c.key, p)) : useClipTip(cellTip(c.key, p)))}
-            className={`flex min-w-0 flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap px-2 ${
+            className={`flex min-w-0 flex-none ${c.key === 'pName' || c.key === 'pNote' ? 'group/annot' : ''} items-center overflow-hidden text-ellipsis whitespace-nowrap px-2 ${
               mid ? 'justify-center text-center' : num ? 'justify-end text-xs' : ''
             } ${cp ? `shadow-[inset_-1px_0_0_var(--border2),3px_0_8px_-3px_rgba(0,0,0,.4)] ${pinBg}` : ''} ${isSrcOf(c.key) ? 'invisible' : ''} ${dragging ? 'transition-transform duration-200 ease-out' : ''}`}
             style={{ width: c.w, transform: dx ? `translateX(${dx}px)` : undefined, ...(cp ? stickyStyle(c.left) : {}) }}
@@ -258,6 +259,10 @@ const a = useAnnotations(s => s.layers[`parcel-${id}`]);
        ~150px wide and sits inside a row that is itself clickable, so making the
        entire cell open an editor meant stray clicks during row selection kept
        popping a form open. An explicit affordance is unambiguous. */
+    /* The pencil hides until the row's pointer is over the cell (the td
+       carries group/annot): a column of always-visible pencils read as
+       noise. opacity-0 keeps it hoverable, so an empty cell is still
+       clickable, and focus-visible keeps it reachable by keyboard. */
     <span className="flex items-center gap-1">
       <button
         onClick={e => {
@@ -270,11 +275,10 @@ const a = useAnnotations(s => s.layers[`parcel-${id}`]);
           onEdit({ id, field, at: { x: r.left, y: r.bottom + 4 } });
         }}
         {...useTipProps(text ? 'คลิกเพื่อแก้ไข' : 'คลิกเพื่อใส่ชื่อ/หมายเหตุของคุณ')}
-        className="grid size-[16px] flex-none cursor-pointer place-items-center rounded-[4px] text-[9px] text-dim2 transition hover:bg-panel2 hover:text-accent"
+        className="grid size-[16px] flex-none cursor-pointer place-items-center rounded-[4px] text-[9px] text-dim2 opacity-0 transition hover:bg-panel2 hover:text-accent focus-visible:opacity-100 group-hover/annot:opacity-100"
       >
         ✎
-      </button>
-      {/* Blank, not a dash. The user asked for an empty cell, and a dash reads
+      </button>      {/* Blank, not a dash. The user asked for an empty cell, and a dash reads
           as a value rather than as "nothing written here yet". */}
       {text
         ? <RichText value={text} style={style} className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" />
@@ -590,18 +594,16 @@ on release the table snaps to the new order with no movement. */
         })()}
 {annotEdit && (
           <div className="fixed z-[98]" style={{ left: annotEdit.at.x, top: annotEdit.at.y }}>
-            <RichTextEditor
+            {/* The WYSIWYG-flavoured markup editor: toolbar over ONE textarea,
+                whichever column was clicked. Spreading `cur` keeps the other
+                field's text and the legacy style flags — setLayer replaces the
+                whole annotation, so anything omitted would be wiped. */}
+            <MarkEditor
               label={annotEdit.field === 'name' ? 'ชื่อกำกับของคุณ' : 'หมายเหตุของคุณ'}
-              value={(parcelAnnots[`parcel-${annotEdit.id}`]?.[annotEdit.field] as string) ?? ''}
-              note=""
-              style={parcelAnnots[`parcel-${annotEdit.id}`]?.style ?? {}}
-              onChange={({ value, style }) => {
+              text={(parcelAnnots[`parcel-${annotEdit.id}`]?.[annotEdit.field] as string) ?? ''}
+              onDone={next => {
                 const cur = parcelAnnots[`parcel-${annotEdit.id}`] ?? {};
-                setLayer(annotEdit.id, {
-                  ...cur,
-                  [annotEdit.field]: value.trim() || null,
-                  ...(annotEdit.field === 'name' ? { nameStyle: style } : { noteStyle: style }),
-                });
+                setLayer(annotEdit.id, { ...cur, [annotEdit.field]: next.trim() || null });
               }}
               onClose={() => setAnnotEdit(null)}
             />

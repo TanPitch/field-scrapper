@@ -7,7 +7,8 @@ import { hasColumnOverride, useAnnotations } from '../../store/useAnnotations';
 import { patchApp, useApp } from '../../store/useApp';
 import type { FilterArea } from '../../types';
 import { btn, fl, frow } from '../ui/styles';
-import { RichText, RichTextEditor } from '../ui/RichText';
+import { RichText } from '../ui/RichText';
+import { AnnotInputs } from '../ui/AnnotInputs';
 import { Switch } from '../ui/Switch';
 import { DetSub, LpBadge, VPad, drowCls, emptyNote, rowIcon } from './shared';
 
@@ -68,19 +69,15 @@ function AreaRow({ a }: { a: FilterArea }) {
 
       {annotating && (
         <div className="absolute left-1.5 top-full z-[98] mt-0.5" onClick={e => e.stopPropagation()}>
-          <RichTextEditor
+          <AnnotInputs
             label={`พื้นที่ A${a.no}`}
-            value={annot?.name ?? ''}
+            name={annot?.name ?? ''}
             note={annot?.note ?? ''}
-            style={annot?.nameStyle ?? annot?.style ?? {}}
-            noteStyle={annot?.noteStyle ?? {}}
-            dual
             /* Namespaced by kind so an area and a drawing can share an id number
                without overwriting each other's annotation. */
-            onChange={({ value, note, style, noteStyle }) =>
-              setLayer(`area-${a.id}`, value.trim() || note.trim()
-                || Object.keys(style).length || Object.keys(noteStyle).length
-                ? { name: value.trim() || null, note: note.trim() || null, nameStyle: style, noteStyle }
+            onDone={(name, note) =>
+              setLayer(`area-${a.id}`, name.trim() || note.trim()
+                ? { name: name.trim() || null, note: note.trim() || null, nameStyle: annot?.nameStyle ?? annot?.style, noteStyle: annot?.noteStyle }
                 : null)
             }
             onClose={() => setAnnotating(false)}

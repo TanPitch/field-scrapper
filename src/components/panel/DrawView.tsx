@@ -10,7 +10,8 @@ import { hasColumnOverride, useAnnotations } from '../../store/useAnnotations';
 import { patchApp, useApp } from '../../store/useApp';
 import type { DrawShape, DrawTool } from '../../types';
 import { ColorButton } from '../ui/ColorButton';
-import { RichText, RichTextEditor } from '../ui/RichText';
+import { RichText } from '../ui/RichText';
+import { AnnotInputs } from '../ui/AnnotInputs';
 import { Seg } from '../ui/Seg';
 import { btn, inp } from '../ui/styles';
 import { Switch } from '../ui/Switch';
@@ -130,22 +131,15 @@ function DrawRow({ d }: { d: DrawShape }) {
 
       {annotating && (
         <div className="absolute left-1.5 top-full z-[98] mt-0.5" onClick={e => e.stopPropagation()}>
-          <RichTextEditor
+          <AnnotInputs
             label={`ชั้นข้อมูล #${d.no}`}
-            value={annot?.name ?? ''}
+            name={annot?.name ?? ''}
             note={annot?.note ?? ''}
-            /* Name and note are styled independently — one shared style made it
-               impossible to emphasise a word inside a note without bolding all
-               of it. */
-            style={annot?.nameStyle ?? annot?.style ?? {}}
-            noteStyle={annot?.noteStyle ?? {}}
-            dual
-            onChange={({ value, note, style, noteStyle }) =>
-              /* Nothing at all removes the override, so the layer goes back to
-                 its own name and unstyled — same as never annotating it. */
-              setLayer(d.id, value.trim() || note.trim()
-                || Object.keys(style).length || Object.keys(noteStyle).length
-                ? { name: value.trim() || null, note: note.trim() || null, nameStyle: style, noteStyle }
+            /* Plain text only — mark the flag styles through untouched so
+               anything styled before the editor became plain still shows. */
+            onDone={(name, note) =>
+              setLayer(d.id, name.trim() || note.trim()
+                ? { name: name.trim() || null, note: note.trim() || null, nameStyle: annot?.nameStyle ?? annot?.style, noteStyle: annot?.noteStyle }
                 : null)
             }
             onClose={() => setAnnotating(false)}
