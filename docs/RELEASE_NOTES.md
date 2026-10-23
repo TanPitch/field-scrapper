@@ -4,6 +4,58 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-10-23 — accounts for real, group-sale rings, price-graph rules
+
+- **Account function works: every setting now follows the user between
+  machines.** The synced-preferences list grew from 24 keys to ~50 — base map,
+  overlay toggles, flood config, pin layers + their opacities, table column
+  (width/order/pinned/hidden), search limit, server-log limit, layout mode,
+  2FA/avatar choices, pinned rows. Table-column layout is stored as
+  one full row per column (PUT /api/me/tables/lots), and the restore side
+  applies visible/pinned/order/width back over local state — server rows win,
+  columns the server has not recorded keep local state. Row pins (`pinnedIds`)
+  serialise Set⇄array so they sync too.
+- **Khon Kaen images: root cause fixed in the data, not the code.** 1,331 KK
+  lots had zero cover images because ingest attaches images only to genuinely
+  new lots. 2,655 `lot_images` rows were backfilled offline from the LED cache
+  (`img-backfill.mjs`, deed-number validated); ~1,978 KK lots and 8 multi-deed
+  rows remain and need a future LED listing pass (scrapeLED's
+  `landpicture`/`mapjot`/`map` fields).
+- **The user manager is real.** `GET/POST/PATCH/DELETE /api/users` +
+  `POST /api/users/:id/password`, admin-only, with last-seen (from the session
+  store) and each user's own avatar pref joined into the list. Accounts can be
+  suspended (`disabled` col, migration 027) and that refuses login after the
+  password check — the 403 is unreachable without the correct password, so it
+  is not a username oracle. The UI cannot disable/demote/delete yourself and
+  the server cannot leave zero active admins; deletion cleans sessions and
+  cascades prefs/tables/annotations. All 19 smoke assertions in
+  `smoke-users.mjs` pass over real HTTP.
+- **ผู้ใช้ pane is functional:** the display name now has an อัปเดต button that
+  PUTs to /api/me (disabled until the text differs), and เปลี่ยนรหัสผ่าน /
+  ยืนยันตัวตน 2 ขั้นตอน each open their own popup panel (new reusable
+  `ui/Modal.tsx`, `data-portal`-tagged and capture-phase ESC so it never
+  closes the settings drawer around it). No more mockups in either user pane —
+  the "คืนค่ารายชื่อเริ่มต้น" button is gone.
+- **Group sales ring their siblings.** Clicking a parcel whose LED remark
+  carries "ขายรวม / N แปลง" auto-selects every parcel of the same
+  province+case+year+ลำดับการขาย (server now ships `groupCount`), the halo
+  filter switches to a `match` over the sibling ids, and the detail panel
+  grows a "ขายรวมกลุ่ม N แปลง" chip listing the sibling deeds + LED's own
+  remark.
+- **Price graph follows the puzzle rules.** Plot = every past round + exactly
+  ONE point for the next scheduled round, styled dashed/translucent on the
+  forecast leg (5/8 → 6 points; 8/8 → 8; sold out at 3/6 → 3). The
+  today-line-in-the-past bug is gone because the range applier and the
+  constructor now share one `plotOf()` window instead of two divergent
+  computations. New setting รอบถัดไปแบบทึบ draws the forecast in full ink.
+- **Settings cleanups:** ปลดล็อคเมนูขั้นสูง + its secret are deleted (the
+  search tab was never actually gated by it), server-pane log lines are
+  date-stamped `yyyy/mm/dd hh:mm` with a no-wrap headline over a wrapped
+  detail, the list is scrollable on its own and capped at a configurable
+  count, and the coord-gaps pane keeps its search row pinned while it
+  scrolls, never wraps the ขนาด column, and only shows the resolver's
+  `geo_note` in fullscreen. พิกาด → พิกัด everywhere.
+
 ### 2026-10-23 — datum for the whole country, เมืองขอนแก่น nearly complete
 
 - **The กรมธนารักย์ datum is now measured nationally, not per province.** 42
