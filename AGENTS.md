@@ -90,18 +90,44 @@ The script refuses a hand point whose size disagrees with LED. น.ส.3ก. dee
 (4265, 1758, 1565 in ขอนแก่น) are absent from both TD and DOL — parked on
 purpose, `geo_note` explains.
 
-## Docker server (migration target, started 2026-10-23)
+## Docker server (DB + images live there, 2026-10-23)
 
 TrueNAS + Portainer on the LAN: `https://192.168.1.137:33100/`, user
 `opencode-portainer`. Always `curl.exe -k` (self-signed). Portainer API:
 `POST /api/auth {"Username":…,"Password":…}` → `{jwt}`, then
 `Authorization: Bearer <jwt>`; the docker proxy sits under
-`/api/endpoints/{id}/docker/...`. No SSH on the box is known.
+`/api/endpoints/3/docker/...`. Two quirks learned the hard way:
 
-Destination paths on the NAS:
+- a fresh JWT is only accepted immediately after issuing — re-auth inside every
+  shell block and call without pausing first;
+- container-create can return an empty body while succeeding — re-POST and the
+  conflict message leaks the full id.
 
-- images → `/mnt/disk-01/App_Storage/field-scrapper/data`
-- database → `/mnt/disk-01/App_Storage/field-scrapper/db`
+What is running: container **`fs-db`** (postgis/postgis:16-3.4, host port
+**33200**, restart unless-stopped).
+
+`DATABASE_URL` for scripts that should use the server DB (the local
+`landmap-pg` on :5433 stays as fallback until the app itself runs on Docker):
+
+```
+DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap
+```
+
+NAS paths:
+
+- postgres data → `/mnt/disk-01/App_Storage/field-scrapper/db/pgdata`
+- pg_dump `-Fc` safety copy → `/mnt/disk-01/App_Storage/field-scrapper/db/restore/landmap.dump`
+- auction images (7,046 files, 1.63 GB) → `/mnt/disk-01/App_Storage/field-scrapper/data`
+
+Verified on 2026-10-23: row counts identical to local (parcels 5,698 /
+auction_lots 5,839 / auction_rounds 46,712 / lot_images 5,140 / parcels with
+geom 5,349 / dol match 176 / crs_calibration 2), PostGIS 3.4.3, images complete
+(count 7,046 exactly — the first tar pass silently skipped 8 files; shipped as
+a repair tar). The restore was done by running `pg_restore` in a one-shot
+container against the live server — the postgres entrypoint runs its script dir
+as uid 70 and `/data` is root-owned, so the init-time `10-restore.sh` redirect
+fails (`Permission denied`) and nothing restores; if fs-db is ever re-initialised
+from scratch, chown `/data` first or restore by hand the same way.
 
 Keep local copies of both until the app itself runs on Docker — the local
 frontend still serves `/img/land` from `test/data/img`.
