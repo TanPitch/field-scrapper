@@ -382,18 +382,23 @@ sample size, basis and residuals as data (`010_crs_calibration.sql`).
 
 Re-read by the user twice with identical coordinates to eight decimals: these
 are genuine geometry disagreements between กรมธนารักย์ and กรมที่ดิน for the
-same deed, not hand errors. They are excluded from the datum fit, and if either
-parcel is ever ingested, **กรมที่ดิน's point wins** (the project's truth source
+same deed, not hand errors. On 2026-10-23 the user also opened both agencies'
+official map GUIs and looked at the marker directly: for both deeds TD's
+marker falls in the wrong place, while กรมที่ดิน's graphic map puts the land
+exactly where its coordinate reads — the map views side with DOL. They are
+excluded from the datum fit, and if either parcel is ever ingested,
+**กรมที่ดิน's point wins** (the project's truth source
 for "where is this land" — the record of that rule is in the answers file).
 
 ### น.ส.3ก. is a blind spot for both agencies
 
-Deeds 4265, 1758 and 1565 (ผบ. / ผบE., ขอนแก่น) were re-checked by hand three
-times: น.ส.3ก. parcels are **not findable on either TD's โฉนด layer or
+Deeds 4265, 4266, 1758 and 1565 (ผบ. / ผบE., ขอนแก่น) were re-checked by hand
+more than once: น.ส.3ก. parcels are **not findable on either TD's โฉนด layer or
 กรมที่ดิน's web** (a same-number hit on DOL came back with a wrong size and
 wrong อำเภอ — a different land). The only path that resolves them is TD's NS3K
-MapServer layer (`test/resolveNs3k.js`). The three above have no NS3K row either;
-their `geo_note` on the parcel row says so.
+MapServer layer (`test/resolveNs3k.js`). Of the four, 1758 and 1565 later got
+NS3K rows and are placed; 4265 and 4266 have no NS3K row either — their
+`geo_note` on the parcel row says so.
 
 ### กรมที่ดิน cadastre layers 0 and 1 — know before you query
 
@@ -412,5 +417,11 @@ no fix is needed — this is here so nobody "discovers" it again.
 - the script refuses to store when the hand size disagrees with LED (wrong-land
   read protection, e.g. deed 88022 was flagged at a 10× gap: LED 0-0-0.90 vs
   hand-read 0-0-9);
+- when the user has re-checked and LED's own row is the wrong one, record with
+  **no size args** — the check is skipped and the note carries the DOL size and
+  the reason. 88022's resolution (2026-10-23): DOL shows 0-0-9, confirmed twice
+  by the user; the LED row 0-0-0.90 stays as stored, never mutated;
+- a size that is left out is not checked — nothing downstream can tell hand
+  reads from automated ones either way;
 - only `match` verdicts are user-facing; mismatches and no_result stay in the
   admin error group.

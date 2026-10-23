@@ -65,3 +65,10 @@ deed : rai-ngan-wa [lat,lon] amphur tambon
 # เข้า DB แล้วจุดควรใช้ของ DOL ตามกติกาของโปรเจกต์
 - 15188 : 0-0-15 [12.60414098,102.10910156] เมืองจันทบุรี วัดใหม่ (ซ้ำเดิม)
 - 9866 : 1-2-41.2 [6.47684054,101.21029257] ยะหา ละแอ (ซ้ำเดิม)
+
+# Visual check 2026-10-23 — for both 15188 and 9866 the user opened both
+# agencies' official map GUIs: TD's marker falls in the wrong place, and
+# กรมที่ดิน's graphic map shows the land exactly where the hand-read
+# coordinate sits. That is why the TD/DOL markers are far apart, and the map
+# views side with DOL. Rule stands: if these are ever ingested, DOL's point
+# wins.

@@ -18,10 +18,13 @@ git push -u origin dev
 ```bash
 bun run dev                 # frontend
 bun server/index.js         # API on :8787
-DATABASE_URL=postgres://postgres:landmap@localhost:5433/landmap
+DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap
 ```
 
-Postgres runs in Docker as `landmap-pg`, port `5433`.
+Postgres runs locally in Docker as `landmap-pg`, port `5433` — dev fallback for
+small tests only. Since 2026-10-23 the canonical DB and images live on the NAS
+(see the Docker section below); code stays local until the app itself runs
+there.
 
 Do not start long-running servers from a tool/agent shell. `Start-Process` with
 inherited stdout has hung the tool. The user runs the frontend and API in their
@@ -86,9 +89,12 @@ a list shaped `deed : 0-R-N.N [lat,lon] ตำบล`. Verify each row against L
 bun recordDolPoint.js <parcelId> <lat> <lon> <r> <n> <wa> "<note>"
 ```
 
-The script refuses a hand point whose size disagrees with LED. น.ส.3ก. deeds
-(4265, 1758, 1565 in ขอนแก่น) are absent from both TD and DOL — parked on
-purpose, `geo_note` explains.
+The script refuses a hand point whose size disagrees with LED. Omitting the
+size skips the check — the note carries the DOL size and the reason; that is
+the path for rows where LED's own row is wrong (88022: DOL 0-0-9, LED row
+0-0-0.90 wrong, kept unchanged). น.ส.3ก. deeds (4265, 4266 in ขอนแก่น) are
+absent from TD, DOL and the NS3K layer — parked on purpose, `geo_note`
+explains.
 
 ## Docker server (DB + images live there, 2026-10-23)
 
