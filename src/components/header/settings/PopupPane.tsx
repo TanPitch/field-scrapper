@@ -54,6 +54,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const showLandKindIcon = useApp(s => s.showLandKindIcon);
   const chartTodayLine = useApp(s => s.chartTodayLine);
   const chartForecast = useApp(s => s.chartForecast);
+  const chartForecastSolid = useApp(s => s.chartForecastSolid);
   const labelNextDate = useApp(s => s.labelNextDate);
   const hlSold = useApp(s => s.highlightSoldRounds);
   const condoUnitOrder = useApp(s => s.condoUnitOrder);
@@ -202,6 +203,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       </div>
       <div className={frow}><span className={fl}>เส้นวันนี้</span><Switch checked={chartTodayLine} onChange={v => patchApp({ chartTodayLine: v })} /></div>
       <div className={frow}><span className={fl}>ราคารอบถัดไป</span><Switch checked={chartForecast} onChange={v => patchApp({ chartForecast: v })} /></div>
+      {/* เส้นรอบถัดไปสีทึบเหมือนรอบที่ผ่านแล้ว — ปกติวาดจาง+เส้นประ เพื่อแยก "ผ่านแล้ว/ยังไม่ถึง" */}
+      <div className={frow}><span className={fl}>รอบถัดไปแบบทึบ</span><Switch checked={chartForecastSolid} onChange={v => patchApp({ chartForecastSolid: v })} /></div>
 
       <div className={setSec}>ห้องชุด</div>
       <div className={frow}>

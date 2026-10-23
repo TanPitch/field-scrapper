@@ -82,11 +82,15 @@ export function chartWindow(
 
 /** Apply the shared chart range (and auto-fit the y axis to the visible window). */
 export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
-  const f0 = p.hist[0].d, f1 = p.hist[p.hist.length - 1].d;
-  const next = nextRoundPrice(p, Date.now());
+  /* Same source as the constructor — see plotOf. The old version sized the
+     axis from the full ladder (scheduled future rounds included) while the
+     constructor plotted past-only, and the mismatch pushed the today line into
+     the past. */
+  const { pts, f0, f1, next } = plotOf(p, getApp().chartForecast, Date.now());
+  if (!pts.length) return;
   const { min, max } = chartWindow(f0, f1, next?.date, getApp().chartRange);
-  const vis = p.hist.filter(h => h.d >= min && h.d <= max);
-  const ys = (vis.length ? vis : p.hist).map(h => h.v);
+  const vis = pts.filter(h => h.d >= min && h.d <= max);
+  const ys = (vis.length ? vis : pts).map(h => h.v);
   const ymin = Math.min(...ys), ymax = Math.max(...ys);
   const pad = (ymax - ymin) * 0.15 || Math.max(1, ymax * 0.08);
   const sx = ch.options.scales?.x as RangeOpts | undefined;
@@ -94,6 +98,41 @@ export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
   if (sx) { sx.min = min; sx.max = max; }
   if (sy) { sy.min = ymin - pad; sy.max = ymax + pad; }
   ch.update('none');
+}
+
+/**
+ * What gets plotted, and the marks on it — the single source the constructor
+ * and applyChartRange both read.
+ *
+ * Plot rule (what the user asked for): every round that has already happened,
+ * plus ONE point for the next scheduled round. Round 5 of 8 → 6 points; 8 of 8
+ * → 8 with nothing ahead; a lot killed after round 3 of 6 keeps 3, because "no
+ * further rounds" is not "a next round somewhere". A lot whose rounds are all
+ * still ahead shows its single first point, styled as forecast — a lone hollow
+ * marker, since a line needs two. */
+export function plotOf(p: Parcel, showFc: boolean, now: number): {
+  pts: { d: number; v: number }[];
+  /** Index of the last real (past) point; -1 when every point is forecast. */
+  realEnd: number;
+  f0: number;
+  f1: number;
+  next: { date: number; price: number } | null;
+} {
+  const past = p.hist.filter(h => h.d <= now);
+  const next = showFc ? nextRoundPrice(p, now) : null;
+  const lastPast = past[past.length - 1] ?? null;
+  /* The forecast point only makes sense beyond the last real one: a "next"
+     round dated before the last past point is stale schedule data, not a
+     future, and it would draw the tail backwards. */
+  const fc = lastPast && next && next.date > lastPast.d ? { d: next.date, v: next.price } : null;
+  const pts = fc ? [...past, fc] : past;
+  return {
+    pts,
+    realEnd: past.length - 1,
+    f0: pts[0]?.d ?? 0,
+    f1: pts[pts.length - 1]?.d ?? 0,
+    next,
+  };
 }
 
 /** The chart keeps Chart.js auto ticks; month markers live on the range slider. */
@@ -111,26 +150,22 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
      a toggle that only re-reads inside the effect body would leave the already
      drawn canvas untouched until the parcel changed. */
   const showFc = useApp(s => s.chartForecast);
+  /* Draw the forecast leg in full ink instead of dashed/faded (ผู้ใช้จะตั้งได้). */
+  const solidFc = useApp(s => s.chartForecastSolid);
 
   useEffect(() => {
     const canvas = cv.current;
     if (!canvas) return;
     setupCharts();
-    /* Only what has actually happened is plotted. p.hist carries a point per
-       round including scheduled ones still ahead, and drawing those connected
-       up to today implies a trend that has not happened. Knowing the next round
-       date is useful for the price headline; it is not evidence about the past. */
     const now = Date.now();
-    const past = p.hist.filter(h => h.d <= now);
-    /* A single point cannot draw a line. Fall back to the full history so the
-       chart still shows something rather than an empty box. */
-    const plot = past.length >= 2 ? past : p.hist;
-    /* No price history at all, so there is no first point and nothing to draw.
-       Everything below reads plot[0] and plot[plot.length - 1]; without this the
-       lot has no rounds published and the panel died on `plot[0].d`. Safe to
-       return here because this is an effect body, not the render - an early
-       return between hooks is what broke the range slider. */
-    if (!plot.length) return;
+    /* Plot points and the x window come from one helper — see plotOf — so the
+       axis could never disagree with the data it frames. */
+    const { pts, realEnd, f0, f1, next } = plotOf(p, showFc, now);
+    /* No past rounds and no computable next round: there is nothing to draw
+       and everything below reads pts[0]. Safe to return here because this is
+       an effect body, not the render - an early return between hooks is what
+       broke the range slider. */
+    if (!pts.length) return;
 
     /* The x window is part of the config, not applied afterwards.
      *
@@ -141,23 +176,14 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
      * put the today line in the wrong place until the user touched the range and
      * forced the correction. Stating the window up front means there is only
      * ever one scale. */
-    const win = chartWindow(plot[0].d, plot[plot.length - 1].d,
-      nextRoundPrice(p, now)?.date, getApp().chartRange);
+    const win = chartWindow(f0, f1, next?.date, getApp().chartRange);
 
-    /* The next round's price is computable — the discount ladder is public
-       arithmetic, not a guess — so it belongs on the chart. It is drawn as a
-       dashed, half-strength tail rather than a solid point, because it has not
-       happened: a solid marker would read as a result the same way the old
-       future points did. The break in styling is what separates "sold" from
-       "will be". */
-    const next = showFc ? nextRoundPrice(p, now) : null;
-    const lastReal = plot[plot.length - 1];
-    const fc = next && lastReal && next.date > lastReal.d ? { d: next.date, v: next.price } : null;
-    const pts = fc ? [...plot, fc] : plot;
-    /* Index of the final real point: any segment ending after it is forecast. */
-    const realEnd = plot.length - 1;
+    /* The forecast leg and point are drawn translucent + dashed (setting: solid)
+       rather than a solid marker, because it has not happened: a solid marker
+       would read as a result the same way the old future points did. The break
+       in styling is what separates "sold" from "will be". */
+    const isFcLeg = (i: number) => i > realEnd;
 
-    const f0 = plot[0].d, f1 = fc ? fc.d : plot[plot.length - 1].d;
     const evs = p.events
       .map(e => ({ ...e, d: p.hist[e.idx]?.d }))
       .filter(e => e.d != null && e.d <= now);
@@ -171,18 +197,21 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
           borderColor: ACCENT, borderWidth: 2, pointRadius: 4,
           pointHoverRadius: 6, pointHitRadius: 14,
           /* Per-segment styling. p1DataIndex is the *later* endpoint of the
-             segment, so `> realEnd` picks out exactly the one forecast leg and
-             leaves every historical leg solid. */
+             segment, so `> realEnd` picks out exactly the forecast leg and
+             leaves every historical leg solid — unless the "solid forecast"
+             setting asks for full ink everywhere. */
           segment: {
-            borderDash: c => (c.p1DataIndex > realEnd ? [5, 4] : undefined),
-            borderColor: c => (c.p1DataIndex > realEnd ? fade(ACCENT, 0.45) : ACCENT),
-            borderWidth: c => (c.p1DataIndex > realEnd ? 1.5 : 2),
+            borderDash: c => (isFcLeg(c.p1DataIndex) && !solidFc ? [5, 4] : undefined),
+            borderColor: c => (isFcLeg(c.p1DataIndex) && !solidFc ? fade(ACCENT, 0.45) : ACCENT),
+            borderWidth: c => (isFcLeg(c.p1DataIndex) && !solidFc ? 1.5 : 2),
           },
           /* The forecast point is hollow, so it reads as "not yet" on its own
-             even if the dashes are lost at a glance. */
-          pointBackgroundColor: c => (c.dataIndex > realEnd ? 'transparent' : '#fff'),
-          pointBorderColor: c => (c.dataIndex > realEnd ? fade(ACCENT, 0.45) : ACCENT),
-          pointStyle: c => (c.dataIndex > realEnd ? 'circle' : 'circle'),
+             even if the dashed leg is missed at a glance. The solid option
+             switches the leg to full ink but keeps the point hollow — the
+             future stays marked as not-yet. */
+          pointBackgroundColor: c => (isFcLeg(c.dataIndex) && !solidFc ? 'transparent' : '#fff'),
+          pointBorderColor: c => (isFcLeg(c.dataIndex) && !solidFc ? fade(ACCENT, 0.45) : ACCENT),
+          pointStyle: () => 'circle',
           /* Sharp corners. tension 0.3 curved between points, which smoothed a
              discrete auction ladder into a shape the data never took — and a
              dip that never happened would look like a real one. */
@@ -254,7 +283,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
       patchApp({ chartRange: { min: nmin, max: nmax } });
     };
     const onUp = () => { dr = null; canvas.style.cursor = 'grab'; };
-    const onDbl = () => { patchApp({ chartRange: null }); toast('à¸”à¸¹à¸Šà¹ˆà¸§à¸‡à¹€à¸§à¸¥à¸²à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”'); };
+    const onDbl = () => { patchApp({ chartRange: null }); toast('ดูช่วงเวลาทั้งหมด'); };
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
@@ -274,7 +303,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     /* showToday and priceBath must be deps: toggling either in settings re-renders
        this component, but the Chart instance is only rebuilt by this effect. Leaving
        them out meant the toggle appeared to do nothing until the parcel changed. */
-  }, [p, showToday, showFc, priceBath]);
+  }, [p, showToday, showFc, priceBath, solidFc]);
 
   useEffect(() => { if (chart.current) applyChartRange(chart.current, p); }, [range, p]);
 
