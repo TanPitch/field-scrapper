@@ -1,61 +1,18 @@
-# Hand queue - Khon Kaen city (province 40, district 01) - published parcels still with
-# no coordinate. Read each on DOL's web UI (no quota on hand reads), reply one line
+# Hand queue - Khon Kaen city (province 40, district 01) - parcels still with no
+# coordinate. Read each on DOL's web UI (no quota on hand reads), reply one line
 # per land in the form the project uses:
 #   101391 : 0-0-47.2 [lat 8 decimals,lon 8 decimals] ตำบล
 # LED size column lets you spot a wrong land on the spot - the size must match.
 #
-# 4265 and 4266 are น.ส.3ก. - unfindable on TD, DOL and the NS3K layer, re-checked
-# repeatedly. Marked SKIP inline; do not spend time on them.
+# 45 letters from this queue were recorded by hand on 23 Oct 2026 (44 exact-size
+# matches + 101391, which navigator recorded at LED's size after checking the
+# coord against the LED land photo). The four rows below are all that remain:
 
-parcel 10292 | deed 101391 | LED 0-0-47.2 | บ้านเป็ด | case ผบE.1582/2567 | next sale 2026-10-28
-parcel 10316 | deed 120824 | LED 7-2-60 | บ้านหว้า | case ผบ.144/2568 | next sale 2026-10-28
-parcel 10483 | deed 156930 | LED 0-0-28.3 | บ้านทุ่ม | case ผบ.1739/2563 | next sale 2026-10-28
-parcel 10486 | deed 252452 | LED 0-0-30 | ในเมือง | case ผบE.4557/2568 | next sale 2026-10-28
-parcel 10488 | deed 281477 | LED 0-0-10 | ในเมือง | case ผบE.4557/2568 | next sale 2026-10-28
-parcel 10385 | deed 294826 | LED 0-0-20 | เมืองเก่า | case ผบE.9618/2567 | next sale 2026-10-28
-parcel 10380 | deed 308964 | LED 0-0-13 | เมืองเก่า | case ผบE.8616/2568 | next sale 2026-10-28
-parcel 10638 | deed 329906 | LED 0-0-48.5 | แดงใหญ่ | case ผบE.1899/2566 | next sale 2026-10-28
-parcel 10491 | deed 331322 | LED 0-0-50.1 | บ้านหว้า | case ผบE.8546/2568 | next sale 2026-10-28
-parcel 10524 | deed 331593 | LED 0-0-51.1 | บ้านเป็ด | case ผบE.765/2567 | next sale 2026-10-28
-parcel 10500 | deed 331685 | LED 0-0-49.6 | บ้านหว้า | case ผบE.8140/2567 | next sale 2026-10-28
-parcel 10604 | deed 334034 | LED 0-0-26.8 | ศิลา | case ผบE.2265/2567 | next sale 2026-10-28
-parcel 10659 | deed 335350 | LED 0-0-50.4 | แดงใหญ่ | case ผบE.1251/2568 | next sale 2026-10-28
-parcel 10329 | deed 346582 | LED 0-0-33.4 | บ้านเป็ด | case ผบE.2199/2568 | next sale 2026-10-28
-parcel 10549 | deed 353658 | LED 0-0-48 | ศิลา | case ผบ.898/2563 | next sale 2026-10-28
-parcel 10036 | deed 58113 | LED 0-0-34.7 | ในเมือง | case ผบ.507/2565 | next sale 2026-11-04
-parcel 10104 | deed 95938 | LED 0-0-35 | บ้านหว้า | case ผบ.1664/2562 | next sale 2026-11-04
-parcel 10068 | deed 218556 | LED 0-0-51.5 | ศิลา | case ผบ.151/2565 | next sale 2026-11-04
-parcel 10170 | deed 280473 | LED 0-1-24.3 | เมืองเก่า | case ผบ.4229/2561 | next sale 2026-11-04
-parcel 9947 | deed 288911 | LED 0-0-39.2 | บ้านทุ่ม | case ผบ.1772/2561 | next sale 2026-11-04
-parcel 9863 | deed 307402 | LED 0-0-71.2 | บ้านเป็ด | case พE.54/2567 | next sale 2026-11-04
-parcel 9655 | deed 331301 | LED 0-0-16.5 | บ้านหว้า | case ผบE.1242/2568 | next sale 2026-11-04
-parcel 10008 | deed 331379 | LED 0-0-38.5 | บ้านหว้า | case ผบE.2613/2563 | next sale 2026-11-04
-parcel 9895 | deed 332005 | LED 0-0-38.5 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9896 | deed 332006 | LED 0-0-39.3 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9897 | deed 332019 | LED 0-0-57.1 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9898 | deed 332021 | LED 0-0-48 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9899 | deed 332022 | LED 0-0-47.2 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9900 | deed 332023 | LED 0-0-61.8 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9901 | deed 332025 | LED 0-0-41 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9902 | deed 332026 | LED 0-0-43.2 | แดงใหญ่ | case มย.11/2568 | next sale 2026-11-04
-parcel 9738 | deed 333799 | LED 0-2-50 | เมืองเก่า | case ผบE.202/2567 | next sale 2026-11-04
-parcel 10146 | deed 334247 | LED 0-0-46.1 | บ้านเป็ด | case ผบE.792/2568 | next sale 2026-11-04
-parcel 9850 | deed 335153 | LED 0-0-53.4 | เมืองเก่า | case ผบE.2765/2568 | next sale 2026-11-04
-parcel 9851 | deed 335154 | LED 0-0-52.9 | เมืองเก่า | case ผบE.2765/2568 | next sale 2026-11-04
+parcel 10036 | deed 58113 | LED 0-0-34.7 | ในเมือง | case ผบ.507/2565 | next sale 2026-11-04 | NEEDS-CHECK: DOL 1-0-17.5 vs LED 0-0-34.7; งดขาย so LED shows no image, not enough to verify - parked 23 Oct
+parcel 10104 | deed 95938 | LED 0-0-35 | บ้านหว้า | case ผบ.1664/2562 | next sale 2026-11-04 | NEEDS-CHECK: DOL 0-1-0 vs LED 0-0-35; same-land doubt - parked 23 Oct
 parcel 11149 | deed 4265 | LED 0-0-50 | โนนท่อน | case ผบ.2395/2562 | next sale 2026-11-11 | SKIP NS3K (unfetchable)
 parcel 11150 | deed 4266 | LED 0-0-50 | โนนท่อน | case ผบ.2395/2562 | next sale 2026-11-11 | SKIP NS3K (unfetchable)
-parcel 11066 | deed 126254 | LED 0-1-52 | บ้านหว้า | case ผบ.252/2561 | next sale 2026-11-11
-parcel 9632 | deed 178241 | LED 0-0-45.6 | ศิลา | case ผบ.1231/2561 | next sale 2026-11-11
-parcel 9402 | deed 185541 | LED 0-0-16 | บ้านเป็ด | case ผบ.4162/2563 | next sale 2026-11-11
-parcel 9430 | deed 203941 | LED 0-1-0.3 | ศิลา | case มE.43/2566 | next sale 2026-11-11
-parcel 9443 | deed 228619 | LED 0-2-0 | บ้านเป็ด | case พE.291/2566 | next sale 2026-11-11
-parcel 11021 | deed 257649 | LED 0-0-36.8 | ศิลา | case ผบE.7612/2568 | next sale 2026-11-11
-parcel 9512 | deed 258853 | LED 0-0-18.2 | เมืองเก่า | case ผบ.1936/2560 | next sale 2026-11-11
-parcel 10934 | deed 264250 | LED 0-0-40 | แดงใหญ่ | case ผบE.377/2568 | next sale 2026-11-11
-parcel 10855 | deed 331250 | LED 0-0-37.2 | บ้านหว้า | case อ.1366/2568 | next sale 2026-11-11
-parcel 10884 | deed 331333 | LED 0-0-37.5 | บ้านหว้า | case ผบE.1181/2568 | next sale 2026-11-11
-parcel 10917 | deed 336480 | LED 0-0-58.3 | พระลับ | case ผบE.1261/2567 | next sale 2026-11-11
-parcel 10895 | deed 342668 | LED 0-0-25.9 | บ้านเป็ด | case พ.267/2569 | next sale 2026-11-11
 
-# rows total: 49 | NS3K skips: 2 | actionable by hand now: 47
+# rows left: 4 | NS3K skips: 2 | parked NEEDS-CHECK: 2 | actionable by hand now: 0
+# 23 Oct 2026: 45 recorded this batch; city placed 1,132 / 1,138 (99.5%).
 # regenerated 2026-10-23 against fs-db (192.168.1.137:33200)

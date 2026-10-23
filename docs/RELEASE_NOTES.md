@@ -32,6 +32,17 @@ All notable changes to Field Scrapper. Dates are ISO.
   the CHECK) while hand reads on its web UI are unlimited and do the parcels the
   scripts cannot reach. `recordDolPoint.js` refuses a hand point whose size
   disagrees with LED, so a wrong-land read cannot enter the database.
+- **Admin: the error-lands page can go full screen.** The coordinate-gaps pane
+  in Settings gains a เต็มจอ toggle — the table expands over the whole viewport
+  (portalled to `<body>` so the settings drawer's animation cannot trap it, ESC
+  or the ✕ button closes) so checking the last problem parcels no longer happens
+  in a scroll box. RELEASE_NOTES' in-app import also now follows the docs/ move.
+- **เมืองขอนแก่น nearly complete: 1,132 / 1,138 (99.5%) placed.** The remaining
+  45 queue lands were recorded by hand, every one again gated on LED size.
+  101391 is stored at LED's size with a note saying DOL shows 0-3-50.5 — the
+  user verified the coordinate against the LED land photo. 58113 and 95938 stay
+  unplaced with geo_note warnings (size conflicts that cannot be verified); 4265
+  and 4266 remain NS3K. Matched parcels now 5,395 / 5,698 (94.7%).
 
 ### The first release with real data
 
