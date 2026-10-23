@@ -100,8 +100,8 @@ questions, and averaging them would be wrong.
 | source | supplies | note |
 |---|---|---|
 | **LED** กรมบังคับคดี | case number, parties, deed/น.ส.3ก., size, the asking-price cascade, sale rounds, photographs | the only source of the auction itself |
-| **กรมธนารักย์** | exact per-parcel assessment ฿/ตร.วา, ระวาง, survey number, parcel coordinate | undocumented service; the app's best valuation |
-| **กรมที่ดิน** | verification only | removed from the active pipeline by request |
+| **กรมธนารักย์** | exact per-parcel assessment ฿/ตร.วา, ระวาง, survey number, parcel coordinate | undocumented service; the app's best valuation; coordinates come via the empirical datum in `crs_calibration` (see `docs/KNOWLEDGE.md`) |
+| **กรมที่ดิน** | verification of the parcel's identity and point | anonymous API is 20 lookups/day (local ledger CHECK enforces it); the web UI is unlimited and is how the user places the parcels TD cannot — most เมืองขอนแก่น city points came from the user reading the site by hand, recorded with `test/recordDolPoint.js` |
 | **AWS Terrain Tiles** | height above sea level, ~9.2 m/px | stored with its source and a stated uncertainty |
 
 Every field records its source and observation date in `field_provenance`, so two
@@ -160,8 +160,19 @@ bun elevation.js            # add height from AWS Terrain Tiles
 bun verification.js         # print an LED → TD comparison table
 ```
 
-`test/` holds only what is still needed. One-off probes and superseded scripts
-were deleted; 32 files remain.
+`test/` holds the scrapers plus the whole coordinate pipeline, their tests, and
+`NOTES.md` as an index of what is still here. Files added since the first cut:
+
+| file | role |
+|---|---|
+| `scrapeByProvince.js` | per-province LED backfill (Bot 1) |
+| `resolveTdParcels.js` | Bot 2's TD leg — UTM from TD, datum-corrected, `DOL_DAILY_LIMIT=0` |
+| `tdCadastre.js` | กรมที่ดิน cadastre layers (MapServer 0/1) used during identity resolution |
+| `tdCrs.js` | loads `crs_calibration` and re-reads UTM with the measured datum; `--apply` recomputes |
+| `sampleCoords.js` / `sampleOffsets.js` | the national datum measurement pair (42 lands, 14 provinces) |
+| `recordDolPoint.js` | writes a point read by hand off the กรมที่ดิน web, gated on LED size agreement |
+| `resolveNs3k.js` | น.ส.3ก. parcels — only TD's NS3K layer can place them |
+| `repairPlaced.js` / `verifyPlaced.js` | admin helpers for placed-point gaps and re-verification |
 
 | file | role |
 |---|---|
@@ -331,6 +342,19 @@ src/
 db/migrations/              ordered, re-runnable SQL
 test/                       scrapers, enrichment, and their tests
 ```
+
+---
+
+## Docs
+
+| file | what it is |
+|---|---|
+| `docs/KNOWLEDGE.md` | domain facts measured against the live sites (codes, quotas, datum) |
+| `docs/RELEASE_NOTES.md` | change history |
+| `docs/BOT-PLAN.md` | the two-bot ledger process and its real run log |
+| `ROADMAP.md` | current status measured from the DB, and what is next |
+| `test/NOTES.md` | condensed operational notes for the scraper suite |
+| `AGENTS.md` | working conventions for this repo |
 
 ---
 

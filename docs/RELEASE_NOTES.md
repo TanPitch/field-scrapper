@@ -4,6 +4,37 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-10-23 — datum for the whole country, เมืองขอนแก่น nearly complete
+
+- **The กรมธนารักย์ datum is now measured nationally, not per province.** 42
+  lands across 14 provinces (เชียงราย → ยะลา) were sampled by
+  `test/sampleCoords.js`; the user read all 42 real points off กรมที่ดิน's site,
+  every one agreeing with LED on size/tambon/amphur. One shift per SRID holds:
+  24047 = (−50.6 m, +180.5 m) from 29 lands / 11 provinces, 24048 = (−55.4 m,
+  +181.3 m) from 11 lands / 5 provinces; per-province spread ≤ 4.2 m. Both
+  `crs_calibration` rows were refit and all 5,079 TD-placed markers recomputed
+  (`bun tdCrs.js --apply`) — marker error vs กรมที่ดิน dropped from a median of
+  8.8 / 6.6 m to **2.4 / 1.6 m**. The old "24048 is Khon Kaen-only" restriction
+  is retired.
+- **Two parcels disagree with TD by more than 25 m — and it is not a reading
+  error.** The user re-read 15188 (จันทบุรี, 74.1 m) and 9866 (ยะลา, 58.6 m) and
+  got the same coordinates to eight decimals both times. Genuine
+  agency-geometry disagreement; they were held out of the datum fit, and per the
+  project rule กรมที่ดิน wins whenever those parcels are ever ingested.
+- **เมืองขอนแก่น (อำเภอเมือง): 1,086 / 1,136 parcels placed (95.6%).** The user
+  read กรมที่ดิน's web UI by hand (no scripted quota involved) and
+  `test/recordDolPoint.js` recorded 8 more lands this day, each gated on LED
+  size agreement. 50 remain, 3 of which are น.ส.3ก. known to be absent from both
+  TD and DOL's โฉนด layers and parked with a note.
+- **Matched parcels: 5,349 / 5,698 (93.9%)** carry a coordinate from TD or DOL.
+- **Provider-of-truth clarified in README:** กรมที่ดิน is no longer "removed
+  from the pipeline" — its API stays quota-bound at 20/day (local ledger enforces
+  the CHECK) while hand reads on its web UI are unlimited and do the parcels the
+  scripts cannot reach. `recordDolPoint.js` refuses a hand point whose size
+  disagrees with LED, so a wrong-land read cannot enter the database.
+
+### The first release with real data
+
 This is the release where the app stops being a mockup over invented data and
 starts serving real scraped parcels. It is deliberately grouped by what it
 changes, because the version diff is large.

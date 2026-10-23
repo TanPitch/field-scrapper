@@ -341,7 +341,76 @@ insert. A name/code disagreement logs a warning instead of taking the run down.
 - **TD district codes** — no endpoint identified; need one for the LED↔TD
   conversion pipeline and the frontend's search/filter.
 - `tambon_code` vs `tambon_ref_code` split (see §2).
-- Coordinate resolution — TD unlimited, DOL 20/day. 179 parcels still have no
-  geometry, so the map draws no markers at all until this runs.
+- Coordinate resolution — TD unlimited, DOL 20/day scripted (hand reads on DOL's
+  web UI are unlimited). 349 parcels still carry no coordinate; most of those are
+  the hand-work queue or known agency blind spots (see §7).
 - DOL bulk access needs written permission.
-- CRS calibration proven for Khon Kaen only.
+- CRS calibration — **superseded**: refit nationally on 2026-10-23, see §7.
+
+---
+
+## 7. The national datum (2026-10-23) — measured, not assumed
+
+**How it was measured.** `test/sampleCoords.js` picked 42 lands across 14
+provinces (เชียงราย → ยะลา), each with a confirmed TD→cadastre chain; the user
+read every parcel's real point off กรมที่ดิน's web site and answered back
+(`test/research/samples/thailand-14-dol-answers.txt`). All 42 agreed with LED on
+size, อำเภอ and ตำบล, so all 42 count as measurements.
+
+**Result: one shift per SRID, lawfully.** Per-แปลง offsets fit a single
+translation each:
+
+| SRID (EPSG) | offset (metres, applied as Δx = lon / Δy = lat after transform) | basis |
+|---|---|---|
+| TD EPSG:24047 (INDIAN 1975 / TM 97°E) | −50.6 m E, +180.5 m N | 29 lands, 11 จังหวัด |
+| TD EPSG:24048 (INDIAN 1975 / TM 102°E) | −55.4 m E, +181.3 m N | 11 lands, 5 จังหวัด |
+
+Per-province spread around the fitted shift is ≤ 4.2 m — within the scatter any
+single agency geometry guarantees, so **there is no lawful reason for a
+per-province table**. The old restriction "24048 is Khon Kaen-only, do not
+reuse" is retired; `crs_calibration.scope` was set to NULL. Both rows carry the
+sample size, basis and residuals as data (`010_crs_calibration.sql`).
+
+**Precision.** After the refit, the 5,079 TD-placed markers disagree with
+กรมที่ดิน's own published point at a median of **2.4 m / 1.6 m** (previously
+8.8 / 6.6 m). This is the map's practical accuracy.
+
+**Hold-outs, recorded because they are true exceptions.**
+
+- 15188 (จันทบุรี เมืองจันทบุรี วัดใหม่) — lands 74.1 m apart, agency to agency.
+- 9866 (ยะลา ยะหา ละแอ) — 58.6 m apart.
+
+Re-read by the user twice with identical coordinates to eight decimals: these
+are genuine geometry disagreements between กรมธนารักย์ and กรมที่ดิน for the
+same deed, not hand errors. They are excluded from the datum fit, and if either
+parcel is ever ingested, **กรมที่ดิน's point wins** (the project's truth source
+for "where is this land" — the record of that rule is in the answers file).
+
+### น.ส.3ก. is a blind spot for both agencies
+
+Deeds 4265, 1758 and 1565 (ผบ. / ผบE., ขอนแก่น) were re-checked by hand three
+times: น.ส.3ก. parcels are **not findable on either TD's โฉนด layer or
+กรมที่ดิน's web** (a same-number hit on DOL came back with a wrong size and
+wrong อำเภอ — a different land). The only path that resolves them is TD's NS3K
+MapServer layer (`test/resolveNs3k.js`). The three above have no NS3K row either;
+their `geo_note` on the parcel row says so.
+
+### กรมที่ดิน cadastre layers 0 and 1 — know before you query
+
+The TD_Former_View MapServer that `tdCadastre.js` reads has **disjoint province
+coverage between layer 0 and layer 1**: อุดรธานี / มุกดาหาร / อุบลราชธานี /
+บึงกาฬ appear only in layer 1, while เชียงใหม่ / เชียงราย / ปราจีนบุรี /
+ภูเก็ต appear only in layer 0. `officialArea` already queries both layers, so
+no fix is needed — this is here so nobody "discovers" it again.
+
+### Hand-reading procedure (the path that replaced automated DOL for small batches)
+
+`test/recordDolPoint.js <parcelId> <lat> <lon> [rai ngan wa] [note]`:
+
+- sizes live in `auction_lots` (`size_rai/size_ngan/size_wa`), **not** on the
+  parcel row — check the lot row before recording;
+- the script refuses to store when the hand size disagrees with LED (wrong-land
+  read protection, e.g. deed 88022 was flagged at a 10× gap: LED 0-0-0.90 vs
+  hand-read 0-0-9);
+- only `match` verdicts are user-facing; mismatches and no_result stay in the
+  admin error group.

@@ -64,3 +64,44 @@ being called done.
 
 `bun test/seedUsers.js` creates `admin / admin1234` and
 `fieldscrapper / user1234`. These are local development credentials only.
+
+## Docs layout
+
+`docs/` holds `RELEASE_NOTES.md`, `BOT-PLAN.md` and `KNOWLEDGE.md`. `ROADMAP.md`,
+`README.md` and this file stay at the root. `AUDIT.md` is untracked user work —
+never sweep it into a commit.
+
+Thai text through tool shells: piping bun stdout in PowerShell mangles it.
+Capture with `cmd /c "bun ... > file"` and read the file back with
+`-Encoding utf8`.
+
+## Hand DOL batches (how city work actually moves)
+
+The user reads กรมที่ดิน's web UI (unlimited — no scripted quota) and sends back
+a list shaped `deed : 0-R-N.N [lat,lon] ตำบล`. Verify each row against LED
+**before** recording: sizes live in `auction_lots` (`size_rai/ngan/wa`), not on
+`parcels`. Then:
+
+```bash
+bun recordDolPoint.js <parcelId> <lat> <lon> <r> <n> <wa> "<note>"
+```
+
+The script refuses a hand point whose size disagrees with LED. น.ส.3ก. deeds
+(4265, 1758, 1565 in ขอนแก่น) are absent from both TD and DOL — parked on
+purpose, `geo_note` explains.
+
+## Docker server (migration target, started 2026-10-23)
+
+TrueNAS + Portainer on the LAN: `https://192.168.1.137:33100/`, user
+`opencode-portainer`. Always `curl.exe -k` (self-signed). Portainer API:
+`POST /api/auth {"Username":…,"Password":…}` → `{jwt}`, then
+`Authorization: Bearer <jwt>`; the docker proxy sits under
+`/api/endpoints/{id}/docker/...`. No SSH on the box is known.
+
+Destination paths on the NAS:
+
+- images → `/mnt/disk-01/App_Storage/field-scrapper/data`
+- database → `/mnt/disk-01/App_Storage/field-scrapper/db`
+
+Keep local copies of both until the app itself runs on Docker — the local
+frontend still serves `/img/land` from `test/data/img`.
