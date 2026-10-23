@@ -190,12 +190,3 @@ export const SORT_LABELS: Record<string, string> = {
 
 export const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 export const TH_WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-
-/**
- * Shared passphrase that reveals the API/settings section in the header.
- * This is a UI gate, not a security boundary: the bundle ships to the browser
- * and anyone can read this constant. It keeps the panel out of the way of
- * ordinary use; anything that must actually be protected belongs behind the
- * server's session check, not here.
- */
-export const SETTINGS_SECRET = 'landmap';
