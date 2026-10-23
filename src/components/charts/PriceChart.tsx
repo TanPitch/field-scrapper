@@ -71,13 +71,20 @@ export function chartWindow(
   range: { min: number; max: number } | null | undefined,
 ): { min: number; max: number } {
   const top = forecast != null && forecast > f1 ? forecast : f1;
-  let min = range?.min ?? f0;
-  let max = range?.max ?? top;
-  min = Math.max(f0, Math.min(min, top));
-  /* Never a zero-width axis: a single-point lot would divide by zero somewhere
-     in Chart.js. One day is the smallest window that means anything. */
-  max = Math.max(min + DAY, Math.min(max, top));
-  return { min, max };
+  if (range) {
+    let min = Math.max(f0, Math.min(range.min, top));
+    /* Never a zero-width axis: a single-point lot would divide by zero somewhere
+       in Chart.js. One day is the smallest window that means anything. */
+    let max = Math.max(min + DAY, Math.min(range.max, top));
+    return { min, max };
+  }
+  /* No saved range: auto-fit the axis with air on both sides instead of gluing
+     the first dot to the y axis. The end date 01/09→01/10 reads as roughly
+     01/08→01/11 — half the span on each side — and a single-point lot still
+     gets a month of breathing room. */
+  const span = Math.max(0, top - f0);
+  const gap = Math.max(span / 2, 30 * DAY);
+  return { min: f0 - gap, max: top + gap };
 }
 
 /** Apply the shared chart range (and auto-fit the y axis to the visible window). */
@@ -248,7 +255,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     chart.current = ch;
     applyChartRange(ch, p);
     
-    const cur = () => getApp().chartRange ?? { min: f0, max: f1 };
+    const cur = () => getApp().chartRange ?? chartWindow(f0, f1, next?.date, null);
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const sc = ch.scales.x, r = canvas.getBoundingClientRect();

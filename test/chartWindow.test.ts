@@ -9,20 +9,32 @@ const d = (n: number) => T + n * DAY;
    happens to be. When the scale was set after the chart had already drawn, the
    first frame used Chart.js's own "nice" bounds and the line landed in the wrong
    place until a range change forced the correction. These pin the arithmetic that
-   both the first paint and every repaint now share. */
+   both the first paint and every repaint now share.
 
-test('with no saved range the window is the data itself', () => {
-  expect(chartWindow(d(0), d(100), null, null)).toEqual({ min: d(0), max: d(100) });
+   With no saved range the axis now auto-fits: half the data span padding on
+   each side (minimum one month), so the announce-price dot is not glued to the
+   axis edge. Half-span ≈ 100 days for history d(0)–d(100), 65 days when the
+   forecast extends to d(130). */
+
+test('with no saved range the window pads the data on both sides', () => {
+  expect(chartWindow(d(0), d(100), null, null)).toEqual({ min: d(-50), max: d(150) });
 });
 
 test('a forecast round extends the window past the last real point', () => {
   // The chart draws a dashed tail for the next round. An axis that stopped at the
   // last real point cut off exactly where the forecast began.
-  expect(chartWindow(d(0), d(100), d(130), null).max).toBe(d(130));
+  const w = chartWindow(d(0), d(100), d(130), null);
+  expect(w.max).toBe(d(195));
 });
 
 test('a forecast inside the data does not shrink the window', () => {
-  expect(chartWindow(d(0), d(100), d(40), null).max).toBe(d(100));
+  const w = chartWindow(d(0), d(100), d(40), null);
+  expect(w.max).toBe(d(150));
+});
+
+test('a single-point lot gets a month of air on each side', () => {
+  const w = chartWindow(d(50), d(50), null, null);
+  expect(w).toEqual({ min: d(20), max: d(80) });
 });
 
 test('a saved range inside the data is respected', () => {
