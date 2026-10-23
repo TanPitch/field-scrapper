@@ -3,7 +3,7 @@ import { debounce } from '../lib/format';
 import { isResell } from '../lib/parcelColor';
 import {
   applyDrawPrefs, applyLabelLayout, applyOverlayOpacity, applyOverlayVisibility, applyPaint, applyParcelLayerVisibility,
-  rebuildFlood, refreshPlates,
+  applyRingPaint, positionGroupRing, rebuildFlood, refreshPlates,
 } from '../map/layers';
 import { position as positionParcelLabels, registerParcels, syncParcelLabels } from '../map/parcelLabels';
 import { setUnitOrder, subscribeParcels } from '../data/liveData';
@@ -130,6 +130,10 @@ export function useMapSync(): void {
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */
   useEffect(() => { if (mapReady) { applyPaint(); refreshPlates(); } }, [mapReady, popColors, reColor]);
 
+  /* ring colour setting → selection ring + dashed siblings */
+  const ringColor = useApp(s => s.ringColor);
+  useEffect(() => { if (mapReady) applyRingPaint(); }, [mapReady, ringColor]);
+
   /* The popup and the detail panel resolve a parcel through PARCEL_BY_ID, so the
      cascade has to reach that index too - otherwise the dot picks a unit by the
      user's order and the popup still shows whichever one the API returned last. */
@@ -169,19 +173,21 @@ export function useMapSync(): void {
     });
   }, [mapReady]);
 
-  /* the DOM labels are positioned in screen space, so they follow the camera */
+  /* the DOM labels are positioned in screen space, so they follow the camera;
+     the dashed group-sale rings have fixed-px radius too, so their metres
+     stretch with each zoom change and regenerate on the same events */
   useEffect(() => {
     if (!mapReady) return;
     const map = getMap();
     if (!map) return;
-    const on = () => positionParcelLabels();
+    const on = () => { positionParcelLabels(); positionGroupRing(); };
     map.on('move', on);
     map.on('zoom', on);
     map.on('resize', on);
     return () => {
       map.off('move', on);
       map.off('zoom', on);
-map.off('resize', on);
+      map.off('resize', on);
     };
   }, [mapReady]);
 

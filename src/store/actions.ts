@@ -1,6 +1,7 @@
 import { BASEMAPS, DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER } from '../data/constants';
 import { PARCEL_BY_ID, ALL_PARCELS, diagnoseParcels } from '../data/liveData';
 import { getMap, hasLayer } from '../map/mapRef';
+import { setGroupRing } from '../map/layers';
 import { closeClickPopup, closeHoverPopup, getClickPopId, getHoverPopId, openClickPopup, setPopupDismissHandler } from '../map/popups';
 import type { BasemapId, ColKey, Overlay, OverlayId, RightView } from '../types';
 import { EMPTY_FILTERS, getApp, patchApp, toast } from './useApp';
@@ -37,19 +38,45 @@ export function showRight(v: RightView): void { patchApp({ rpView: v, rightOpen:
 /**
  * Parcels that sell as one lot with `id` — LED's group sale ("ขายรวม").
  *
- * The group identity is case + year + sale order inside one province, which is
- * what LED numbers a run of consecutive ลำดับการขาย by; groupCount is the
- * plated check ("รวม N แปลง"). Requiring the count re-derives the group on the
- * client rather than trusting the count alone: a single missing sibling on a
- * stale payload shows as a smaller ring than LED Word sold, which a human will
- * notice, instead of popping siblings silently.
+ * LED ships the group in two shapes, and ผบ.754/2562 (deeds 24653 ↔ 161371) is
+ * why both must count: both lots have group_lot_count NULL and the same
+ * case/year/order, and the ONLY evidence is the remark text — "ขายรวมกับที่ดินโฉนดเลขที่
+ * 161371, ราคาประเมินรวม …". So a parcel is group-eligible when the plating
+ * count says so OR its remark says ขายรวม; structured siblings come from the
+ * case+year+order key, and any deed number named in an eligible remark joins
+ * by deed number even if its own key or count disagrees. An order-key sibling
+ * with neither signal stays out — same order, different land.
  */
+const mentionsGroup = (remark?: string | null): boolean =>
+  !!remark && /ขายรวม|รวม\s*\d+\s*แปลง|ขายต่อเนื่อง|พร้อมกัน/.test(remark);
+
 function groupOf(id: number): number[] {
   const p = PARCEL_BY_ID.get(id);
-  if (!p?.caseNoRaw || (p.groupCount ?? 1) <= 1) return [id];
-  const key = (q: typeof p) => [q.province, q.caseNoRaw, q.caseYear ?? '', q.order ?? ''].join('|');
-  const siblings = ALL_PARCELS.filter((q) => (q.groupCount ?? 1) > 1 && key(q) === key(p));
-  return siblings.length > 1 ? siblings.map((q) => q.id) : [id];
+  if (!p) return [id];
+  if (!p.caseNoRaw && !mentionsGroup(p.remark)) return [id];
+  const key = (q: typeof p) => [q.province, q.caseNoRaw ?? '', q.caseYear ?? '', q.order ?? ''].join('|');
+  const pool = ALL_PARCELS.filter((q) =>
+    (q.groupCount ?? 1) > 1 || mentionsGroup(q.remark)
+      ? q.caseNoRaw && key(q) === key(p)
+      : false);
+  if (!pool.length) return [id];
+  const sibs = new Set<number>([id]);
+  for (const q of pool) sibs.add(q.id);
+  /* Deed-number references are exact: the remark names the sibling's โฉนด, so
+     take them regardless of key or count. Scanning ALL_PARCELS once per select
+     is a few ms over ~6k parcels — cheaper than maintaining an index for a
+     lookup that happens one click at a time. */
+  const byDeed = new Map(ALL_PARCELS.map((q) => [q.deedNo, q]));
+  for (const q of [p, ...pool]) {
+    if (!q || !mentionsGroup(q.remark)) continue;
+    for (const m of q.remark!.matchAll(/โฉนด[^ ]*\s*เลขที่\s*([0-9,\s]{4,})/g)) {
+      for (const d of m[1].split(/[,\s]+/).filter(Boolean)) {
+        const other = byDeed.get(d);
+        if (other && other.id !== id) sibs.add(other.id);
+      }
+    }
+  }
+  return sibs.size > 1 ? [...sibs] : [id];
 }
 
 export function select(id: number, { fly = true }: { fly?: boolean } = {}): void {
@@ -69,11 +96,16 @@ const p = PARCEL_BY_ID.get(id);
   const group = groupOf(id);
   patchApp({ selectedId: id, groupIds: group, rpView: 'detail', rightOpen: true, pinSel: String(id) });
   /* A group sale rings every parcel that sells together, not just the one the
-     pointer happened to land on — that is the entire point of the label. */
-  if (map && hasLayer('parcels-halo')) {
-    map.setFilter('parcels-halo', group.length > 1
-      ? ['match', ['get', 'id'], group, true, false]
-      : ['==', ['get', 'id'], id]);
+     pointer happened to land on. The primary keeps its solid stroke on the
+     halo layer; every sibling gets the dashed ring (line layer — see
+     layers.setGroupRing, because circle strokes cannot dash). */
+  if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], id]);
+  if (map && hasLayer('parcels-ring')) {
+    setGroupRing(id, group
+      .filter((gid) => gid !== id)
+      .map((gid) => PARCEL_BY_ID.get(gid))
+      .filter((q): q is NonNullable<typeof q> => !!q)
+      .map((q) => [q.lng, q.lat] as [number, number]));
   }
   if (getHoverPopId() === id) closeHoverPopup();
   if (getApp().popupMode === 'active') openClickPopup(p);
@@ -88,6 +120,7 @@ export function deselect(): void {
      re-enter deselect() and recurse. */
   patchApp({ selectedId: null, groupIds: [], pinSel: null });
   if (map && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], -1]);
+  if (map && hasLayer('parcels-ring')) setGroupRing(null, []);
   closeClickPopup();
 }
 

@@ -2,6 +2,8 @@ import {
   patchApp,
   useApp,
 } from '../../../store/useApp';
+import { ACCENT } from '../../../data/constants';
+import { ColorButton } from '../../ui/ColorButton';
 import { Seg } from '../../ui/Seg';
 import {
   fl,
@@ -17,6 +19,7 @@ export function MapPane() {
   const markerSize = useApp(s => s.markerSize);
   const searchLimit = useApp(s => s.searchLimit);
   const persistMapView = useApp(s => s.persistMapView);
+  const ringColor = useApp(s => s.ringColor);
 
   return (
     <>
@@ -31,6 +34,22 @@ export function MapPane() {
       <div className={frow}>
         <span className={fl}>ขนาดหมุด</span>
         <Seg<MarkerSize> items={[['small', 'เล็ก'], ['normal', 'ปกติ'], ['large', 'ใหญ่']]} value={markerSize} onChange={v => patchApp({ markerSize: v })} />
+      </div>
+      <div className={frow}>
+        <span className={fl}>สีวงแหวนแปลงที่เลือก</span>
+        <span className="flex items-center gap-1.5">
+          {/* Empty = follow the accent, so the swatch shows what is live now. */}
+          <ColorButton
+            value={ringColor || ACCENT}
+            title="สีวงแหวนแปลงที่เลือก (ทึบ) และแปลงที่ขายรวมกัน (เส้นประ)"
+            onChange={hex => patchApp({ ringColor: hex })}
+            className="size-[19px] flex-none rounded-[4px] border border-line2"
+            style={{ background: ringColor || ACCENT }}
+          />
+          {ringColor && (
+            <button className="text-[10.5px] text-dim2 underline" onClick={() => patchApp({ ringColor: '' })}>ตามสีหลัก</button>
+          )}
+        </span>
       </div>
 
       <div className={setSec}>การค้นหา</div>

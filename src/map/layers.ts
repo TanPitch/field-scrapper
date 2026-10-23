@@ -1,4 +1,4 @@
-import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
+import type { ExpressionSpecification, GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 import { ACCENT, AREA_COLOR, MAP_FONTS, WMS_BASE } from '../data/constants';
 import { getApp } from '../store/useApp';
 import type { Overlay, Status } from '../types';
@@ -183,6 +183,56 @@ export function rebuildFlood(): void {
   safeAddLayer({ id: sid + '-r', type: 'raster', source: sid, layout: { visibility: ov.visible ? 'visible' : 'none' }, paint: { 'raster-opacity': ov.opacity } });
 }
 
+/* ---------- selected-parcel rings ----------
+ *
+ * The primary selection keeps its solid stroke on the `parcels-halo` circle
+ * layer. MapLibre circle strokes cannot dash, so the group-sale siblings get
+ * their ring from a separate line layer fed with a small polygon generated in
+ * metres around each of their dots:
+ *
+ *   px radius     — the same fixed-px value the halo uses: (DOT_RADIUS + 5.5) * markerScale()
+ *   metres        — px * metres-per-pixel, MPU = 156543.03392·cos(lat) / 2^zoom
+ *
+ * Since the px radius is fixed but metres-per-pixel changes with the camera,
+ * the geometry regenerates on every move/zoom (positionGroupRing — useMapSync
+ * wires the listeners). It holds at most a handful of 48-point rings, so this
+ * runs comfortably at pointer-drag rate.
+ */
+let ringPts: [number, number][] = [];
+
+/** One solid-ring/dashed-ring set, in list coords. Passing an empty list hides it. */
+export function setGroupRing(_solidId: number | null, pts: [number, number][]): void {
+  ringPts = pts;
+  positionGroupRing();
+}
+
+/** Polygon circle around [lng, lat] with radius rM metres. */
+function ringPolygon([lng, lat]: [number, number], rM: number): GeoJSON.Feature {
+  const latR = rM / 111320;
+  const lngR = rM / (111320 * Math.cos((lat * Math.PI) / 180));
+  const n = 48, ring: [number, number][] = [];
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * 2 * Math.PI;
+    ring.push([lng + lngR * Math.cos(a), lat + latR * Math.sin(a)]);
+  }
+  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+}
+
+/** Regen the dashed sibling rings for the current camera. */
+export function positionGroupRing(): void {
+  const map = getMap();
+  if (!map || !hasLayer('parcels-ring')) return;
+  let feats: GeoJSON.Feature[] = [];
+  if (ringPts.length) {
+    const px = (DOT_RADIUS + 5.5) * markerScale();
+    const mpp = (156543.03392 * Math.cos((map.getCenter().lat * Math.PI) / 180)) / Math.pow(2, map.getZoom());
+    const rM = px * mpp;
+    feats = ringPts.map((c) => ringPolygon(c, rM));
+  }
+  const src = map.getSource('ring') as GeoJSONSource | undefined;
+  src?.setData(fc(feats));
+}
+
 /* ---------- parcels, labels, drawings ---------- */
 export function addCustomLayers(): void {
   const map = requireMap();
@@ -191,6 +241,10 @@ export function addCustomLayers(): void {
   addOverlayLayers();
   ensureAreaLayers();
 
+  if (!map.getSource('ring')) {
+    map.addSource('ring', { type: 'geojson', data: fc([]) });
+    safeAddLayer({ id: 'parcels-ring', type: 'line', source: 'ring', paint: { 'line-color': s.ringColor || ACCENT, 'line-width': 2, 'line-dasharray': [2.5, 2.5], 'line-opacity': 0.95 } });
+  }
   if (!map.getSource('parcels')) {
     map.addSource('parcels', { type: 'geojson', data: fc([]) });
     safeAddLayer({ id: 'parcels-halo', type: 'circle', source: 'parcels', filter: ['==', ['get', 'id'], -1], paint: { 'circle-radius': radiusExpr(5.5), 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ACCENT, 'circle-stroke-width': 2.4 } });
@@ -204,6 +258,7 @@ export function addCustomLayers(): void {
   }
   if (!map.getSource('draws')) addDrawLayers();
   if (s.selectedId != null && hasLayer('parcels-halo')) map.setFilter('parcels-halo', ['==', ['get', 'id'], s.selectedId]);
+  if (ringPts.length) positionGroupRing();
 }
 
 const showSeg = (m: string) => m === 'both' || m === 'seg';
@@ -275,6 +330,15 @@ export function applyPaint(): void {
   map.setPaintProperty('parcels-dot', 'circle-color', statusColor(getApp().popColors, getApp().reColor));
   map.setPaintProperty('parcels-dot', 'circle-radius', radiusExpr(0));
   if (map.getLayer('parcels-halo')) map.setPaintProperty('parcels-halo', 'circle-radius', radiusExpr(5.5));
+  applyRingPaint();
+}
+/** Ring colour: the user's setting when set, otherwise the theme accent. */
+export function applyRingPaint(): void {
+  const map = getMap();
+  if (!map) return;
+  const col = getApp().ringColor || ACCENT;
+  if (map.getLayer('parcels-halo')) map.setPaintProperty('parcels-halo', 'circle-stroke-color', col);
+  if (map.getLayer('parcels-ring')) map.setPaintProperty('parcels-ring', 'line-color', col);
 }
 export function applyLabelLayout(): void {
   const s = getApp();
@@ -289,7 +353,7 @@ export function applyDrawPrefs(): void {
 }
 export function applyParcelLayerVisibility(): void {
   const on = getApp().landOn;
-  (['parcels-dot', 'parcels-halo'] as const).forEach(l => {
+  (['parcels-ring', 'parcels-dot', 'parcels-halo'] as const).forEach(l => {
     const map = getMap();
     if (map && hasLayer(l)) map.setLayoutProperty(l, 'visibility', on ? 'visible' : 'none');
   });

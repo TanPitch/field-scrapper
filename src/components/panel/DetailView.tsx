@@ -7,6 +7,7 @@ import { useMoney } from '../../hooks/useMoney';
 import { fdate, fmtRai, numDate, sizeRowLabel } from '../../lib/format';
 import { popupKind } from '../../map/popups';
 import { patchApp, useApp } from '../../store/useApp';
+import { select } from '../../store/actions';
 import { useLightbox } from '../../store/useLightbox';
 import type { Parcel } from '../../types';
 import { PriceChart } from '../charts/PriceChart';
@@ -377,19 +378,35 @@ export function DetailView() {
       </DetTop>
 
       {/* Group sale ("ขายรวม"): the siblings are already ringed on the map and
-          auto-selected — see groupOf() in actions.ts. The chip names them, so
-          the selection reads in the panel as well as on the map. */}
+          auto-selected — see groupOf() in actions.ts. The chip names them, and
+          each deed is a link that moves the selection to that parcel, which
+          the user could otherwise only reach by hunting for its dot. */}
       {groupIds.length > 1 && (
         <div className="mt-1.5 rounded-[9px] border border-line2 bg-panel2 px-2.5 py-1.5 text-[11px] leading-[1.7]">
           <div className="flex items-center gap-1.5 font-semibold text-accent">
             <Link2 size={12} className="flex-none" />
             ขายรวมกลุ่ม {groupIds.length} แปลง — จะขายรวมกันในนัดนี้
           </div>
-          <div className="text-[10.5px] text-dim2">
-            {groupIds
-              .map((gid) => PARCEL_BY_ID.get(gid)?.deedNo)
-              .filter(Boolean)
-              .join(', ')}
+          <div>
+            {groupIds.map((gid, i) => {
+              const q = PARCEL_BY_ID.get(gid);
+              if (!q?.deedNo) return null;
+              return (
+                <span key={gid}>
+                  {i > 0 && ', '}
+                  {gid === p.id ? <span className="text-dim">{q.deedNo}</span> : (
+                    <button
+                      type="button"
+                      {...useTipProps('เลือกแปลงโฉนดนี้')}
+                      className="text-accent underline decoration-dotted transition hover:decoration-solid"
+                      onClick={() => select(gid)}
+                    >
+                      {q.deedNo}
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
           {p.remark && <div className="mt-0.5 text-[10px] text-dim2">{p.remark}</div>}
         </div>

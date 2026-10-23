@@ -50,7 +50,7 @@ const SYNCED_PREFS = [
   'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
   'overlays', 'flood', 'landOn', 'cctvOn', 'sensOn', 'transportOn', 'transportOpacity', 'sensOpacity',
   'searchLimit', 'logLimit', 'bottomH', 'forceArea', 'cascade', 'gkey',
-  'avatarColor', 'avatarCfg', 'twoFa', 'pinnedIds',
+  'avatarColor', 'avatarCfg', 'twoFa', 'pinnedIds', 'ringColor',
 ] as const;
 
 export interface SyncState {
