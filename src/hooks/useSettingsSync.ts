@@ -20,6 +20,7 @@
 
 import { useEffect, useRef } from 'react';
 import { api, makeWriter } from '../lib/api';
+import { DEFAULT_COL_ORDER } from '../data/constants';
 import { normStyle, type RichTextStyle } from '../lib/richText';
 import { useAnnotations } from '../store/useAnnotations';
 import { patchApp, useApp } from '../store/useApp';
@@ -35,13 +36,21 @@ interface ApiUser {
   avatarColor: string | null; avatarPath: string | null; isAdmin: boolean;
 }
 
-/** Scalar app preferences worth keeping server-side. */
+/** Scalar app preferences worth keeping server-side. Every user-settable value
+ *  is on this list — anything deliberately chosen should follow the account.
+ *  pinnedIds counts too, but it is a Set, so the writer serialises it to an
+ *  array and the loader turns it back. */
 const SYNCED_PREFS = [
-  'theme', 'accentColor', 'glassLevel', 'layout', 'basemap', 'restrict', 'override',
+  'theme', 'accentColor', 'glassLevel', 'layoutMode', 'basemap', 'restrict', 'override',
   'statusVisible', 'popColors', 'reColor', 'popupCfg', 'lbCfg', 'popupMode',
   'showLandKindIcon', 'priceBath', 'priceSpace', 'chartTick', 'markerSize',
-  'labelSold', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
-  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed', 'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
+  'labelSold', 'labelNextDate', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
+  'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'chartForecastSolid', 'chartTodayLine',
+  'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed',
+  'detailRowHidden', 'detailRowOrder', 'filters', 'sort',
+  'overlays', 'flood', 'landOn', 'cctvOn', 'sensOn', 'transportOn', 'transportOpacity', 'sensOpacity',
+  'searchLimit', 'logLimit', 'bottomH', 'forceArea', 'cascade', 'gkey',
+  'avatarColor', 'avatarCfg', 'twoFa', 'pinnedIds',
 ] as const;
 
 export interface SyncState {
@@ -91,7 +100,11 @@ export function useSettingsSync(): SyncState {
     return useApp.subscribe((s) => {
       const prefs: Record<string, unknown> = {};
       for (const k of SYNCED_PREFS) {
-        if (k in s) prefs[k] = (s as unknown as Record<string, unknown>)[k];
+        if (!(k in s)) continue;
+        /* Sets are not JSON — pinned rows go out as an array of ids. */
+        prefs[k] = k === 'pinnedIds'
+          ? Array.from(s.pinnedIds as ReadonlySet<number>)
+          : (s as unknown as Record<string, unknown>)[k];
       }
       if (!Object.keys(prefs).length) return;
       writePrefs('prefs', async () => {
@@ -133,40 +146,20 @@ export function useSettingsSync(): SyncState {
     });
   }, [signedIn]);
 
-  /* OUT: table column layout. */
+  /* OUT: table column layout.
+   *
+   * Reorder, hide, pin and resize are useApp state, not annotation rows;
+   * watching only the annotations (as the first version did) meant a layout
+   * the user spent an afternoon arranging never left the machine unless they
+   * also happened to rename a column. Both stores feed the same writer, and
+   * the 900 ms debounce collapses a drag-resize into one PUT. */
   useEffect(() => {
     if (!signedIn) return;
-    let first = true;
-    return useAnnotations.subscribe((s) => {
-      if (first) { first = false; return; }
-      for (const [tableKey, cols] of Object.entries(s.cols)) {
-        writeColumns(`cols:${tableKey}`, async () => {
-          const app = useApp.getState();
-          const r = await api.put(`/api/me/tables/${encodeURIComponent(tableKey)}`, {
-            /* The layout the user actually has. visible/pinned/order were
-               constants, so the server's visible, pinned and sort_order columns
-               could only ever hold their defaults and a layout restored on
-               another machine came back as if nobody had touched it. width was
-               never sent at all. */
-            columns: Object.entries(cols).map(([key, c], i) => {
-              const at = app.colOrder.indexOf(key as ColKey);
-              return {
-                key, label: c.name ?? null, note: c.note ?? null,
-                style: c.style ?? {},
-                /* Per-field styles ride alongside; see styleWith() in
-                   server/users.js, which keeps all three in one jsonb. */
-                nameStyle: c.nameStyle ?? {}, noteStyle: c.noteStyle ?? {},
-                visible: !app.colHidden.has(key as ColKey),
-                pinned: app.colPinned.has(key as ColKey),
-                width: app.colWidths[key as ColKey] ?? null,
-                order: at < 0 ? i : at,
-              };
-            }),
-          });
-          if (!r.ok) errRef.current = r.error;
-        });
-      }
-    });
+    let annFirst = true;
+    const fire = () => writeColumns('cols:lots', putColumns);
+    const unA = useAnnotations.subscribe(() => { if (annFirst) { annFirst = false; return; } fire(); });
+    const unApp = useApp.subscribe(fire);
+    return () => { unA(); unApp(); };
   }, [signedIn]);
 
   return { ready: readyRef.current, error: errRef.current };
@@ -178,7 +171,13 @@ async function loadPrefs(): Promise<void> {
   const r = await api.get<{ prefs: Record<string, unknown> }>('/api/me/prefs');
   if (!r.ok || !r.data?.prefs) return;
   const patch: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(r.data.prefs)) if (k in SYNCED_PREFS) patch[k] = v;
+  for (const [k, v] of Object.entries(r.data.prefs)) {
+    if (!(k in SYNCED_PREFS)) continue;
+    /* pinnedIds went out as an array (Sets are not JSON). */
+    patch[k] = k === 'pinnedIds' && Array.isArray(v)
+      ? new Set<number>(v as number[])
+      : v;
+  }
   if (Object.keys(patch).length) patchApp(patch as never);
 }
 
@@ -202,6 +201,61 @@ async function loadColumns(): Promise<void> {
   }
   useAnnotations.getState().setColumn('lots', '__bulk__', null);
   for (const [k, v] of Object.entries(cols)) useAnnotations.getState().setColumn('lots', k, v);
+
+  /* The other half of the restore: visible, pinned, order and width ride on
+     the same rows as the labels. Skipping them here was why a layout saved on
+     one machine came back as if it had never been arranged — the PUT stored
+     everything, the GET rebuilt only names and styles. Server rows win where
+     they exist; columns the server has not recorded keep their local state. */
+  const known = new Set<ColKey>(DEFAULT_COL_ORDER);
+  const app = useApp.getState();
+  const savedOrder = r.data.columns.map((c) => String(c.key)).filter((k) => known.has(k as ColKey));
+  const at = new Set(savedOrder);
+  const hidden = new Set(app.colHidden);
+  const pinned = new Set(app.colPinned);
+  const widths = { ...app.colWidths };
+  for (const c of r.data.columns) {
+    const key = c.key as ColKey;
+    if (!known.has(key)) continue;
+    if (c.visible === false) hidden.add(key); else hidden.delete(key);
+    if (c.pinned === true) pinned.add(key); else pinned.delete(key);
+    if (typeof c.width === 'number' && c.width > 0) widths[key] = c.width;
+    else delete widths[key];
+  }
+  patchApp({
+    colOrder: [...(savedOrder as ColKey[]), ...app.colOrder.filter((k) => !at.has(String(k)))].filter(
+      (k, i, all) => all.indexOf(k) === i),
+    colHidden: hidden,
+    colPinned: pinned,
+    colWidths: widths,
+  });
+}
+
+/* The layout side of the column sync. One row per column of the current
+ * layout — the full set, not just annotated columns — so the restore side can
+ * rebuild the whole table instead of whatever subset a rename had touched. */
+async function putColumns(): Promise<void> {
+  const app = useApp.getState();
+  const cols = useAnnotations.getState().cols['lots'] ?? {};
+  const r = await api.put('/api/me/tables/lots', {
+    columns: app.colOrder.map((key, order) => ({
+      key,
+      label: cols[key]?.name ?? null,
+      note: cols[key]?.note ?? null,
+      style: cols[key]?.style ?? {},
+      /* Per-field styles ride alongside; see styleWith() in server/users.js,
+         which keeps all three in one jsonb. */
+      nameStyle: cols[key]?.nameStyle ?? {},
+      noteStyle: cols[key]?.noteStyle ?? {},
+      visible: !app.colHidden.has(key),
+      pinned: app.colPinned.has(key),
+      width: app.colWidths[key] ?? null,
+      order,
+    })),
+  });
+  /* A module-level write: no errRef in scope, and a failed settings write is a
+     logged warning, not a UI event — offline is a normal state here. */
+  if (!r.ok) console.warn('[settings-sync] columns PUT failed:', r.error);
 }
 
 async function loadLayers(): Promise<void> {

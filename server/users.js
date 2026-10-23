@@ -128,7 +128,7 @@ router.post("/auth/register", async (req, res) => {
              VALUES ($1, $2, $3) RETURNING id, username, display_name, avatar_color, is_admin`,
             [username, hash, displayName]);
         const u = rows[0];
-        req.session.userId = u.id;
+        req.session.userId = Number(u.id);
         res.status(201).json({ user: publicUser(u) });
     } catch (e) {
         if (e.code === "23505") return res.status(409).json({ error: "username taken" });
@@ -149,8 +149,15 @@ router.post("/auth/login", async (req, res) => {
      * cost as the hit path instead of returning early. */
     const ok = await verifyPassword(password, u ? u.password_hash : DUMMY_HASH);
     if (!ok || !u) return res.status(401).json({ error: "wrong username or password" });
+    /* After the verify, deliberately: the disabled answer must not be reachable
+     * without the correct password, or "account is disabled" becomes a username
+     * oracle for anyone who can read a status code. */
+    if (u.disabled) return res.status(403).json({ error: "this account is disabled" });
 
-    req.session.userId = u.id;
+    /* bigserial comes back from pg as a string ("319"); coerce at the
+       boundary or every id equality check downstream — including the
+       admin-self guards — compares "319" === 319 and silently misses. */
+    req.session.userId = Number(u.id);
     res.json({ user: publicUser(u) });
 });
 
@@ -160,8 +167,9 @@ router.post("/auth/logout", (req, res) => {
 
 function publicUser(u) {
     return {
-        id: u.id, username: u.username, displayName: u.display_name,
+        id: Number(u.id), username: u.username, displayName: u.display_name,
         avatarColor: u.avatar_color, avatarPath: u.avatar_path, isAdmin: u.is_admin,
+        disabled: Boolean(u.disabled),
     };
 }
 
@@ -185,7 +193,7 @@ router.put("/me", requireUser, async (req, res) => {
                 avatar_color = coalesce($3, avatar_color),
                 updated_at = now()
           WHERE id = $1
-      RETURNING id, username, display_name, avatar_color, avatar_path, is_admin`,
+      RETURNING id, username, display_name, avatar_color, avatar_path, is_admin, disabled`,
         [req.userId, displayName, avatarColor]);
     res.json({ user: publicUser(rows[0]) });
 });
@@ -206,6 +214,126 @@ router.post("/me/password", requireUser, async (req, res) => {
     await req.db.query(
         `UPDATE app_users SET password_hash = $2, updated_at = now() WHERE id = $1`,
         [req.userId, await hashPassword(next)]);
+    res.json({ ok: true });
+});
+
+/* -------------------------------------------------- admin: user management */
+
+/* The list joins its two side tables in one pass: `session` (express-session's
+ * own store, migration 012) gives the newest expiry per user — the closest
+ * thing to "last seen" available — and user_prefs holds the profile picture
+ * under 'avatarCfg' as a data-URL, because a picture is just another persisted
+ * setting. Reading it here saves the admin page one request per user row. */
+router.get("/users", requireAdmin, async (req, res) => {
+    const { rows } = await req.db.query(
+        `SELECT u.id, u.username, u.display_name, u.avatar_color, u.is_admin, u.disabled,
+                u.created_at,
+                (SELECT max(s.expire) FROM session s
+                  WHERE s.sess->>'userId' = u.id::text) AS last_seen
+           FROM app_users u
+       ORDER BY u.id`);
+    const av = await req.db.query(`SELECT user_id, value FROM user_prefs WHERE key = 'avatarCfg'`);
+    const avatars = new Map(av.rows.map((r) => [Number(r.user_id), r.value]));
+    res.json({
+        users: rows.map((u) => ({
+            id: Number(u.id), username: u.username, displayName: u.display_name,
+            avatarColor: u.avatar_color, isAdmin: u.is_admin, disabled: u.disabled,
+            created: u.created_at, lastSeen: u.last_seen,
+            avatarCfg: avatars.get(u.id) ?? null,
+        })),
+    });
+});
+
+/* Same validation as register, but no session is opened for the created
+ * account — the admin makes the user, the user signs in themselves. */
+router.post("/users", requireAdmin, async (req, res) => {
+    const username = String(req.body?.username ?? "").trim().toLowerCase();
+    const password = String(req.body?.password ?? "");
+    const displayName = String(req.body?.displayName ?? "").trim() || username;
+    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+        return res.status(400).json({ error: "username must be 3-32 chars of a-z 0-9 . _ -" });
+    }
+    if (password.length < 8) {
+        return res.status(400).json({ error: "password must be at least 8 characters" });
+    }
+    try {
+        const { rows } = await req.db.query(
+            `INSERT INTO app_users (username, password_hash, display_name, is_admin)
+             VALUES ($1, $2, $3, $4)
+          RETURNING id, username, display_name, avatar_color, avatar_path, is_admin, disabled`,
+            [username, await hashPassword(password), displayName, Boolean(req.body?.isAdmin)]);
+        res.status(201).json({ user: publicUser(rows[0]) });
+    } catch (e) {
+        if (e.code === "23505") return res.status(409).json({ error: "username taken" });
+        throw e;
+    }
+});
+
+/* Admin edits: display name, admin flag, disabled. Explicit opt-outs for you
+ * yourself and for the last active admin, so an operator cannot lock
+ * everyone — including themselves — out of the admin pages from the UI. */
+router.patch("/users/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: "bad id" });
+    const displayName = req.body?.displayName == null ? undefined
+        : (String(req.body.displayName).trim() || null);
+    const isAdmin = req.body?.isAdmin == null ? undefined : Boolean(req.body.isAdmin);
+    const disabled = req.body?.disabled == null ? undefined : Boolean(req.body.disabled);
+    /* Number() both sides: a session created by an older build stores pg's
+       bigint string ("319"), and "319" === 319 would miss the guard. */
+    if ((isAdmin === false || disabled === true) && Number(req.userId) === id) {
+        return res.status(400).json({ error: "you cannot disable or demote your own account" });
+    }
+    if (isAdmin === false || disabled === true) {
+        const { rows } = await req.db.query(
+            `SELECT count(*)::int AS n FROM app_users
+              WHERE is_admin AND NOT coalesce(disabled, false) AND id <> $1`, [id]);
+        if (!rows[0].n) return res.status(400).json({ error: "that would leave no active admin" });
+    }
+    const { rows } = await req.db.query(
+        `UPDATE app_users SET
+             display_name = coalesce($2, display_name),
+             is_admin     = coalesce($3, is_admin),
+             disabled     = coalesce($4, disabled),
+             updated_at   = now()
+           WHERE id = $1
+       RETURNING id, username, display_name, avatar_color, is_admin, disabled`,
+        [id, displayName ?? null, isAdmin ?? null, disabled ?? null]);
+    if (!rows.length) return res.status(404).json({ error: "no such user" });
+    res.json({ user: publicUser(rows[0]) });
+});
+
+/* Admin password reset — the whole point is recovering an account whose owner
+ * lost the password, so there is no "current password" step here. */
+router.post("/users/:id/password", requireAdmin, async (req, res) => {
+    const next = String(req.body?.password ?? "");
+    if (next.length < 8) {
+        return res.status(400).json({ error: "password must be at least 8 characters" });
+    }
+    const { rowCount } = await req.db.query(
+        `UPDATE app_users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+        [Number(req.params.id) || 0, await hashPassword(next)]);
+    if (!rowCount) return res.status(404).json({ error: "no such user" });
+    res.json({ ok: true });
+});
+
+/* Delete removes prefs, table layout and annotations with the account (they
+ * all cascade, migration 009). The session store table is not cascaded — its
+ * rows are keyed by sid — so they go explicitly, or the dead user's cookie
+ * would keep answering /me until expiry. */
+router.delete("/users/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: "bad id" });
+    if (Number(req.userId) === id) return res.status(400).json({ error: "you cannot delete your own account" });
+    const { rows } = await req.db.query(`SELECT is_admin FROM app_users WHERE id = $1`, [id]);
+    if (!rows.length) return res.status(404).json({ error: "no such user" });
+    if (rows[0].is_admin) {
+        const { rows: admins } = await req.db.query(
+            `SELECT count(*)::int AS n FROM app_users WHERE is_admin AND id <> $1`, [id]);
+        if (!admins[0].n) return res.status(400).json({ error: "that would leave no admin" });
+    }
+    await req.db.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [String(id)]);
+    await req.db.query(`DELETE FROM app_users WHERE id = $1`, [id]);
     res.json({ ok: true });
 });
 

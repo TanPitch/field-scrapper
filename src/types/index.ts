@@ -125,6 +125,17 @@ export interface Parcel {
   deedNo: string;
   court: string;
   caseNo: string;
+  /** LED's raw case fields, the group-sale regroup key along with `order`:
+   *  every parcel of one ลำดับการขาย shares case + year + sale order. */
+  caseNoRaw?: string | null;
+  caseYear?: number | null;
+  /** LED's ลำดับการขาย label, e.g. "ครั้งที่ 1". */
+  order?: string;
+  /** LED group sale: how many parcels auction as one lot (migration 014).
+   *  1 or undefined for an ordinary, single-parcel sale. */
+  groupCount?: number;
+  /** LED's free-text remark; group sales carry "ขายรวม (แปลงที่ …)" here. */
+  remark?: string | null;
   plaintiff: string;
   defendant: string;
   possessor: string;
@@ -345,15 +356,20 @@ export interface Elevation {
   uncertaintyM: number | null;
 }
 
-/** Mockup account row for the จัดการผู้ใช้ pane. */
+/** One row of the admin user manager, as GET /api/users returns it.
+ *  avatarCfg is the user's own profile-picture pref (data-URL included),
+ *  copied structurally from AvatarCfg in ui/AvatarPicker to keep this module
+ *  free of a component import. */
 export interface ManagedUser {
   id: number;
-  name: string;
-  email: string;
-  role: 'admin' | 'user';
-  active: boolean;
-  twoFa: boolean;
-  lastSeen: string;
+  username: string;
+  displayName: string;
+  avatarColor: string;
+  isAdmin: boolean;
+  disabled: boolean;
+  created: string;
+  lastSeen: string | null;
+  avatarCfg: { icon: string; from: string; to: string; image: string } | null;
 }
 export type LayoutMode = 'docked' | 'floating';
 export type GlassLevel = 'none' | 'transparent';

@@ -8,7 +8,7 @@ import type { CondoUnitOrder } from '../lib/condoUnits';
 import type {
   BasemapId, BBox, Cascade, CctvPin, ColKey, DrawDistMode, DrawMode, DrawShape, DrawTool, Filters, FilterArea,
   ChartTick, FloodConfig, GlassLevel, LightboxField, LayoutMode, LngLat, MarkerSize, Overlay, OverlayId, PopupConfig, PopupMode, RightView, SensorPin, SortState,
-  ManagedUser, PopupKind, Status, Theme, TransportPin,
+  PopupKind, Status, Theme, TransportPin,
 } from '../types';
 
 export const EMPTY_FILTERS: Filters = {
@@ -31,6 +31,8 @@ export interface AppState {
   chartTodayLine: boolean;
   /** Draw the dashed, semi-transparent leg to the predicted next-round price. */
   chartForecast: boolean;
+  /** Draw the forecast leg in solid ink like the past, instead of dashed/faded. */
+  chartForecastSolid: boolean;
   /** Which unit stands in for a condo building on the map. */
   condoUnitOrder: CondoUnitOrder;
   /** Restore the map to wherever it was left, rather than the default view. */
@@ -39,8 +41,6 @@ export interface AppState {
   lastView: { lng: number; lat: number; zoom: number } | null;
   /** Collapse the settings sections down to their headers. */
   sectionsCollapsed: boolean;
-  /** Reveals the API/server settings block in the header. */
-  showApiSettings: boolean;
   /** Detail-panel rows the user has hidden. */
   detailRowHidden: string[];
   /** User-chosen display order for detail-panel rows. */
@@ -95,6 +95,10 @@ export interface AppState {
   leftOpen: boolean;
   settingsOpen: boolean;
   selectedId: number | null;
+  /** Parcels that sell together with the selected one (same ลำดับการขาย).
+   *  Filled by select() when the parcel has group sale siblings; cleared on
+   *  deselect so a stale ring never survives a click elsewhere. */
+  groupIds: number[];
   bottomH: number;
 
   /* ----- drawing ----- */
@@ -135,9 +139,10 @@ export interface AppState {
   markerSize: MarkerSize;
   /** Max hits shown for a search, per source group. */
   searchLimit: number;
-  /** Reveals the ค้นหา & API settings tab (needs the unlock code from แผนที่). */
-  /** Mockup account fields (ผูใช้ pane) — no backend. */
-  /** dmin sees hidden settings tabs without the unlock code. */
+  /** How many run-log lines the server pane keeps visible. */
+  logLimit: number;
+  /** Account fields, synced to the server account via useSettingsSync. */
+  /** Admin sees the hidden management tabs (ผู้ใช้ทั้งหมด, ข้อมูลที่ยังหาไม่เจอ). */
   role: 'user' | 'admin';
   signedIn: boolean;
   userName: string;
@@ -146,8 +151,6 @@ export interface AppState {
   avatarColor: string;
   /** Icon/colour (or uploaded image) for the profile picture. */
   avatarCfg: AvatarCfg;
-  /** Mockup account list for จัดการผู้ใช้. */
-  managedUsers: ManagedUser[];
   cctvList: CctvPin[];
   sensList: SensorPin[];
   transportList: TransportPin[];
@@ -167,11 +170,11 @@ export const useApp = create<AppState>(set => ({
   labelNextDate: true,
   chartTodayLine: true,
   chartForecast: true,
-  condoUnitOrder: "sizeDesc",
+  chartForecastSolid: false,
+  condoUnitOrder: "statusFirst",
   persistMapView: true,
   lastView: null,
   sectionsCollapsed: true,
-  showApiSettings: false,
   detailRowHidden: [],
   detailRowOrder: [],
   showLandKindIcon: true,
@@ -216,6 +219,7 @@ export const useApp = create<AppState>(set => ({
   leftOpen: true,
   settingsOpen: false,
   selectedId: null,
+  groupIds: [],
   bottomH: 286,
 
   drawTool: 'poly',
@@ -242,15 +246,16 @@ export const useApp = create<AppState>(set => ({
   zoom: 12.35,
 
   landOn: true,
-  cctvOn: true,
-  sensOn: true,
-  transportOn: true,
+  cctvOn: false,
+  sensOn: false,
+  transportOn: false,
   transportOpacity: 0.9,
   glassLevel: 'none',
   layoutMode: 'floating',
   sensOpacity: 0.9,
   markerSize: 'normal',
   searchLimit: 8,
+  logLimit: 20,
   role: 'admin',
   signedIn: false,
   userName: 'fieldscrapper',
@@ -258,7 +263,6 @@ export const useApp = create<AppState>(set => ({
   twoFa: false,
   avatarColor: '',
   avatarCfg: { icon: 'user', from: '#4C9AFF', to: '', image: '' },
-  managedUsers: [],
   cctvList: [],
   sensList: [],
   transportList: [],
