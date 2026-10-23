@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
+import { ClipboardPaste, Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
 import { toast } from '../../../store/useApp';
@@ -88,6 +88,38 @@ function gapKind(g: Gap): GapKind {
   return 'other';
 }
 
+/* ---------- bulk paste mode ----------
+ *
+ * The admin copies lines from another source, one parcel per line:
+ *   72956 0-0-32 [12.72002572,99.94910112] ชะอำ ชะอำ เพชรบุรี
+ *   เลขโฉนด ไร่-งาน-ตร.วา [lat, lng]            ตำบล อำเภอ จังหวัด
+ * The line is parsed into an editable preview table first (so a broken line
+ * can be fixed or dropped before anything moves), sent to
+ * POST /api/admin/coord-gaps/parse for the per-field verdict, and only rows
+ * that come back clean can be written through the existing PATCH endpoint.
+ */
+interface PRow {
+  deed: string; size: string; lat: string; lon: string;
+  tambol: string; amphur: string; city: string;
+  verdict: null | { ok: boolean; parcelId: number | null; verdict: Record<string, string> };
+}
+
+const PLACE = /^(\S+)\s+(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\s*\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]\s*(.*)$/;
+
+function parsePaste(src: string, into: PRow[] = []): PRow[] {
+  const rows = into;
+  for (const line of src.split('\n').map((l) => l.trim()).filter(Boolean)) {
+    const m = PLACE.exec(line);
+    if (!m) continue; /* silently dropped: the preview only shows rows it understood */
+    const [tambol = '', amphur = '', ...city] = m[7]!.trim().split(/\s+/);
+    rows.push({
+      deed: m[1]!, size: `${m[2]}-${m[3]}-${m[4]}`, lat: m[5]!, lon: m[6]!,
+      tambol, amphur, city: city.join(' '), verdict: null,
+    });
+  }
+  return rows;
+}
+
 /**
  * Parcels LED listed that neither TD nor DOL could place, for an admin to
  * correct by hand.
@@ -113,6 +145,11 @@ export function CoordGapsPane() {
      animated settings drawer, where position:fixed would anchor to the
      drawer's transform — the full-screen frame is portalled to <body> instead. */
   const [big, setBig] = useState(false);
+  /* Bulk paste mode (see parsePaste above). */
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [raw, setRaw] = useState('');
+  const [pRows, setPRows] = useState<PRow[]>([]);
+  const [pBusy, setPBusy] = useState(false);
   useEffect(() => {
     if (!big) return;
     const onKey = (e: KeyboardEvent) => {
@@ -152,6 +189,42 @@ export function CoordGapsPane() {
 
   const num = (v: number | null) => (v == null ? '-' : String(v));
   const size = (g: Gap) => [g.size_rai, g.size_ngan, g.size_wa].some((x) => x != null) ? `${num(g.size_rai)}-${num(g.size_ngan)}-${num(g.size_wa)}` : '-';
+
+  /* Paste → editable preview (no server yet): broken lines are dropped, good
+     ones wait in a table the admin can still fix by hand. */
+  const parseRows = () => {
+    const rows = parsePaste(raw);
+    setPRows(rows);
+    toast(rows.length ? `แปลงได้ ${rows.length} แถว` : 'ไม่เข้าใจบรรทัดใดเลย', rows.length ? undefined : 'warn');
+  };
+
+  /* Send the preview to the server for the per-field verdict. */
+  const checkRows = async () => {
+    if (!pRows.length) return;
+    setPBusy(true);
+    const r = await api.post<{ results: NonNullable<PRow['verdict']>[] }>('/api/admin/coord-gaps/parse', { rows: pRows });
+    setPBusy(false);
+    if (!r.ok) { toast(r.error ?? 'ตรวจสอบไม่สำเร็จ', 'warn'); return; }
+    setPRows(pRows.map((row, i) => ({ ...row, verdict: r.data!.results[i] ?? null })));
+  };
+
+  /* Write every clean row through the existing single-row PATCH. */
+  const saveOkRows = async () => {
+    const ok = pRows.filter((row) => row.verdict?.ok && row.verdict.parcelId != null);
+    if (!ok.length) { toast('ไม่มีแถวที่ผ่านทั้งหมด', 'warn'); return; }
+    setPBusy(true);
+    let done = 0;
+    for (const row of ok) {
+      const r = await api.patch(`/api/admin/coord-gaps/${row.verdict!.parcelId}`, {
+        td_lat: Number(row.lat), td_lon: Number(row.lon), td_status: 'resolved',
+      });
+      if (r.ok) done++;
+    }
+    setPBusy(false);
+    toast(`บันทึกแล้ว ${done}/${ok.length} แถว`);
+    setPRows(pRows.filter((row) => !ok.includes(row)));
+    void load();
+  };
 
   /* Filtered on the client because the list is already capped at 300 rows, and
      the fields a person searches on - province, district, deed, case - are all
@@ -209,7 +282,81 @@ export function CoordGapsPane() {
         <button className={btn} onClick={() => setBig(!big)}>
           {big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? 'ย่อ' : 'เต็มจอ'}
         </button>
+        <button className={btn} onClick={() => setPasteOpen(!pasteOpen)} disabled={busy}>
+          <ClipboardPaste size={13} /> แปะข้อความ
+        </button>
       </div>
+
+      {pasteOpen && (
+        <div className="mb-2 rounded-[9px] border border-line2 bg-panel2 p-2">
+          <div className="mb-1 text-[10.5px] text-dim2">
+            บรรทัดละแปลง: <span className="font-display">เลขโฉนด ไร่-งาน-วา [lat, lng] ตำบล อำเภอ จังหวัด</span>
+          </div>
+          <textarea
+            className={`${inp} h-24 w-full font-mono`}
+            value={raw}
+            onChange={(e) => setRaw(e.target.value)}
+            placeholder="72956 0-0-32 [12.72002572,99.94910112] ชะอำ ชะอำ เพชรบุรี"
+          />
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <button className={btn} onClick={parseRows} disabled={!raw.trim()}>แปลงข้อความ</button>
+            <button className={btn} onClick={() => { setRaw(''); setPRows([]); }} disabled={!raw && !pRows.length}>ล้าง</button>
+            {!!pRows.length && (
+              <>
+                <button className={btn} onClick={() => void checkRows()} disabled={pBusy}>
+                  ส่งตรวจ {pRows.length} แถว
+                </button>
+                <button className={btn} onClick={() => void saveOkRows()} disabled={pBusy}>
+                  บันทึกแถวที่ผ่าน
+                </button>
+              </>
+            )}
+          </div>
+
+          {!!pRows.length && (
+            <table className="mt-2 w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-line text-left text-dim2">
+                  {['เลขโฉนด', 'ร-ง-วา', 'lat', 'lng', 'ตำบล', 'อำเภอ', 'จังหวัด', 'ผลตรวจ'].map((h) => (
+                    <th key={h} className="py-1 pr-1.5 font-medium">{h}</th>
+                  ))}
+                  <th className="w-6" />
+                </tr>
+              </thead>
+              <tbody>
+                {pRows.map((row, i) => (
+                  <tr key={i} className="border-b border-line/40 align-top">
+                    {(['deed', 'size', 'lat', 'lon', 'tambol', 'amphur', 'city'] as const).map((k) => (
+                      <td key={k} className="py-1 pr-1.5">
+                        {/* Every cell editable: a mismatch found by the server is
+                            often fixed right here, then re-checked. */}
+                        <input
+                          className={`${inp} ${(k === 'lat' || k === 'lon') ? 'w-24' : k === 'size' ? 'w-20' : 'w-16 min-w-14'} py-0.5`}
+                          value={row[k]}
+                          onChange={(e) => setPRows(pRows.map((x, j) => (j === i ? { ...x, [k]: e.target.value, verdict: null } : x)))}
+                        />
+                      </td>
+                    ))}
+                    <td className="py-1 pr-1.5 text-[10px] whitespace-nowrap">
+                      {row.verdict && (row.verdict.ok
+                        ? <span className="text-accent">✓ ตรงทุกช่อง</span>
+                        : Object.entries(row.verdict.verdict).map(([k, v]) => (
+                            <span key={k} className="block text-err">{v}</span>
+                          )))}
+                    </td>
+                    <td className="py-1">
+                      <button
+                        className="text-dim2 transition hover:text-ink"
+                        onClick={() => setPRows(pRows.filter((_, j) => j !== i))}
+                      ><X size={12} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       <div className="mb-2 flex flex-wrap gap-1">
         <button

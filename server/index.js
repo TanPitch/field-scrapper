@@ -620,6 +620,86 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
       } catch (e) { console.error("[coord-gaps]", e); res.status(500).json({ error: e.message }); }
 });
 
+/**
+ * Bulk paste-validate.
+ *
+ * The admin copies rows from another source — deed, size as ไร่-งาน-ตร.วา,
+ * [lat, lng], then ตำบล อำเภอ จังหวัด — and this compares each pasted field
+ * against what the ledger actually has before anything is written. Report
+ * only: writing stays with the PATCH endpoint below, which is what the
+ * reviewer triggers when a row comes back clean.
+ *
+ * The check that matters most is the size one: LED's rai/ngan/wa against the
+ * pasted row is what caught the subwa scaling bug, so it is compared
+ * field-for-field rather than eyeballed.
+ */
+app.post("/api/admin/coord-gaps/parse", requireAdmin, async (req, res) => {
+    try {
+        const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+        if (!rows.length || rows.length > 300)
+            return res.status(400).json({ error: "rows ต้องมี 1..300 แถว" });
+
+        const norm = (v) => String(v ?? "").trim().replace(/\s+/g, " ");
+        const same = (a, b) => norm(a) === norm(b);
+        const results = [];
+        for (const r of rows) {
+            const verdict = {};
+            const deed = norm(r.deed);
+            const lat = Number(r.lat), lon = Number(r.lon);
+
+            if (!deed) verdict.deed = "ไม่มีเลขโฉนด";
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                verdict.coord = "รูปแบบพิกัดไม่ถูกต้อง";
+            } else if (lat < 5 || lat > 21 || lon < 97 || lon > 106) {
+                /* Thailand's box. A coordinate outside it usually means lat and
+                 * lng were swapped when the row was written. */
+                verdict.coord = "พิกัดอยู่นอกประเทศไทย (สลับ lat/lng?)";
+            }
+
+            let found = null;
+            if (deed) {
+                const city = norm(r.city);
+                const { rows: pr } = await pool.query(`
+                    SELECT p.id, p.province_name, p.district_name, p.tumbol, l.size_unit,
+                           l.size_rai AS l_rai, l.size_ngan AS l_ngan, l.size_wa AS l_wa
+                      FROM parcels p
+                      LEFT JOIN LATERAL (
+                        SELECT size_unit, size_rai, size_ngan, size_wa
+                          FROM auction_lots
+                         WHERE parcel_id = p.id AND size_rai IS NOT NULL
+                         ORDER BY id LIMIT 1
+                      ) l ON true
+                     WHERE p.deed_number = $1
+                     ORDER BY (p.province_name = $2) DESC NULLS LAST, p.id
+                     LIMIT 1`, [deed, city || null]);
+                found = pr[0] ?? null;
+            }
+            if (deed && !found) verdict.deed = "ไม่พบในระบบ";
+
+            if (found) {
+                /* LED's own rai/ngan/wa, for the ร-ง-ว comparison. */
+                if (r.size != null && r.size !== "") {
+                    const m = /^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(norm(r.size));
+                    if (!m) verdict.size = "รูปแบบขนาดไม่ถูกต้อง";
+                    else if (found.size_unit === "sqm") {
+                        verdict.size = `LED เก็บเป็น ตร.ม. (${norm(found.l_rai)})`;
+                    } else {
+                        const close = (x, y) => Math.abs(Number(x ?? 0) - Number(y ?? 0)) <= 0.05;
+                        if (!(close(m[1], found.l_rai) && close(m[2], found.l_ngan) && close(m[3], found.l_wa)))
+                            verdict.size = `LED: ${found.l_rai ?? "-"}-${found.l_ngan ?? "-"}-${found.l_wa ?? "-"}`;
+                    }
+                }
+                if (r.tambol && !same(r.tambol, found.tumbol)) verdict.tambol = `LED: ${norm(found.tumbol) || "-"}`;
+                if (r.amphur && !same(r.amphur, found.district_name)) verdict.amphur = `LED: ${norm(found.district_name) || "-"}`;
+                if (r.city && !same(r.city, found.province_name)) verdict.city = `LED: ${norm(found.province_name) || "-"}`;
+            }
+
+            results.push({ ok: Object.keys(verdict).length === 0, verdict, parcelId: found?.id ?? null });
+        }
+        res.json({ results });
+    } catch (e) { console.error("[coord-gaps/parse]", e); res.status(500).json({ error: e.message }); }
+});
+
 /** The values the parcels.geo_status CHECK constraint actually allows. */
 const GEO_STATUSES = ["unresolved", "verified", "mismatch"];
 
