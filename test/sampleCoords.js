@@ -19,7 +19,10 @@
  * a land ends up marked in the wrong district.
  *
  * Nothing is written. The provinces it reads are mostly ones we have never
- * scraped, and a sample is not a scrape.
+ * scraped, and a sample is not a scrape. Piping this script's output to a file
+ * through PowerShell's `| Out-File` mangles Thai (the console decodes bun's
+ * UTF-8 as the OEM codepage), so capture with cmd redirection instead:
+ *   cmd /c "bun sampleCoords.js ... > research/samples/<name>.txt"
  */
 import { Client } from "pg";
 import { LedClient } from "./ledClient.js";
