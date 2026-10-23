@@ -1,4 +1,5 @@
-import { RefreshCw } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
 import { toast } from '../../../store/useApp';
@@ -108,6 +109,16 @@ export function CoordGapsPane() {
   const [edit, setEdit] = useState<Record<number, { lat: string; lon: string }>>({});
   const [q, setQ] = useState('');
   const [only, setOnly] = useState<GapKind | ''>('');
+  /* Full-screen error-lands editing: the pane normally lives inside the
+     animated settings drawer, where position:fixed would anchor to the
+     drawer's transform — the full-screen frame is portalled to <body> instead. */
+  const [big, setBig] = useState(false);
+  useEffect(() => {
+    if (!big) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBig(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [big]);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -148,8 +159,8 @@ export function CoordGapsPane() {
       .some((v) => v != null && String(v).toLowerCase().includes(needle));
   });
 
-  return (
-    <div className="px-3 pb-6">
+  const body = (
+    <>
       <div className={setSec}>ข้อมูลที่ยังหาไม่เจอ</div>
       {err && <p className="text-[12px] text-err">เข้าถึงข้อมูลไม่ได้: {err}</p>}
       {summary && (
@@ -177,6 +188,9 @@ export function CoordGapsPane() {
         />
         <button className={btn} onClick={() => void load()} disabled={busy}>
           <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> {busy ? 'กำลังโหลด…' : 'โหลดใหม่'}
+        </button>
+        <button className={btn} onClick={() => setBig(!big)}>
+          {big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? 'ย่อ' : 'เต็มจอ'}
         </button>
       </div>
 
@@ -262,6 +276,19 @@ export function CoordGapsPane() {
       </table>
       {!gaps.length && !busy && !err && <p className="mt-2 text-[11px] text-dim2">ไม่มีรายการที่ค้างอยู่</p>}
       {!!gaps.length && !shown.length && <p className="mt-2 text-[11px] text-dim2">ไม่ตรงกับที่ค้นหา</p>}
-    </div>
+    </>
   );
+
+  if (big) {
+    return createPortal((
+      <div className="fixed inset-0 z-[120] overflow-y-auto bg-panel p-3">
+        <button
+          className="fixed right-3 top-3 z-[121] inline-flex size-[31px] cursor-pointer items-center justify-center rounded-lg border border-line2 bg-panel text-dim transition hover:text-ink"
+          onClick={() => setBig(false)}
+        ><X size={15} /></button>
+        {body}
+      </div>
+    ), document.body);
+  }
+  return <div className="px-3 pb-6">{body}</div>;
 }

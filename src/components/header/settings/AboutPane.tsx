@@ -1,6 +1,7 @@
 import { RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
-import RELEASE_NOTES from '../../../../RELEASE_NOTES.md?raw';
+/* RELEASE_NOTES.md was moved to docs/ on 2026-10-23 — the import path follows. */
+import RELEASE_NOTES from '../../../../docs/RELEASE_NOTES.md?raw';
 import { resetAll } from '../../../store/actions';
 import {
   changelogVersion,
