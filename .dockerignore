@@ -1,13 +1,18 @@
-# Docker - ignored, the image does not need them.
+# Build-context prunes: dependencies/dist are rebuilt inside the image, the
+# big data and research folders never belong in a container build, and the
+# NAS image share is bind-mounted as /app/data at runtime (not copied in).
 node_modules
 test/node_modules
 dist
+out
 .env
 .env.*
 !.env.example
 .git
 .gitignore
+test/data
+test/research
+test/out
 AUDIT.md
-out
 *.log
 .cache

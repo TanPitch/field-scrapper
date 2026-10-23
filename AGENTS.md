@@ -138,3 +138,23 @@ from scratch, chown `/data` first or restore by hand the same way.
 
 Keep local copies of both until the app itself runs on Docker — the local
 frontend still serves `/img/land` from `test/data/img`.
+
+## App pack (image + stack ready 2026-10-23, not deployed)
+
+`server/index.js` serves `dist/` when it exists (SPA fallback included), so the
+same server file runs in dev and in the container. Packing pieces:
+
+- `server/Dockerfile` — two-stage `oven/bun:1`; the build stage runs
+  `bun run build`, so `docs/*.md` must stay in the context (AboutPane inlines
+  `docs/RELEASE_NOTES.md?raw`).
+- `.dockerignore` — prunes node_modules / dist / out / .git / test/data /
+  test/research / test/out / AUDIT.md.
+- `docker/portainer-stack.yml` — service `fs-app`, **8788→8787**, `DATABASE_URL`
+  through fs-db's host port, `IMAGE_ROOT=/app/data` bind-mounted from the NAS
+  image share.
+- Deploy route that keeps code off the NAS: build on the PC
+  (`docker build -f server/Dockerfile -t fieldscrapper:latest .`),
+  `docker save` → copy → `docker load` on the NAS, then deploy the stack yml in
+  Portainer.
+- `run-dev.cmd` (repo root) opens the dev pair (API :8787 + Vite :5173) already
+  pointed at the NAS DB.

@@ -12,6 +12,7 @@
  */
 import express from "express";
 import cors from "cors";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import session from "express-session";
@@ -691,6 +692,22 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
  * only because the request loop starts later than the next synchronous line.
  * Route order should be what the file says it is. */
 app.use("/api", (_req, res) => res.status(404).json({ error: "unknown endpoint" }));
+
+/* Built frontend when it exists (the Docker image carries dist/): serve the
+ * static bundle and hand the remaining GET paths to the SPA. Plain middleware
+ * on purpose - Express 5's path-pattern syntax buys nothing for one fallback.
+ * In dev dist/ is absent, so nothing is mounted and Vite's :5173 keeps doing
+ * this job through its /api and /img proxies. */
+const DIST = path.resolve(HERE, "..", "dist");
+if (fs.existsSync(path.join(DIST, "index.html"))) {
+    app.use(express.static(DIST, { maxAge: "1h", index: false, fallthrough: true }));
+    app.use((req, res, next) => {
+        if (req.method !== "GET" || req.path.startsWith("/api/")
+            || req.path.startsWith("/img/")) return next();
+        res.sendFile(path.join(DIST, "index.html"));
+    });
+    console.log(`  frontend served from ${DIST}`);
+}
 
 /* Every route above queries Postgres, and Express's default error handler
  * answers with an HTML body - which lib/api.ts can only report to the user as

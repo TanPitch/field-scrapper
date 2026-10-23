@@ -1,0 +1,24 @@
+# Portainer stack - Field Scrapper (one container: frontend dist + API).
+#
+# Deploy route that keeps the code off the NAS: build the image on the PC,
+#   docker build -f server/Dockerfile -t fieldscrapper:latest .
+# carry it over (docker save -o fieldscrapper.tar fieldscrapper:latest, copy,
+# docker load -i fieldscrapper.tar on the NAS), then deploy this stack.
+#
+# The existing fs-db PostgreSQL container is NOT part of this stack - it is
+# reached over the host port it already publishes (192.168.1.137:33200).
+# NOTE: images bind path may need to match your NAS share layout exactly.
+services:
+  fs-app:
+    image: fieldscrapper:latest
+    container_name: fs-app
+    restart: unless-stopped
+    ports:
+      - "8788:8787"                     # then open http://<nas-ip>:8788
+    environment:
+      DATABASE_URL: postgres://postgres:landmap@192.168.1.137:33200/landmap
+      IMAGE_ROOT: /app/data
+      # NODE_ENV: production             # only together with SESSION_SECRET
+      # SESSION_SECRET: change-me-please
+    volumes:
+      - /mnt/disk-01/App_Storage/field-scrapper/data:/app/data
