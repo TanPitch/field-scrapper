@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
 import { toast } from '../../../store/useApp';
 import { btn, inp, setSec } from '../../ui/styles';
+import { useTipProps } from '../../ui/Tip';
 
 /** One parcel the resolve cascade could not place, as /api/admin/coord-gaps returns it. */
 interface Gap {
@@ -268,22 +269,23 @@ export function CoordGapsPane() {
           it. Full-bleed (-mx/px) so the sticky surface reads as the pane's own
           header bar rather than a floating card. */}
       <div className={`${big
-        ? 'sticky top-0 z-[2] -mx-3 bg-panel px-3 pb-2 pt-3'
-        : 'mb-2'} flex flex-wrap items-center gap-1.5`}>
+        ? 'sticky top-8 z-[2] -mx-3 bg-panel px-3 pb-2 pt-3'
+        : 'mb-2'}`}>
+      <div className={'flex flex-wrap items-center gap-1.5'}>
         <input
           className={`${inp} min-w-0 flex-1`}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="ค้นหา จังหวัด / อำเภอ / เลขโฉนด / คดี…"
         />
-        <button className={btn} onClick={() => void load()} disabled={busy}>
-          <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> {busy ? 'กำลังโหลด…' : 'โหลดใหม่'}
+        <button className={btn} {...useTipProps(busy ? 'กำลังโหลด…' : 'โหลดใหม่')} onClick={() => void load()} disabled={busy}>
+          <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
         </button>
-        <button className={btn} onClick={() => setBig(!big)}>
-          {big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? 'ย่อ' : 'เต็มจอ'}
+        <button className={btn} {...useTipProps(big ? 'ย่อ' : 'เต็มจอ')} onClick={() => setBig(!big)}>
+          {big ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
         </button>
-        <button className={btn} onClick={() => setPasteOpen(!pasteOpen)} disabled={busy}>
-          <ClipboardPaste size={13} /> แปะข้อความ
+        <button className={btn} {...useTipProps('แปะข้อความ')} onClick={() => setPasteOpen(!pasteOpen)} disabled={busy}>
+          <ClipboardPaste size={13} />
         </button>
       </div>
 
@@ -375,6 +377,7 @@ export function CoordGapsPane() {
           );
         })}
       </div>
+      </div>
 
       <table className="mt-3 w-full text-[11.5px]">
         <thead>
@@ -453,7 +456,7 @@ export function CoordGapsPane() {
          [data-portal] targets, so a click anywhere in this frame no longer
          closes the drawer that hosts the pane — it used to read as "click
          anything and it all vanished". */
-      <div data-portal className="fixed inset-0 z-[120] overflow-y-auto bg-panel p-3">
+      <div data-portal className="fixed inset-0 z-[120] overflow-y-auto bg-panel p-3" data-selectable>
         <button
           className="fixed right-3 top-3 z-[121] inline-flex size-[31px] cursor-pointer items-center justify-center rounded-lg border border-line2 bg-panel text-dim transition hover:text-ink"
           onClick={() => setBig(false)}
@@ -462,5 +465,8 @@ export function CoordGapsPane() {
       </div>
     ), document.body);
   }
-  return <div className="px-3 pb-6">{body}</div>;
+  /* data-selectable: the missing-data rows (deed numbers, districts, notes)
+     are exactly what an admin copies elsewhere, so the pane opts out of the
+     body-wide user-select:none. */
+  return <div className="px-3 pb-6" data-selectable>{body}</div>;
 }

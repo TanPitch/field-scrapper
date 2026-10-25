@@ -77,10 +77,13 @@ export function ColumnPicker({ anchor, onClose }: { anchor: HTMLElement; onClose
         return (
           <div
             key={k} data-ck={k}
-            className={`relative flex touch-none items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-panel2 ${isDrag ? 'rounded-md opacity-50 outline outline-1 outline-accent' : ''} ${mark}`}
+            className={`relative flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-panel2 ${isDrag ? 'rounded-md opacity-50 outline outline-1 outline-accent' : ''} ${mark}`}
             onPointerMove={move} onPointerUp={end} onPointerCancel={end}
           >
-            <span className="inline-flex flex-none cursor-grab p-0.5 text-dim2" {...useTipProps('ลากเพื่อสลับลำดับ')} onPointerDown={e => down(e, k)}><Grip /></span>
+            {/* Reorder starts ONLY here: on small screens the list scrolls
+                with the finger anywhere else, and the grip itself opts out of
+                scroll (touch-none) so a touch drag is a reorder, not a scroll. */}
+            <span className="inline-flex flex-none cursor-grab touch-none select-none p-0.5 text-dim2" {...useTipProps('ลากเพื่อสลับลำดับ')} onPointerDown={e => down(e, k)}><Grip /></span>
             <button
               type="button" {...useTipProps('ปักหมุดคอลัมน์นี้ไว้ซ้าย')} onClick={() => toggleColPin(k)}
               className={`inline-flex cursor-pointer border-none bg-transparent p-0.5 ${pinned.has(k) ? 'text-accent' : 'text-dim2 opacity-55 hover:text-ink'}`}

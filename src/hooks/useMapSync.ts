@@ -246,14 +246,20 @@ export function useMapSync(): void {
   useEffect(() => { if (mapReady) syncPinSelectionRing(); }, [mapReady, pinSel, cctvList, sensList, transportList]);
   useEffect(() => { if (mapReady) { applyPinMarkerSize(); applyPaint(); } }, [mapReady, markerSize]);
 
-  /* keep the canvas sized when side panels animate */
+  /* keep the canvas sized when side panels animate — once, at the END.
+   * A resize on every frame re-rasters the canvas repeatedly while the
+   * bottom panel is dragged and the map strobes. Waiting ~140ms of quiet
+   * gives zero resizes during the drag and exactly one when it is over. */
   useEffect(() => {
     const map = getMap();
     const el = map?.getContainer();
     if (!map || !el) return;
-    let raf = 0;
-    const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => map.resize()); });
+    let t = 0;
+    const ro = new ResizeObserver(() => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => map.resize(), 140);
+    });
     ro.observe(el);
-    return () => { ro.disconnect(); cancelAnimationFrame(raf); };
+    return () => { ro.disconnect(); window.clearTimeout(t); };
   }, [mapReady]);
 }

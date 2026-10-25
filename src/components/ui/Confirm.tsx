@@ -38,7 +38,10 @@ export function Confirm({ state, close }: { state: ConfirmState | null; close: (
 
   return (
     <div className="fixed inset-0 z-[400] grid place-items-center bg-bg/70 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-[380px] rounded-[14px] border border-line2 bg-panel p-5 shadow-[0_24px_60px_rgba(0,0,0,.6)]">
+      {/* data-selectable: the body is `user-select:none` by default; without
+          this the confirm's title/body (the text you are about to type or copy,
+          like a username) could not be selected at all. */}
+      <div className="w-full max-w-[380px] rounded-[14px] border border-line2 bg-panel p-5 shadow-[0_24px_60px_rgba(0,0,0,.6)]" data-selectable>
         <div className={`flex items-center gap-2 text-[13.5px] font-semibold ${danger ? 'text-[#FF8B7D]' : 'text-ink'}`}>
           <AlertTriangle size={16} />{state.title}
         </div>

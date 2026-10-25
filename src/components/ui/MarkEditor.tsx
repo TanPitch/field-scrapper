@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { ICON_CHOICES, PRESET_COLORS } from '../../lib/richText';
-import { parseMark } from '../../lib/markText';
 import { useTipProps } from './Tip';
 
 /**
@@ -11,6 +10,13 @@ import { useTipProps } from './Tip';
  * rather than documents: B/I/U/highlight/ink wrap the selection in `<b>`,
  * `<i>`, `<u>`, `<bg=#hex>`, `<fg=#hex>` tags that stay visible in the
  * textarea, exactly like the user asked. lib/markText is the single parser.
+ *
+ * The first version lost the textarea's selection the moment a toolbar button
+ * was pressed (mousedown moved focus to the button, selectionStart collapsed),
+ * so "styling text" wrapped nothing. Every toolbar button now swallows
+ * mousedown — the click still fires, but focus and the highlighted range stay
+ * in the textarea. No preview box: the user asked for it removed; the markup is
+ * the thing they type, and the cell next door can be glimpsed for reassurance.
  *
  * Click-away and Escape COMMIT, not discard — losing a typed note to a stray
  * click would be hostile.
@@ -41,11 +47,14 @@ export function MarkEditor({
     };
   });
 
+  /** Toolbar buttons must not take focus from the textarea, or the selection
+   *  they are supposed to wrap is gone before onClick reads it. */
+  const keepSel = (e: React.MouseEvent) => { e.preventDefault(); };
+
   const wrapTag = (flag: 'b' | 'i' | 'u' | 'bg' | 'fg', hex?: string) => {
     const el = ta.current;
     if (!el) return;
-    const s = el.selectionStart, e = el.selectionEnd;
-    if (s == null || e == null) return;
+    const s = el.selectionStart ?? 0, e = el.selectionEnd ?? s;
     const open = flag === 'bg' || flag === 'fg' ? `<${flag}=#${hex}>` : `<${flag}>`;
     const close = `</${flag}>`;
     const mid = v.slice(s, e);
@@ -74,12 +83,12 @@ export function MarkEditor({
       {/* The toolbar sits over the text, editor-style. Colour buttons open a
           small palette; emoji inserts a plain character (no tag needed). */}
       <div className="mb-1.5 flex items-center gap-1">
-        <button type="button" className={`${bSel} font-bold`} {...useTipProps('ตัวหนา <b>')} onClick={() => wrapTag('b')}>B</button>
-        <button type="button" className={`${bSel} italic`} {...useTipProps('ตัวเอียง <i>')} onClick={() => wrapTag('i')}>I</button>
-        <button type="button" className={`${bSel} underline`} {...useTipProps('ขีดเส้นใต้ <u>')} onClick={() => wrapTag('u')}>U</button>
+        <button type="button" className={`${bSel} font-bold`} onMouseDown={keepSel} {...useTipProps('ตัวหนา <b>')} onClick={() => wrapTag('b')}>B</button>
+        <button type="button" className={`${bSel} italic`} onMouseDown={keepSel} {...useTipProps('ตัวเอียง <i>')} onClick={() => wrapTag('i')}>I</button>
+        <button type="button" className={`${bSel} underline`} onMouseDown={keepSel} {...useTipProps('ขีดเส้นใต้ <u>')} onClick={() => wrapTag('u')}>U</button>
         <div className="mx-0.5 h-4 w-px flex-none bg-line2" />
         <div className="relative">
-          <button type="button" className={bSel} {...useTipProps('ใส่สัญลักษณ์')} onClick={() => setPicker(picker === 'emoji' ? '' : 'emoji')}>🙂</button>
+          <button type="button" className={bSel} onMouseDown={keepSel} {...useTipProps('ใส่สัญลักษณ์')} onClick={() => setPicker(picker === 'emoji' ? '' : 'emoji')}>🙂</button>
           {picker === 'emoji' && (
             <div className="absolute left-0 top-full z-[99] mt-1 w-[212px] rounded-[8px] border border-line2 bg-panel p-1.5 shadow-panel">
               <div className="grid grid-cols-8 gap-0.5">
@@ -87,6 +96,7 @@ export function MarkEditor({
                   <button
                     key={ic} type="button"
                     className="grid size-[22px] place-items-center rounded-[4px] text-[12px] transition hover:bg-panel2"
+                    onMouseDown={keepSel}
                     onClick={() => {
                       const el = ta.current;
                       const at = el ? el.selectionStart ?? v.length : v.length;
@@ -104,7 +114,7 @@ export function MarkEditor({
         </div>
         <div className="relative">
           <button
-            type="button" className={bSel}
+            type="button" className={bSel} onMouseDown={keepSel}
             {...useTipProps('สีพื้นหลังข้อความ <bg=#hex>')}
             onClick={() => setPicker(picker === 'bg' ? '' : 'bg')}
             style={{ fontWeight: 700 }}
@@ -114,14 +124,14 @@ export function MarkEditor({
           {picker === 'bg' && (
             <div className="absolute left-0 top-full z-[99] mt-1 flex w-[150px] flex-wrap gap-1 rounded-[8px] border border-line2 bg-panel p-1.5 shadow-panel">
               {PRESET_COLORS.map(c => (
-                <button key={c} type="button" className={sw} style={{ background: c }} onClick={() => { wrapTag('bg', c); setPicker(''); }} />
+                <button key={c} type="button" className={sw} onMouseDown={keepSel} style={{ background: c }} onClick={() => { wrapTag('bg', c); setPicker(''); }} />
               ))}
             </div>
           )}
         </div>
         <div className="relative">
           <button
-            type="button" className={bSel}
+            type="button" className={bSel} onMouseDown={keepSel}
             {...useTipProps('สีตัวอักษร <fg=#hex>')}
             onClick={() => setPicker(picker === 'fg' ? '' : 'fg')}
           >
@@ -130,7 +140,7 @@ export function MarkEditor({
           {picker === 'fg' && (
             <div className="absolute left-0 top-full z-[99] mt-1 flex w-[150px] flex-wrap gap-1 rounded-[8px] border border-line2 bg-panel p-1.5 shadow-panel">
               {PRESET_COLORS.map(c => (
-                <button key={c} type="button" className={sw} style={{ background: c }} onClick={() => { wrapTag('fg', c); setPicker(''); }} />
+                <button key={c} type="button" className={sw} onMouseDown={keepSel} style={{ background: c }} onClick={() => { wrapTag('fg', c); setPicker(''); }} />
               ))}
             </div>
           )}
@@ -146,11 +156,6 @@ export function MarkEditor({
         rows={3}
         className="mb-2 w-full resize-y rounded-[6px] border border-line2 bg-bg px-2 py-1 text-[12px] leading-snug outline-none focus:border-accent"
       />
-
-      {/* Live preview — markup applied as parseMark will render it. */}
-      <div className="mb-2 rounded-[6px] border border-line2 bg-bg px-2 py-1.5 text-[11.5px] whitespace-pre-wrap break-words">
-        <RichPreview value={v || 'ตัวอย่างโปร่ง <b>ชื่อ</b>'} />
-      </div>
 
       <div className="flex justify-end gap-1.5">
         <button
@@ -170,11 +175,4 @@ export function MarkEditor({
       </div>
     </div>
   );
-}
-
-/* Local preview shim — the full RichText needs nothing more, but keeps this
-   file free of the whole-field style plumbing. */
-function RichPreview({ value }: { value: string }) {
-  const spans = parseMark(value);
-  return <span className="min-w-0">{spans.map((sp, i) => <span key={i} style={sp.css}>{sp.text}</span>)}</span>;
 }

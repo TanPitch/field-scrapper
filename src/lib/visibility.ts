@@ -1,4 +1,4 @@
-﻿import { MIN_ZOOM } from '../data/constants';
+﻿import { MIN_ZOOM, STATUS } from '../data/constants';
 import { ALL_PARCELS } from '../data/liveData';
 import type { BBox, FilterArea, Filters, LngLat, Parcel, SortKey, SortState, Status } from '../types';
 import { closeRing, pip } from './geo';
@@ -53,8 +53,20 @@ export function dataPass(p: Parcel, { filters: f, statusVisible }: Pick<RowInput
     if (f.maxElev != null && e > f.maxElev) return false;
   }
   if (f.text) {
+    /* The table search box finds the words actually printed on the row, so the
+     * haystack is every field a cell can render - not just name + deed. Status
+     * is matched by its Thai label, money both raw and comma-grouped so
+     * "1,456,000" typed with separators still lands. */
     const q = f.text.toLowerCase();
-    if (!(p.name.toLowerCase().includes(q) || p.deed.toLowerCase().includes(q))) return false;
+    const hay: unknown[] = [
+      p.name, p.deed, p.deedNo, p.province, p.amp, p.tambon,
+      p.caseNo, p.caseNoRaw, p.caseYear, p.order, p.propertyType,
+      p.court, p.plaintiff, p.defendant, p.remark,
+      p.enforcementOffice, p.possessor, p.ownerFile, p.dataSource,
+      STATUS[p.status]?.th, p.price, p.price.toLocaleString('en-US'),
+      p.wah, p.id, p.lotId,
+    ];
+    if (!hay.some(s => s != null && s !== '' && String(s).toLowerCase().includes(q))) return false;
   }
   return true;
 }
