@@ -217,6 +217,22 @@ export function DetailView() {
   /* Only rounds LED has actually dated — see the rounds table below. */
   const scheduledRounds = p.rounds.filter((r) => r.date != null);
 
+  /* LED prints one committee-set price per lot (ราคาที่กำหนดโดยคณะกรรมการ
+     กำหนดราคาทรัพย์). The scraper stored that figure in officer_price; the
+     committee_price column instead holds the page's floor figure on
+     group-sale sheets — a copy of the opening price (ผบ.2545/2562 carried
+     80,177,600 there while LED's committee value is 98,329,928) — or plain 0.
+     A genuinely distinct committee_price wins, officer_price is the
+     fallback, and neither may repeat the opening price: doing so would
+     present a round figure as a committee decision. */
+  const firstPrice = p.hist[0]?.v ?? null;
+  const committeePrice: number | null =
+    p.committeePrice != null && p.committeePrice > 0 && p.committeePrice !== firstPrice
+      ? p.committeePrice
+      : p.enforcementOfficerPrice != null && p.enforcementOfficerPrice > 0 && p.enforcementOfficerPrice !== firstPrice
+        ? p.enforcementOfficerPrice
+        : null;
+
   /* Index of the round the lot sold at, from LED's status code 1. Falls back to
      the first round LED marks as a sale by label, because a parcel can arrive
      from a fixture without status codes. -1 means "not found". */
@@ -249,13 +265,22 @@ export function DetailView() {
           ['ระวาง', td?.rawang],
           ['หลักประกัน', fmt(p.collateral)],
           ...(p.spouseCollateral != null ? [['คู่สมรส หลักประกัน', fmt(p.spouseCollateral)] as [string,string]] : []),
-          ...(p.expertPrice != null ? [['ราคา ผู้เชี่ยวชาญ', fmt(p.expertPrice)] as [string,string]] : []),
-          ...(p.enforcementOfficerPrice != null ? [['ราคา เจ้าพนักงานบังคับคดี', fmt(p.enforcementOfficerPrice)] as [string,string]] : []),
-          ...(p.assessorPrice != null ? [['ราคา เจ้าพนักงานประเมินราคา', fmt(p.assessorPrice)] as [string,string]] : []),
-          ...(p.committeePrice != null ? [['ราคา คณะกรรมการ', fmt(p.committeePrice)] as [string,string]] : []),
+          ...(p.expertPrice != null && p.expertPrice > 0 ? [['ราคา ผู้เชี่ยวชาญ', fmt(p.expertPrice)] as [string,string]] : []),
+          ...(committeePrice != null ? [['ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์', fmt(committeePrice)] as [string,string]] : []),
+          /* The officer's own figure still shows on its own row — hidden when
+             it IS the committee row (fallback above), because printing one
+             number twice under two names explains nothing. */
+          ...(p.enforcementOfficerPrice != null && p.enforcementOfficerPrice > 0 && p.enforcementOfficerPrice !== committeePrice
+            ? [['ราคา เจ้าพนักงานบังคับคดี', fmt(p.enforcementOfficerPrice)] as [string,string]] : []),
+          ...(p.assessorPrice != null && p.assessorPrice > 0 ? [['ราคา เจ้าพนักงานประเมินราคา', fmt(p.assessorPrice)] as [string,string]] : []),
           // ['การขายรอบถัดไป', nextRound?.date != null ? `${fdate(nextRound.date)} · ${nextRound.status}` : (nextRound?.status ?? '-')],
           ['วันที่ประกาศ', fdate(p.announce)],
           ...(p.soldTs ? [['วันที่ขายออก', fdate(p.soldTs)] as [string, string]] : []),
+          ...(p.soldPrice != null ? [['ราคาที่ขายได้', fmt(p.soldPrice)] as [string, string]] : []),
+          /* Freshness stamp — how long ago LED last confirmed this data. A row
+             the scraper has not refreshed for months then reads as old, not
+             as current fact. */
+          ...(p.ledTs != null ? [['ข้อมูลจาก LED ณ', fdate(p.ledTs)] as [string, string]] : []),
           ...(mortgage ? [['ติดจำนอง', `${fmt(mortgage.amount)} — ${mortgage.bank}`] as [string,string]] : []),
                     /* Height is only meaningful where the coordinate is the parcel's own.
              For a subdistrict-centroid fallback the row says so instead of

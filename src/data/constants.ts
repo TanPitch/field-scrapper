@@ -139,6 +139,11 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
      any of the -10/-20/-30% reductions. Distinct from the headline price, which
      is the next round's. */
   smartPrice: { label: 'ราคาเปิด', w: 132, sortable: true, num: true, sortKey: 'smartPrice' },
+  /* The winning bid — our own sold round (status_code 1). reports.asp answers
+     with the same number but only covers the last 6 months online, so the
+     ledger derives it from the rounds the scraper already stores. '-' while
+     the lot is still selling. */
+  soldPrice: { label: 'ราคาที่ขายได้', w: 140, num: true, sortable: true, sortKey: 'soldPrice', center: true },
   /* User-authored, per parcel. Blank until typed into — which is the point: an
      empty cell means "I have not named this", not "this has no name". */
   pName: { label: 'ชื่อกำกับ', w: 150 },
@@ -176,7 +181,7 @@ export const COL_DEFS: Record<ColKey, ColDef> = {
      table says nothing. นัดที่ and วันที่ are the parts worth reading. */
   roundNext: { label: 'นัดถัดไป', w: 130, subs: ['นัดที่', 'วันที่'], center: true },
 };
-export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast', 'roundNext'];
+export const DEFAULT_COL_ORDER: ColKey[] = ['no', 'status', 'size', 'price', 'smartPrice', 'soldPrice', 'perWah', 'pName', 'pNote', 'saleBy', 'seller', 'ownerFile', 'propertyType', 'deedNo', 'amp', 'tambon', 'court', 'caseNo', 'plaintiff', 'defendant', 'possessor', 'enforcementOffice', 'collateral', 'spouseCollateral', 'expertPrice', 'enforcementOfficerPrice', 'assessorPrice', 'committeePrice', 'announceDate', 'announce', 'lastTs', 'province', 'roundLast', 'roundNext'];
 /* The two annotation columns are visible but empty by default — a user who wants
    them reaches for them immediately, and they are the whole point of the
    feature. Height stays hidden because it is only meaningful where a parcel has

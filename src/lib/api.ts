@@ -164,6 +164,9 @@ export interface ApiParcelProps {
   bidSecurity: number | null;
   publishedDate: string | null;
   firstRoundDate: string | null;
+  /** When our scraper last saw this lot's LED page — the freshness stamp the
+   *  panel prints as "ข้อมูลจาก LED ณ". Null when the scraper has not set it. */
+  ledSeen: string | null;
   remark: string | null;
   court: string | null;
   plaintiff: string | null;

@@ -97,6 +97,13 @@ export interface Parcel {
   tambon: string;
   announce: number;
   soldTs: number | null;
+  /** The winning bid itself — the price of the round LED marks status_code 1.
+   *  Optional because fixtures predate the field; absence renders '-' and
+   *  must not be read as a zero price sold. */
+  soldPrice?: number | null;
+  /** When our scraper last saw this lot's LED page. Undefined on fixtures and
+   *  on any server predating the column — the panel then omits the row. */
+  ledTs?: number | null;
   hist: HistPoint[];
   events: PriceEvent[];
   resell: boolean;
@@ -259,7 +266,7 @@ export interface Filters {
 /** Price-chart x-axis marker interval (labels + gridline spacing). */
 export type ChartTick = 'none' | 'year' | 'm6' | 'm4' | 'm3';
 
-export type SortKey = 'name' | 'status' | 'wah' | 'height' | 'price' | 'smartPrice' | 'perWah' | 'lastTs' | 'announce' | 'province';
+export type SortKey = 'name' | 'status' | 'wah' | 'height' | 'price' | 'smartPrice' | 'soldPrice' | 'perWah' | 'lastTs' | 'announce' | 'province';
 export interface SortState { key: SortKey; dir: 'asc' | 'desc' }
 
 /* ---------- overlays ---------- */
@@ -293,7 +300,7 @@ export type RightView =
 
 /* ---------- table columns ---------- */
 export type ColKey =
-  | 'no' | 'name' | 'status' | 'size' | 'height' | 'price' | 'smartPrice' | 'perWah'
+  | 'no' | 'name' | 'status' | 'size' | 'height' | 'price' | 'smartPrice' | 'soldPrice' | 'perWah'
   /* pName / pNote are the user's own name and note for the parcel, not its
      official ones — they are columns of user text, hence the p prefix. */
   | 'pName' | 'pNote'

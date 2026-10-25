@@ -140,6 +140,10 @@ const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot,
          that the land cost nothing. Printing "0" invites the reader to believe
          the second; "-" reads as absent. */
       case 'price': return p.price > 0 ? fmt(p.price) : '-';
+      /* The winning bid, or '-' while the lot is still on the market — the
+         gap is information too: an empty soldPrice means unsold, not unknown
+         (for a genuinely sold lot the round is always in the ladder). */
+      case 'soldPrice': return p.soldPrice != null ? fmt(p.soldPrice) : '-';
       /* The cascade's opening price, straight from the ladder's first rung. */
       case 'smartPrice': return p.hist[0]?.v != null ? fmt(p.hist[0].v) : '—';
       /* The user's own text about this parcel. Editable by clicking the cell;
@@ -166,10 +170,13 @@ case 'ownerFile': return p.ownerFile;
       case 'enforcementOffice': return p.enforcementOffice;
       case 'collateral': return fmt(p.collateral);
       case 'spouseCollateral': return p.spouseCollateral != null ? fmt(p.spouseCollateral) : '-';
-      case 'expertPrice': return p.expertPrice != null ? fmt(p.expertPrice) : '-';
+      case 'expertPrice': return p.expertPrice != null && p.expertPrice > 0 ? fmt(p.expertPrice) : '-';
       case 'enforcementOfficerPrice': return p.enforcementOfficerPrice != null ? fmt(p.enforcementOfficerPrice) : '-';
       case 'assessorPrice': return p.assessorPrice != null ? fmt(p.assessorPrice) : '-';
-      case 'committeePrice': return p.committeePrice != null ? fmt(p.committeePrice) : '-';
+      /* committee_price is 0 wherever LED's page printed no committee figure
+         and holds a copy of the opening price on group-sale sheets — 0 and
+         copies are "no committee statement", not ฿0. */
+      case 'committeePrice': return p.committeePrice != null && p.committeePrice > 0 ? fmt(p.committeePrice) : '-';
       case 'announceDate': return fdate(p.announce);
       case 'amp': return p.amp;
       case 'announce': return fdate(p.announce);
@@ -272,7 +279,15 @@ const a = useAnnotations(s => s.layers[`parcel-${id}`]);
              table's scroll container). Mixing the two put the editor
              off-screen and it looked like clicking did nothing. */
           const r = e.currentTarget.closest('td,div')?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
-          onEdit({ id, field, at: { x: r.left, y: r.bottom + 4 } });
+          /* The editor is ~280px tall with its toolbar and buttons. When the
+             cell sits near the bottom edge, opening it below lands half the
+             panel off-screen — flip it above the cell, clamped to the top of
+             the viewport. */
+          const H = 290;
+          const y = r.bottom + 4 + H <= window.innerHeight
+            ? r.bottom + 4
+            : Math.max(8, r.top - H - 4);
+          onEdit({ id, field, at: { x: r.left, y } });
         }}
         {...useTipProps(text ? 'คลิกเพื่อแก้ไข' : 'คลิกเพื่อใส่ชื่อ/หมายเหตุของคุณ')}
         className="grid size-[16px] flex-none cursor-pointer place-items-center rounded-[4px] text-[9px] text-dim2 opacity-0 transition hover:bg-panel2 hover:text-accent focus-visible:opacity-100 group-hover/annot:opacity-100"
@@ -603,7 +618,12 @@ on release the table snaps to the new order with no movement. */
               text={(parcelAnnots[`parcel-${annotEdit.id}`]?.[annotEdit.field] as string) ?? ''}
               onDone={next => {
                 const cur = parcelAnnots[`parcel-${annotEdit.id}`] ?? {};
-                setLayer(annotEdit.id, { ...cur, [annotEdit.field]: next.trim() || null });
+                /* The key is the SAME form the cells read: `parcel-${id}`.
+                   Passing the bare parcel id stored the annotation under "123"
+                   while AnnotCell read "parcel-123" — the save was written into
+                   a drawer nobody opened, which is exactly the "can't save"
+                   report. */
+                setLayer(`parcel-${annotEdit.id}`, { ...cur, [annotEdit.field]: next.trim() || null });
               }}
               onClose={() => setAnnotEdit(null)}
             />

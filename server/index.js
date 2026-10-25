@@ -289,6 +289,10 @@ app.get("/api/parcels", async (req, res) => {
                l.start_price, l.start_price_src, l.status, l.next_round_date,
                l.closed_at, l.close_reason, l.close_code, l.committee_price, l.led_price,
                l.officer_price, l.expert_price, l.published_date,
+               /* When the ingest last saw this lot, so the panel can stamp the
+                  data with a freshness date instead of asserting LED's state
+                  indefinitely. */
+               l.last_seen,
                l.first_round_date, l.bid_security, l.remark, l.group_lot_count,
                l.court, l.plaintiff, l.defendant, l.owner, l.legal_exec_dept,
                /* There is no "collateral" column in this schema — the amount LED
@@ -395,6 +399,7 @@ FROM parcels p
                 bidSecurity: toNum(r.bid_security),
                 publishedDate: isoDate(r.published_date),
                 firstRoundDate: isoDate(r.first_round_date),
+                ledSeen: isoDate(r.last_seen),
                 remark: r.remark,
                 imageCount: r.img_count ?? 0,
                 /* The unit badge the marker popup reads. The query already

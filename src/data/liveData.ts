@@ -82,6 +82,13 @@ function mapHist(rounds: SellRound[], startPrice: number | null, announceTs: num
   }
   for (let i = 0; i < rounds.length; i++) {
     const r = rounds[i];
+    /* A ถอนการยึด round is LED taking the land out of seizure: the sale
+     * sequence ends there. Rows the ledger prints after it are leftovers, not
+     * a market the money ever reached, so nothing after this round - not the
+     * withdrawal round itself - becomes a chart point. งดขาย is NOT such an
+     * end: a suspended round is followed by a real next round, so its points
+     * keep flowing. */
+    if (r.status.includes('ถอนการยึด')) break;
     if (r.price == null || r.date == null) continue;
     roundToHist[i] = pts.length;
     pts.push({ d: r.date, v: r.price });
@@ -139,9 +146,9 @@ export const noSaleRound = (r: SellRound): boolean => r.status.trim() === 'ง�
 
 /* LED leaves a lot `active` after every one of its rounds has come back งดขาย.
  * Nothing is being auctioned, so กำลังขาย would advertise a next date for land
- * that is not going to market. The sibling lot in the same building usually
- * carries close_reason=withdrawn, which already says the same thing - this
- * catches the case where the surviving lot has no close reason of its own. */
+ * that is not going to market. That dead end is หมดอายุประกาศ - the
+ * announcement expired with no bidders - never ยกเลิกการขาย, which is kept for
+ * the server's own close_reason (court lifted the attachment). */
 export const neverOnMarket = (rounds: SellRound[]): boolean => {
   const dated = rounds.filter((r) => r.date != null);
   return dated.length > 0 && dated.every(noSaleRound);
@@ -149,7 +156,7 @@ export const neverOnMarket = (rounds: SellRound[]): boolean => {
 
 function mapStatus(raw: string | null, rounds: SellRound[]): Status {
   if (raw === 'sold' || raw === 'inactive' || raw === 'cancelled') return raw;
-  if (raw === 'sale' && neverOnMarket(rounds)) return 'cancelled';
+  if (raw === 'sale' && neverOnMarket(rounds)) return 'inactive';
   return 'sale';
 }
 
@@ -181,6 +188,12 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   const { pts: hist, roundToHist } = mapHist(rounds, startPrice, announceTs, now);
   const lastPrice = hist.length ? hist[hist.length - 1].v : (p.askingPrice ?? 0);
 
+  /* LED's own "sold" marker: the round carrying status_code 1 is the winning
+   * bid, so its date and price are exactly what a printed report would call
+   * the sold date and ราคาที่ขายได้. A lot resold after a failed first sale
+   * has two such rounds — the most recent one is the live fact. */
+  const sold = rounds.filter((r) => r.statusCode === 1).pop() ?? null;
+
   /* LED publishes a ห้องชุด floor area in the same rai/ngan/wa triple as land, so
      30.35 means square metres on a condo unit. Printing a dash told the reader
      nothing; showing the figure lets them judge it, and ห้องชุด in the row above
@@ -206,7 +219,12 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     amp: p.districtName ?? p.amphur ?? '',
     tambon: p.tambon ?? '',
     announce: announceTs,
-    soldTs: null,
+    soldTs: sold?.date ?? null,
+    soldPrice: sold?.price ?? null,
+    /* Freshness: when the ingest last confirmed this lot still matches LED.
+       Nothing shows when the server predates the column — a missing stamp
+       cannot be rendered as an old one. */
+    ledTs: isoTs(p.ledSeen),
     hist,
     events: mapEvents(status, rounds, roundToHist, announceTs),
     resell: false,
