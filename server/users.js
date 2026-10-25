@@ -337,6 +337,27 @@ router.delete("/users/:id", requireAdmin, async (req, res) => {
     res.json({ ok: true });
 });
 
+/* Self-service account removal (the profile page's danger zone). Mirrors the
+ * admin delete above — prefs, table layout and annotations ride the cascade,
+ * sessions go explicitly, else a dead cookie keeps answering /me — but the
+ * caller IS the user, so every device session of this user dies the same way
+ * and their own session cookie is destroyed right here. The last active admin
+ * is refused: without that rule a lone operator could evaporate the only
+ * sign-in. */
+router.delete("/me", requireUser, async (req, res) => {
+    const { rows } = await req.db.query(`SELECT is_admin FROM app_users WHERE id = $1`, [req.userId]);
+    if (!rows.length) return res.status(404).json({ error: "no such user" });
+    if (rows[0].is_admin) {
+        const { rows: admins } = await req.db.query(
+            `SELECT count(*)::int AS n FROM app_users
+              WHERE is_admin AND NOT coalesce(disabled, false) AND id <> $1`, [req.userId]);
+        if (!admins[0].n) return res.status(400).json({ error: "the last admin cannot remove their own account" });
+    }
+    await req.db.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [String(req.userId)]);
+    await req.db.query(`DELETE FROM app_users WHERE id = $1`, [req.userId]);
+    req.session.destroy(() => res.json({ ok: true }));
+});
+
 /* ------------------------------------------------------------------ prefs */
 
 /* Theme, map style, units, toggles — one row per key so adding a preference

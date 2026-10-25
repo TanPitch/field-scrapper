@@ -1,7 +1,8 @@
-import { Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../../lib/api';
 import { patchApp, toast, useApp } from '../../../store/useApp';
+import { useConfirm } from '../../../hooks/useConfirm';
 import { AvatarPicker, AvatarPreview } from '../../ui/AvatarPicker';
 import { Modal } from '../../ui/Modal';
 import { btn, btnAcc, frow, fl, inp, setSec } from '../../ui/styles';
@@ -18,6 +19,7 @@ export function UserPane() {
   const displayName = useApp(s => s.displayName);
   const twoFa = useApp(s => s.twoFa);
   const avatarCfg = useApp(s => s.avatarCfg);
+  const { confirm, dialog } = useConfirm();
 
   const [name, setName] = useState(displayName);
   const dirty = name !== displayName;
@@ -55,8 +57,32 @@ export function UserPane() {
     toast('เปลี่ยนรหัสผ่านแล้ว');
   };
 
+  const removeAccount = async () => {
+    /* The type-word confirm is the brake: `requireText` keeps the
+       confirm button dead until the user types their own username, exactly the
+       GitHub pattern the danger zone asked for. */
+    const ok = await confirm({
+      title: 'ลบบัญชีของคุณ',
+      body: <>บัญชี <b className="text-ink">@{username}</b> จะถูกลบถาวร พร้อมรูปหน้าชื่อ การตั้งค่า ตาราง ปักหมุด และทุกเครื่องที่ล็อกอินอยู่ — ย้อนกลับไม่ได้</>,
+      confirmText: 'ลบบัญชีถาวร',
+      requireText: username,
+    });
+    if (!ok) return;
+    const r = await api.del('/api/me');
+    if (!r.ok) {
+      toast(r.error === 'the last admin cannot remove their own account'
+        ? 'แอดมินคนสุดท้ายลบบัญชีตัวเองไม่ได้ — ให้สิทธิ์ admin กับคนอื่นก่อน'
+        : `ลบไม่สำเร็จ — ${r.error}`, 'warn');
+      return;
+    }
+    /* Back to the splash: the account no longer exists, so nothing to keep. */
+    patchApp({ signedIn: false });
+    toast('ลบบัญชีแล้ว');
+  };
+
   return (
     <>
+      {dialog}
       {/* ---- profile ---- */}
       <div className={`${setSec} !mt-0.5`}>โปรไฟล์</div>
       <div className="flex items-center gap-3 py-1">
@@ -71,7 +97,7 @@ export function UserPane() {
       {/* display name + the update button below it. Disabled until the text
           differs, which is also what keeps an accidental click from PUTting
           the old value back. */}
-      <div className="mt-1 rounded-[10px] border border-line px-3 py-2.5">
+      <div className="mt-1">
         <div className={frow}>
           <span className={fl}>ชื่อที่แสดง</span>
           <input className={inp} value={name} onChange={e => setName(e.target.value)} placeholder="เช่น สมชาย ใจดี" />
@@ -140,6 +166,21 @@ export function UserPane() {
           </div>
         </Modal>
       )}
+
+      {/* ---- danger zone: self-service account removal. The server enforces
+           the same rules the admin panel does (last admin refused), so what
+           the button explains, the API makes true. ---- */}
+      <div className={`${setSec} !text-[#FF8B7D]`}>โซนอันตราย</div>
+      <button
+        type="button"
+        className="mb-1 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#E5484D]/50 bg-[#E5484D]/[.08] px-3 py-2.5 text-[11.5px] font-medium text-[#FF8B7D] transition hover:bg-[#E5484D]/[.16]"
+        onClick={() => void removeAccount()}
+      >
+        <Trash2 size={13} />ลบบัญชีนี้
+      </button>
+      <p className="text-[10.5px] leading-[1.6] text-dim2">
+        ลบถาวร — ต้องพิมพ์ @ชื่อผู้ใช้เพื่อยืนยัน และจะออกจากระบบทุกเครื่องทันที
+      </p>
     </>
   );
 }
