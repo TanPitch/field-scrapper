@@ -49,6 +49,9 @@ export interface AppState {
       'open' = open price large with the winning bid demoted. Read by
       PriceHeadline's sold branch; sold land only. */
   soldPriceHeadline: 'sold' | 'open';
+  /** Rounds from earlier sale orders (resale history): false = shown dimmed,
+      true = hidden. See saleOrderLabels in DetailView. */
+  hidePrevSaleRounds: boolean;
   /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
   showLandKindIcon: boolean;
   priceBath: boolean;
@@ -185,6 +188,7 @@ export const useApp = create<AppState>(set => ({
   detailRowHidden: [],
   detailRowOrder: [],
   soldPriceHeadline: 'sold',
+  hidePrevSaleRounds: false,
   showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,

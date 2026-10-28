@@ -198,34 +198,27 @@ body.reduce-motion .spin-keep {
 #map canvas {
   outline: none;
 }
-/* The attribution tray: its collapsed ⓘ button was made solid light first
-   (commit 513d84d), but clicking ⓘ EXPANDS the tray itself — details strip
-   included — and that still opened on the dark translucent sheet with grey
-   text: the "detail opening from it is too dark" report. Same treatment as the
-   button: solid #f1f3ee surface the map cannot bleed through, dark ink. The
-   transparency is dropped entirely (no backdrop-filter) — nothing must show
-   through — and the radius is left off so the expanded tray and the square
-   ⓘ button join without a seam. */
+/* The attribution tray went light first (commit 9fde458); the user's final call
+   is the opposite: dark theme with white/light text, matching the map's other
+   chrome (scale, ctrl-group). Still SOLID — no backdrop-filter, nothing shows
+   through from the map — and still radius-free so the expanded tray and the
+   square ⓘ button join without a seam. */
 .maplibregl-ctrl-attrib {
-  background-color: #f1f3ee !important;
+  background-color: #101210 !important;
   background-image: none !important;
-  color: #4a5347;
+  color: #b6bdb2;
   font-size: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 .maplibregl-ctrl-attrib a {
-  color: #4a5347;
+  color: #dfe5da;
 }
-/* The collapsed ⓘ shares the tray's dark surface, which turns the control into
-   a dark chip on a dark map edge. The ENTIRE background must go, not just the
-   colour: MapLibre paints a translucent sheet plus a dark ⓘ glyph as
-   background-image, and a background-color rule alone left that glued on top,
-   so the chip still read grey on the user's screen. Own solid light surface,
-   own glyph redrawn dark to sit on it — any transparency would let the dark
-   tray bleed through and the button reads grey again. */
+/* The ⓘ glyph is painted by MapLibre as a background-image SVG, dark on
+   transparent: on this dark surface it would vanish, so the button carries the
+   same solid dark background and its own light-redrawn ⓘ. */
 .maplibregl-ctrl-attrib-button {
-  background-color: #f1f3ee !important;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8.6' fill='none' stroke='%234a5347' stroke-width='1.7'/%3E%3Ccircle cx='12' cy='8' r='1.15' fill='%234a5347'/%3E%3Cpath d='M10.95 10.9h2.1v6h-2.1z' fill='%234a5347'/%3E%3C/svg%3E") !important;
+  background-color: #101210 !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8.6' fill='none' stroke='%23dfe5da' stroke-width='1.7'/%3E%3Ccircle cx='12' cy='8' r='1.15' fill='%23dfe5da'/%3E%3Cpath d='M10.95 10.9h2.1v6h-2.1z' fill='%23dfe5da'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-scale {
   background: rgba(10, 12, 10, 0.55) !important;

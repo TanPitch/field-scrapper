@@ -37,6 +37,38 @@ import { orderRows } from '../../lib/detailRows';
 const PLACEHOLDER_STATUSES = new Set(['รอประกาศ', 'ยังไม่มีการเปิดประมูล']);
 const isPlaceholderStatus = (s: string): boolean => PLACEHOLDER_STATUSES.has(s.trim());
 
+/* Sale-order grouping. LED re-lists land after a failed sale and its นัด count
+   restarts from 1, so one flat 1..N down the whole history misrepresents the
+   table (ผบ.754/2562 carries six separate sale orders). A gap longer than 60
+   days between consecutive dated rounds starts a new order: LED's own นัด
+   spacing inside one order is weeks (runs of ≤ 1 month), while resell gaps
+   measure months. Letters count up from the OLDEST order (A, B, C …); the
+   newest order — the one still live — keeps plain numbers. */
+const SALE_ORDER_GAP = 60 * 864e5;
+
+function saleOrderLabels(rounds: { date: number | null }[]): { text: string; prev: boolean }[] {
+  const order: number[] = [];
+  let g = 0;
+  let prev: number | null = null;
+  rounds.forEach((r) => {
+    if (r.date != null) {
+      if (prev != null && r.date - prev > SALE_ORDER_GAP) g++;
+      prev = r.date;
+    }
+    order.push(g);
+  });
+  const within: number[] = [];
+  let n = 0;
+  order.forEach((cur, i) => {
+    n = i > 0 && order[i - 1] !== cur ? 1 : n + 1;
+    within.push(n);
+  });
+  return order.map((cur, i) => ({
+    text: cur === g ? `${within[i]}` : `${String.fromCharCode(65 + cur)}${within[i]}`,
+    prev: cur !== g,
+  }));
+}
+
 const tdStatusShort = (s: string): string =>
   s.startsWith('skipped') ? 'ไม่มีในชั้นข้อมูลนี้' : 'ยังไม่พบข้อมูล';
 
@@ -165,6 +197,7 @@ export function DetailView() {
   /* every hook must run before the early return below */
   const showKindIcon = useApp(s => s.showLandKindIcon);
   const highlightSold = useApp(s => s.highlightSoldRounds);
+  const hidePrev = useApp(s => s.hidePrevSaleRounds);
   const rowOrder = useApp(s => s.detailRowOrder);
   const rowHidden = useApp(s => s.detailRowHidden);
   /* Parcels the court is selling with this one (LED group sale); select() fills
@@ -226,6 +259,8 @@ export function DetailView() {
   const elev = p.elevation ?? null;
   /* Only rounds LED has actually dated — see the rounds table below. */
   const scheduledRounds = p.rounds.filter((r) => r.date != null);
+  /* นัดที่ label per round, plus which rows belong to earlier sale orders. */
+  const roundLabels = saleOrderLabels(scheduledRounds);
 
   /* LED's committee-set price (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์) reaches
      this component already merged in liveData: led_price first — that is LED's
@@ -488,7 +523,21 @@ export function DetailView() {
         <div className="grid grid-cols-[48px_1fr_1fr] bg-panel2 text-[11px] font-semibold">
           <div className="px-2 py-1.5">นัดที่</div>
           <div className="px-2 py-1.5">วันที่</div>
-          <div className="px-2 py-1.5">สถานะ</div>
+          {/* The resale-history switch lives here, over the column it acts on:
+              earlier sale orders dim (opaque) or collapse (hide). Only offered
+              when the lot actually has an earlier order. */}
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <span>สถานะ</span>
+            {roundLabels.some((l) => l.prev) && (
+              <button
+                type="button"
+                className="rounded-md px-1.5 py-[1px] font-display text-[10px] text-dim2 hover:text-ink"
+                onClick={() => patchApp({ hidePrevSaleRounds: !hidePrev })}
+              >
+                {hidePrev ? 'แสดงรอบก่อนหน้า' : 'ซ่อนรอบก่อนหน้า'}
+              </button>
+            )}
+          </div>
         </div>
 {/* Rounds LED has actually dated.
              A round with no date is not scheduled yet and carries no information,
@@ -506,7 +555,14 @@ export function DetailView() {
             ยังไม่มีนัดวันขาย
           </div>
         ) : (
-          scheduledRounds.map((r, i) => {
+          /* The newest sale order always survives hidePrev (its rows are never
+             `prev`), so the hidden state cannot empty the table. The map keeps
+             the ORIGINAL index — soldFrom() indexes p.rounds, and roundLabels
+             is built positionally over scheduledRounds. */
+          scheduledRounds
+            .map((r, i) => ({ r, i, lab: roundLabels[i] }))
+            .filter(({ lab }) => !(hidePrev && lab.prev))
+            .map(({ r, i, lab }) => {
             const future = r.date != null && r.date > now;
             /* Once a lot sells, everything from the selling round onward is
                dead: that round happened, and the ones after it never will.
@@ -515,11 +571,12 @@ export function DetailView() {
             const sold = highlightSold && p.status === 'sold' ? soldFrom(p) : -1;
             const after = sold >= 0 && i >= sold && !future;
             /* Both tints hang off the same switch. With it off the table is
-               uniform, so "no dimming" means genuinely none. */
-            const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
+               uniform, so "no dimming" means genuinely none. Earlier sale
+               orders dim only when the sold tint is not already speaking. */
+            const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : lab.prev ? 'text-dim2' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
             return (
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t border-line text-[11.5px] ${cls}`}>
-                <div className="px-2 py-1.5">{i + 1}</div>
+                <div className="px-2 py-1.5">{lab.text}</div>
                 {/* The date is always shown — it is the one thing a reader needs
                     to place the round. Only a round LED has nothing to say
                     about goes quiet. */}
