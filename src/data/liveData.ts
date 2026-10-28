@@ -47,7 +47,8 @@ interface RoundRow extends ApiRound {}
  * those — and that decision belongs in the view, not in the data layer.
  *
  * status_code is carried through because the price ladder is meaningless
- * without it: only LED code 3 deepens the discount.
+ * without it: a no-bid round is the ingest's code 3, or LED's own งดขายไม่มีผู้สู้ราคา
+ * label (the report sheet's history rows are code 10 but speak through the label).
  */
 function mapRounds(rows: RoundRow[]): SellRound[] {
   return rows.map((r) => ({
@@ -200,31 +201,41 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   const announceTs = isoTs(p.publishedDate as string | null) ?? now;
   const rounds = mapRounds((p.rounds as RoundRow[]) ?? []);
   const status = mapStatus(p.status, rounds);
-  const startPrice = (p.startPrice as number | null) ?? p.askingPrice;
+
+  /* LED's committee figure (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์), merged
+   * led-first — the NAS dataset is exactly where committee_price holds a
+   * distinct wrong floor: ผบ.2545/2562 carries 80,177,600 there, which is the
+   * จปฐ officer appraisal the biddata scrape wrote into the column, while
+   * LED's own committee value is 98,329,928. The officer's number never stands
+   * in for the committee; it shows under its own ราคา เจ้าพนักงานบังคับคดี
+   * label. */
+  const led = p.ledPrice ?? null;
+  const committeePrice = led != null && led > 0
+    ? led
+    : p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
+
+  /* Everything that reads a "start price" anchors on the committee figure when
+   * LED has one: the announce point (what the chart plots and the event log
+   * prints), and through it startPriceOf() — the ladder base, the PRICE column,
+   * the -10% badge and the sold lot's open price. The scraped start_price is
+   * the biddata page's number and ผบ.2545 proved it can be the wrong source
+   * (จปฐ appraisal 80,177,600 instead of committee 98,329,928), so it demotes
+   * to the fallback for lots LED gives no committee figure for. */
+  const startPrice = committeePrice ?? ((p.startPrice as number | null) ?? p.askingPrice);
   const { pts: hist, roundToHist } = mapHist(rounds, startPrice, announceTs, now);
   const lastPrice = hist.length ? hist[hist.length - 1].v : (p.askingPrice ?? 0);
 
-  /* The headline number, in the order LED's own report sheet teaches:
+  /* led / committeePrice were merged above, ahead of startPrice, because the
+   * announce anchor leads with the committee figure too. The headline order:
    *   sold — ราคาขายได้, what the winner actually paid (ผบE.390/2568 sold at
    *          1,540,000 while the ladder's round price holds the scheduled
    *          1,185,780 floor LED corrected). An unsynced server sends null
    *          and the sold views print '-' rather than paste the floor as a
    *          sale.
-   *   led  — ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์ (ผบ.2545/2562 is
-   *          98,329,928 there, while its scheduled rounds carry the relisted
-   *          floor 80,177,600 the user rejected as the headline).
+   *   led  — the committee figure (ผบ.2545/2562 is 98,329,928 there, while its
+   *          scheduled rounds carry the scraped 80,177,600 column).
    *   else the ladder's last point, as before. */
-  const led = p.ledPrice ?? null;
   const price = p.soldPrice ?? (led != null && led > 0 ? led : lastPrice);
-  /* The committee-ROW figure, merged here so the panel's
-     ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์ row and the table's
-     ราคา คณะกรรมการ column agree: led_price first, then the scraped
-     committee_price column when it carries a figure of its own. The officer
-     figure never stands in for the committee — it shows under its own
-     ราคา เจ้าพนักงานบังคับคดี label. */
-  const committeePrice = led != null && led > 0
-    ? led
-    : p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
 
   /* LED's own "sold" marker: the round carrying status_code 1 is the winning
    * bid, so its date and price are exactly what a printed report would call

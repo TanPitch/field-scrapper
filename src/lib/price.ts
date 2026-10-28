@@ -37,8 +37,13 @@ export const deltaText = (d: PriceDelta): string => `${d.up ? '+' : ''}${d.pct}%
  * Two details that are easy to get wrong and are the reason this is written out
  * rather than inlined:
  *
- *  - Only code 3 (งดขายไม่มีผู้สู้ราคา) deepens the discount. The other
- *    งดขาย-family codes neither deepen nor reset it.
+ *  - A round deepens when LED says nobody bid: the ingest's code 3, or LED's
+ *    own outcome label naming ไม่มีผู้สู้ราคา. The label matters because the
+ *    report sheet's history rows (ledReport.js) carry the verdict only as the
+ *    label, stamped code 10 — the non-deepening งดขาย family — so had the
+ *    label not been read, ผบ.2545/2562's relist would never show its -10%.
+ *    Every other งดขาย variant (คู่ความขอ, ในนัดที่เหลือ…) neither deepens nor
+ *    resets the discount.
  *  - A no-bid round is itself held at the *undiscounted* price, so the count is
  *    incremented after that round's price is computed, never before.
  */
@@ -64,7 +69,7 @@ export function priceLadder(rounds: SellRound[], startPrice: number | null): Lad
     const code = round.statusCode == null ? null : Number(round.statusCode);
     const discountPct = Math.min(noBidCount * DISCOUNT_STEP_PCT, MAX_DISCOUNT_PCT);
     const price = startPrice === null ? null : round2(startPrice * (1 - discountPct / 100));
-    if (code === NO_BID_CODE) noBidCount++;
+    if (code === NO_BID_CODE || round.status.includes('ไม่มีผู้สู้ราคา')) noBidCount++;
     return { round, index, discountPct, price };
   });
 }
@@ -72,10 +77,13 @@ export function priceLadder(rounds: SellRound[], startPrice: number | null): Lad
 /** The opening price a lot started from. */
 export const startPriceOf = (p: Parcel): number =>
   /* The announce point, not simply hist[0]. A case LED suspended and re-listed
-   * carries its older rounds ahead of the relist price (ผบ.2545/2562: six
-   * งดขายไม่มีผู้สู้ราคา rows at 98,329,928, then relisted at 80,177,600), so
-   * the oldest point is the history's figure, not the cycle that is on sale
-   * now. The announcement's own point is the one at the publish date. */
+   * carries its older report rounds ahead of the current cycle, so the oldest
+   * point is history's figure, not the listing that is on sale now — the
+   * announcement's own point is the one at the publish date. What that point
+   * is *anchored to* is decided in liveData (its startPrice export): LED's
+   * committee figure when it has one — the scraped start_price column is the
+   * biddata page's number and ผบ.2545/2562 proved it can be the wrong source
+   * (จปฐ appraisal 80,177,600 instead of committee 98,329,928). */
   p.hist.find((pt) => pt.d === p.announce)?.v ?? p.price;
 
 /**

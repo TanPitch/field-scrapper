@@ -52,15 +52,13 @@ function cellTip(key: ColKey, p: Parcel): string | undefined {
 }
 
 /**
- * Auction case numbers look like "12-716" / "349-62": a group number and a running
- * sequence within it. Built from the row number so it is stable per parcel.
+ * The bottom table's ลำดับที่. On real data this is LED's sale order for the
+ * lot, fbidnum-fsubbidnum ('96 - 1' in the ledger → '96-1' here). The
+ * mockup-era caseNoOf() that synthesised a group-seq pair from the row number
+ * (rows 1/2/3 answered 13-54/14-91/15-128 — the exact wrong trio the user
+ * reported) is gone; the ledger's order_label is the truth it was faking.
+ * Strip the spaces so it reads like LED prints it.
  */
-export function caseNoOf(n: number): string {
-  const group = (n % 350) + 12;
-  const seq = (n * 37) % 900 + 17;
-  return `${group}-${seq}`;
-}
-
 /**
  * The two round columns, each with one fixed rule, so the table can be read
  * across instead of one column whose meaning shifted per row.
@@ -97,7 +95,7 @@ function nextUpcomingRound(p: Parcel): { index: number; round: SellRound } | nul
 
 interface RowProps {
   p: Parcel; lay: LayCell[]; gridW: number; pinned: boolean; selected: boolean; colPinned: ReadonlySet<ColKey>;
-  dot: string; fmt: (v: number) => string; dragging: ColKey | null; no: number;
+  dot: string; fmt: (v: number) => string; dragging: ColKey | null;
   /** px to slide this row's cells while a column drag is in flight. */
   shiftOf: (key: ColKey) => number;
     /** true for the column currently being dragged (masked out). */
@@ -105,13 +103,13 @@ interface RowProps {
     /** Opens the per-parcel name/note editor. */
     onAnnotEdit: (v: NonNullable<AnnotEdit>) => void;
   }
-const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot, fmt, dragging, no, shiftOf, isSrcOf, onAnnotEdit }: RowProps) {
+const Row = memo(function Row({ p, lay, gridW, pinned, selected, colPinned, dot, fmt, dragging, shiftOf, isSrcOf, onAnnotEdit }: RowProps) {
   const bg = selected ? 'bg-accent-dim' : pinned ? 'bg-[rgba(184,241,63,.05)]' : 'bg-panel hover:bg-panel2';
   const edge = selected || pinned ? 'shadow-[inset_2px_0_0_var(--accent)]' : '';
   const pinBg = selected || pinned ? 'bg-[#1B2213]' : 'bg-panel group-hover:bg-panel2';
   const content = (c: LayCell): React.ReactNode => {
     switch (c.key) {
-      case 'no': return no ? caseNoOf(no) : '';
+      case 'no': return p.order ? p.order.replace(/\s+/g, '') : '';
       case 'name': return p.name;
       case 'status': return <><span className="inline-block size-[7px] flex-none rounded-full" style={{ background: dot }} />&nbsp;{STATUS[p.status].th}</>;
       case 'size': return splitWah(toSqWa(p.wah, p.sizeUnit))[c.sub ?? 0];
@@ -482,7 +480,8 @@ export function DataTable() {
   const e0 = Math.min(normRows.length, Math.ceil((st + ch) / ROW_H) + 4);
   const slice = normRows.slice(s0, e0);
   /* stable 1-based row numbers over the current view order, so ลำดับที่ is contiguous */
-  const noOf = useMemo(() => new Map(viewRows.map((p, i) => [p.id, i + 1])), [viewRows]);
+  /* The ลำดับที่ column now prints LED's own order label (p.order); the row
+     number map that fed the old synthesized caseNoOf() is gone with it. */
   const raf = useRef(0);
   const onScroll = () => {
     cancelAnimationFrame(raf.current);
@@ -500,7 +499,7 @@ export function DataTable() {
 
   const isSrcOf = (key: ColKey): boolean => ghost?.key === key;
   const rowProps = (p: Parcel, pinned: boolean) => (
-    <Row key={p.lotId ?? p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} no={noOf.get(p.id) ?? 0} shiftOf={shiftFor} isSrcOf={isSrcOf} onAnnotEdit={setAnnotEdit} />
+    <Row key={p.lotId ?? p.id} p={p} lay={lay} gridW={gridW} pinned={pinned} selected={selectedId === p.id} colPinned={colPinned} dot={parcelDot(p)} fmt={fmt} dragging={dragging} shiftOf={shiftFor} isSrcOf={isSrcOf} onAnnotEdit={setAnnotEdit} />
   );
 
   /**

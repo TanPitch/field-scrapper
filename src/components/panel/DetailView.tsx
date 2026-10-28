@@ -20,13 +20,11 @@ import { PriceHeadline } from './PriceHeadline';
 import { DetRows, DetSub, DetTop, VPad } from './shared';
 import { orderRows } from '../../lib/detailRows';
 
-/* Round status → optional no-buyer flag. A round where nobody placed a bid is marked
-   "ไม่มีผู้ซื้อ" so the schedule reads like a real auction log. */
-function roundStatus(status: string, seed: number): string {
-  if (status === 'กำลังขาย' && seed % 4 === 0) return 'ไม่มีผู้ซื้อ';
-  if (status === 'ประกาศขาย' && seed % 5 === 0) return 'ไม่มีผู้ซื้อ';
-  return status;
-}
+/* The old mockup-era roundStatus fabricator (seed % 4 → 'ไม่มีผู้ซื้อ' over
+   'กำลังขาย'/'ประกาศขาย' rows) is gone: real round rows already carry LED's own
+   outcome label from the ledger — a seeded stamp over invented statuses was
+   exactly the kind of "16 rounds that never happened" noise to stop. The cell
+   below renders r.status as-is. */
 
 /* กรมธนารักย์ gave us no figure. Say which kind of "no" it is, because the two
    mean very different things: a skipped layer is a known blind spot, an
@@ -535,8 +533,9 @@ export function DetailView() {
                       because LED has nothing to say about it, not because it is
                       scheduled. Placeholder text is that signal, so it is the only
                       thing that decides this now; a real label is shown whether the
-                      round has happened or not. */}
-                  {isPlaceholderStatus(r.status) ? (future ? '' : '-') : roundStatus(r.status, p.id * 7 + i * 3)}
+                      round has happened or not. The old seeded ไม่มีผู้ซื้อ fabricator
+                      is gone — real rows carry LED's own label. */}
+                  {isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status}
                 </div>
               </div>
             );

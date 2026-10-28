@@ -45,6 +45,10 @@ export interface AppState {
   detailRowHidden: string[];
   /** User-chosen display order for detail-panel rows. */
   detailRowOrder: string[];
+  /** Sold lots' headline arrangement: 'sold' = winning bid large (default),
+      'open' = open price large with the winning bid demoted. Read by
+      PriceHeadline's sold branch; sold land only. */
+  soldPriceHeadline: 'sold' | 'open';
   /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
   showLandKindIcon: boolean;
   priceBath: boolean;
@@ -180,6 +184,7 @@ export const useApp = create<AppState>(set => ({
   sectionsCollapsed: true,
   detailRowHidden: [],
   detailRowOrder: [],
+  soldPriceHeadline: 'sold',
   showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,

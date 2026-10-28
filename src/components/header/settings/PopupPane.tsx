@@ -58,6 +58,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const labelNextDate = useApp(s => s.labelNextDate);
   const hlSold = useApp(s => s.highlightSoldRounds);
   const condoUnitOrder = useApp(s => s.condoUnitOrder);
+  const soldPriceHeadline = useApp(s => s.soldPriceHeadline);
   
   const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
   const detailRowHidden = useApp(s => s.detailRowHidden);
@@ -185,6 +186,25 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       </>
       )}
       {sectionsCollapsed && (<div className='text-[10.5px] leading-[1.6] text-dim2'>แผงรายละเอียดซ่อนอยู่ - เลือกแสดงแผงรายละเอียด</div>)}
+
+      {/* Sold lands arrange headline prices per user's preference: big winning bid
+          (what the report sheet says was paid) or big open price (the announce
+          anchor — committee figure when LED has one) with the bid demoted.
+          Outside the collapse block above so the control is reachable even when
+          the row list is folded away. */}
+      <div className={setSec}>ราคาแปลงที่ขายแล้ว</div>
+      <div className={frow}>
+        <span className={fl}>ตัวเลขเด่น</span>
+        <Select
+          value={soldPriceHeadline}
+          items={[
+            { v: 'sold', l: 'ราคาขายได้เป็นตัวใหญ่' },
+            { v: 'open', l: 'ราคาเปิดเป็นตัวใหญ่' },
+          ]}
+          onChange={v => patchApp({ soldPriceHeadline: v as 'sold' | 'open' })}
+        />
+      </div>
+      <Hint>มีผลเฉพาะแปลงที่ขายได้ราคาแล้ว — ปกติตัวเลขใหญ่คือราคาที่ขายได้ (ราคาเปิด = ราคาที่กำหนดโดยคณะกรรมการ หรือราคาประกาศเริ่ม)</Hint>
 
       <div className={setSec}>ตารางรอบขาย</div>
       <div className={frow}>

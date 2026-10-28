@@ -1,4 +1,4 @@
-﻿import { ChevronDown, Crosshair, Filter, Search, Table2 } from 'lucide-react';
+﻿import { ChevronDown, Crosshair, Filter, Search, Table2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { HEADER_H, MIN_BH } from '../../data/constants';
 import { debounce } from '../../lib/format';
@@ -68,6 +68,25 @@ export function BottomPanel({ small }: { small: boolean }) {
         <div className="flex h-[30px] w-[min(240px,40vw)] flex-none items-center gap-[7px] rounded-lg border border-line2 bg-bg px-[9px] focus-within:border-accent">
           <Search size={13} className="text-dim2" />
           <input ref={search} placeholder="ค้นหาในตาราง: ชื่อแปลง / เลขโฉนด…" autoComplete="off" onChange={e => onText(e.target.value)} className="min-w-0 flex-1 border-none bg-transparent text-xs text-ink outline-none placeholder:text-dim2" />
+          {/* Clear only while there is something to clear: filters.text is the
+              debounced source of truth, so the ✕ follows what is actually
+              filtering the table, not stray whitespace in the box. Clicking
+              empties both the live input (some typed-but-debouncing text) and
+              the filter, and returns the caret so retyping is instant. */}
+          {filters.text && (
+            <button
+              type="button"
+              {...useTipProps('ล้างคำค้นหา')}
+              onClick={() => {
+                if (search.current) search.current.value = '';
+                patchApp({ filters: { ...useApp.getState().filters, text: '' } });
+                search.current?.focus();
+              }}
+              className="flex-none cursor-pointer rounded p-0.5 text-dim2 transition hover:text-ink"
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
         <div className="flex-1" />
         <button className={btn} {...useTipProps('ตัวกรองข้อมูล')} onClick={e => setFltAnchor(a => (a ? null : e.currentTarget))}>

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useMoney } from '../../hooks/useMoney';
 import { numDate } from '../../lib/format';
-import { discountBadge, nextRoundPrice } from '../../lib/price';
+import { discountBadge, nextRoundPrice, startPriceOf } from '../../lib/price';
+import { useApp } from '../../store/useApp';
 import type { Parcel } from '../../types';
 
 /**
@@ -25,6 +26,9 @@ export function PriceHeadline({
   now?: number;
 }) {
   const fmt = useMoney();
+  /* Sold lots' headline arrangement (setting: แผงรายละเอียด → ราคาแปลงที่ขายแล้ว).
+     Read before the early return below — hooks must run unconditionally. */
+  const soldBig = useApp(s => s.soldPriceHeadline);
   const next = nextRoundPrice(p, now);
   const perWah = p.perWah || p.td?.perSqWa;
   /* LED's committee figure (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์) is the
@@ -37,11 +41,33 @@ export function PriceHeadline({
   const committee = p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
 
   /* Sold, or no future round scheduled: there is no next-round price to lead
-     with, so fall back to the latest known price rather than inventing one. */
+     with, so fall back to the latest known price rather than inventing one.
+     A sold lot (ledger carries the winning bid) may swap which figure is large,
+     per the soldPriceHeadline setting — only ever these two numbers, and only
+     for land that actually sold; an unsynced sold lot (soldPrice null) keeps
+     the single number it always had rather than dressing the floor up as a
+     result. The open price is the same announce anchor startPriceOf() reads:
+     LED's committee figure when it has one, else the scraped start price. */
   if (!next) {
+    const open = startPriceOf(p);
+    const hasOpen = open > 0 && open !== p.price;
+    if (p.soldPrice != null && soldBig === 'open' && hasOpen) {
+      return (
+        <div>
+          <div className="text-2xl font-bold text-accent">{fmt(open)}</div>
+          <div className="mb-2.5 font-display text-[11px] text-dim">
+            ราคาขายได้ {fmt(p.price)}
+            {perWah ? <> · {fmt(perWah)} / ตร.วา</> : null}
+          </div>
+        </div>
+      );
+    }
     return (
       <div>
         <div className="text-2xl font-bold text-accent">{fmt(p.price)}</div>
+        {p.soldPrice != null && hasOpen && (
+          <div className="mb-2.5 font-display text-[11px] text-dim">ราคาเปิด {fmt(open)}</div>
+        )}
         <div className="mb-2.5 font-display text-[11px] text-dim">
           {perWah ? `${fmt(perWah)} / ตร.วา` : null}
         </div>
@@ -67,8 +93,11 @@ export function PriceHeadline({
 
       {/* Start price, struck through and dimmed — context for the discount, not
           a second headline. Hidden when no discount applies, since an unchanged
-          struck-through number reads as "already reduced". */}
-      {next.discountPct > 0 && (
+          struck-through number reads as "already reduced" — and hidden when it
+          just repeats the big number: the committee-led anchor makes
+          next.startPrice equal the headline on lots like ผบ.2545, and printing
+          one figure twice teaches nothing. */}
+      {next.discountPct > 0 && next.startPrice !== committee && (
         <div className="mt-0.5 flex items-baseline gap-1.5 text-[11.5px] text-dim2 opacity-70">
           <span className="font-display text-[10.5px]">ราคาเปิด</span>
           <span>{fmt(next.startPrice)}</span>
