@@ -116,6 +116,9 @@ export interface ApiRound {
   is_held: boolean;
   discount_pct: number | null;
   price: number | null;
+  /** The winning bid from LED's report sheet (028), for rounds that sold.
+   *  Absent on older servers and on every round that did not sell. */
+  sold_price?: number | null;
 }
 
 export interface ApiParcelProps {
@@ -161,6 +164,9 @@ export interface ApiParcelProps {
   ledPrice: number | null;
   officerPrice: number | null;
   expertPrice: number | null;
+  /** LED's reports.asp winning bid (028). Null until the case's sheet has
+   *  been pulled — the client prints '-', never the scheduled figure. */
+  soldPrice: number | null;
   bidSecurity: number | null;
   publishedDate: string | null;
   firstRoundDate: string | null;

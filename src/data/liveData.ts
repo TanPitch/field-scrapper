@@ -58,6 +58,9 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
     statusCode: r.status_code ?? null,
     price: r.price ?? null,
     discountPct: r.discount_pct ?? null,
+    /* The winning bid LED's report sheet printed for this round (028) — only
+       present on ขายได้ rounds, and only on a server that has ledReport.js. */
+    soldPrice: r.sold_price ?? null,
   }));
 }
 
@@ -80,18 +83,27 @@ function mapHist(rounds: SellRound[], startPrice: number | null, announceTs: num
   if (startPrice != null && startPrice > 0) {
     pts.push({ d: announceTs, v: startPrice });
   }
+  /* Rounds whose outcome is the sale's end: ขายได้ (won by a bidder),
+   * ถอนการยึด (the court withdrew the seizure), and งดขายในนัดที่เหลือ (LED
+   * suspended the remaining sessions, e.g. ผบE.2311/2566 "…คู่ความแถลงงด" -
+   * LED appends the reason, so the match is substring). Previous rounds plus
+   * the terminal round's own point plot; anything the ledger prints behind
+   * them is not a market the money ever reached. Plain งดขาย — and งดขายไม่มีผู้สู้ราคา
+   * with it — is deliberately NOT here: a suspended round is followed by a
+   * real next round, so their points keep flowing, and a case whose every row
+   * is งดขาย still plots every one of them. */
+  const terminal = (s: string) =>
+    s.includes('ขายได้') || s.includes('ถอนการยึด') || s.includes('งดขายในนัดที่เหลือ');
   for (let i = 0; i < rounds.length; i++) {
     const r = rounds[i];
-    /* A ถอนการยึด round is LED taking the land out of seizure: the sale
-     * sequence ends there. Rows the ledger prints after it are leftovers, not
-     * a market the money ever reached, so nothing after this round - not the
-     * withdrawal round itself - becomes a chart point. งดขาย is NOT such an
-     * end: a suspended round is followed by a real next round, so its points
-     * keep flowing. */
-    if (r.status.includes('ถอนการยึด')) break;
-    if (r.price == null || r.date == null) continue;
-    roundToHist[i] = pts.length;
-    pts.push({ d: r.date, v: r.price });
+    if (r.date != null) {
+      const v = r.soldPrice ?? r.price;
+      if (v != null) {
+        roundToHist[i] = pts.length;
+        pts.push({ d: r.date, v });
+      }
+    }
+    if (terminal(r.status)) break;
   }
   /* Sorted ascending, because the price chart and lastDelta() both assume the
      last element is the most recent point. Without this a lot whose round
@@ -114,10 +126,14 @@ function mapHist(rounds: SellRound[], startPrice: number | null, announceTs: num
 }
 
 /** Event log. Only the two facts the UI actually asserts from live data. */
-function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], announceTs: number): PriceEvent[] {
+function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], hist: HistPoint[], announceTs: number): PriceEvent[] {
   const out: PriceEvent[] = [];
-  out.push({ idx: 0, label: 'ประกาศขาย', color: '#B8F13F', ink: '#151B06' });
-  void announceTs;
+  /* The announce badge sits on the announcement's own point — not blind idx 0.
+     A case LED suspended-and-relisted carries older report rounds before the
+     current announce date, so the oldest point is a history row; stamping
+     ประกาศขาย on it told the user the 2025 committee round was an announcement. */
+  const announceAt = hist.findIndex((pt) => pt.d === announceTs);
+  out.push({ idx: announceAt >= 0 ? announceAt : 0, label: 'ประกาศขาย', color: '#B8F13F', ink: '#151B06' });
   if (status === 'sold') {
     const sold = rounds.find((r) => r.statusCode === 1);
     const at = roundToHist[rounds.indexOf(sold ?? rounds[0])] ?? -1;
@@ -188,6 +204,28 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
   const { pts: hist, roundToHist } = mapHist(rounds, startPrice, announceTs, now);
   const lastPrice = hist.length ? hist[hist.length - 1].v : (p.askingPrice ?? 0);
 
+  /* The headline number, in the order LED's own report sheet teaches:
+   *   sold — ราคาขายได้, what the winner actually paid (ผบE.390/2568 sold at
+   *          1,540,000 while the ladder's round price holds the scheduled
+   *          1,185,780 floor LED corrected). An unsynced server sends null
+   *          and the sold views print '-' rather than paste the floor as a
+   *          sale.
+   *   led  — ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์ (ผบ.2545/2562 is
+   *          98,329,928 there, while its scheduled rounds carry the relisted
+   *          floor 80,177,600 the user rejected as the headline).
+   *   else the ladder's last point, as before. */
+  const led = p.ledPrice ?? null;
+  const price = p.soldPrice ?? (led != null && led > 0 ? led : lastPrice);
+  /* The committee-ROW figure, merged here so the panel's
+     ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์ row and the table's
+     ราคา คณะกรรมการ column agree: led_price first, then the scraped
+     committee_price column when it carries a figure of its own. The officer
+     figure never stands in for the committee — it shows under its own
+     ราคา เจ้าพนักงานบังคับคดี label. */
+  const committeePrice = led != null && led > 0
+    ? led
+    : p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
+
   /* LED's own "sold" marker: the round carrying status_code 1 is the winning
    * bid, so its date and price are exactly what a printed report would call
    * the sold date and ราคาที่ขายได้. A lot resold after a failed first sale
@@ -209,8 +247,8 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     status,
     wah: size,
     sizeUnit: p.sizeUnit ?? 'wa',
-    price: lastPrice,
-    perWah: land != null ? Math.round(lastPrice / land) : null,
+    price,
+    perWah: land != null ? Math.round(price / land) : null,
     lng: f.geometry?.coordinates?.[0] ?? 0,
     lat: f.geometry?.coordinates?.[1] ?? 0,
     name: [p.assetType, p.tambon, p.landTitle].filter(Boolean).join(' ') || `แปลง ${p.id}`,
@@ -220,13 +258,16 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     tambon: p.tambon ?? '',
     announce: announceTs,
     soldTs: sold?.date ?? null,
-    soldPrice: sold?.price ?? null,
+    /* The server's lot-level winning bid, synced from LED's report sheet. The
+       round-price fallback that used to sit here is gone on purpose: it pasted
+       the scheduled floor as a sale for every unsynced sold lot. */
+    soldPrice: p.soldPrice ?? null,
     /* Freshness: when the ingest last confirmed this lot still matches LED.
        Nothing shows when the server predates the column — a missing stamp
        cannot be rendered as an old one. */
     ledTs: isoTs(p.ledSeen),
     hist,
-    events: mapEvents(status, rounds, roundToHist, announceTs),
+    events: mapEvents(status, rounds, roundToHist, hist, announceTs),
     resell: false,
     imgs: p.imageCount ?? 0,
     /* Real photographs, resolved against the API's static mount. An empty
@@ -268,7 +309,7 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     expertPrice: p.expertPrice ?? null,
     enforcementOfficerPrice: p.officerPrice ?? null,
     assessorPrice: null,
-    committeePrice: p.committeePrice ?? null,
+    committeePrice,
     rounds,
     mortgage: null,
     geoPrecision: p.geoPrecision ?? null,
@@ -409,6 +450,36 @@ export async function loadParcels(provinceCode?: number): Promise<{
 
 /** Subscribe to "the parcel collection was replaced". */
 export const subscribeParcels = onChange;
+
+/**
+ * Refresh ONE parcel from the API.
+ *
+ * The detail panel fires this when it opens a parcel, and `?id=` on the server
+ * doubles as the on-demand LED report sync, so a click on a never-synced case
+ * pulls that case's report sheet - the real winning bid and the per-round
+ * ผลการขาย - and the panel shows it now rather than after the next full
+ * reload. The fetched rows replace the entry in place, keeping ALL_PARCELS and
+ * PARCEL_BY_ID as the only live collections and letting subscribers repaint
+ * through the same listener set publish() uses.
+ */
+export async function refreshParcel(id: number): Promise<void> {
+  if (!Number.isInteger(id) || id <= 0) return;
+  const r = await api.get<{ features: Feature[] }>(`/api/parcels?id=${id}`);
+  if (!r.ok || !r.data?.features) return; /* keep what is on screen */
+  const now = Date.now();
+  const next = r.data.features
+    .map((f) => featureToParcel(f, now))
+    .filter((p): p is Parcel => p != null)
+    .find((p) => p.id === id);
+  if (!next) return;
+  const i = ALL_PARCELS.findIndex((p) => p.id === id);
+  if (i < 0) return; /* the province was switched mid-flight; the next load owns it */
+  ALL_PARCELS[i] = next;
+
+  reindex();
+
+  listeners.forEach((fn) => fn());
+}
 
 /**
  * A snapshot of the two collections, for diagnosing "the table has rows but

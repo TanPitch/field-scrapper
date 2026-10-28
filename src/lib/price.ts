@@ -71,7 +71,12 @@ export function priceLadder(rounds: SellRound[], startPrice: number | null): Lad
 
 /** The opening price a lot started from. */
 export const startPriceOf = (p: Parcel): number =>
-  p.hist[0]?.v ?? p.price;
+  /* The announce point, not simply hist[0]. A case LED suspended and re-listed
+   * carries its older rounds ahead of the relist price (ผบ.2545/2562: six
+   * งดขายไม่มีผู้สู้ราคา rows at 98,329,928, then relisted at 80,177,600), so
+   * the oldest point is the history's figure, not the cycle that is on sale
+   * now. The announcement's own point is the one at the publish date. */
+  p.hist.find((pt) => pt.d === p.announce)?.v ?? p.price;
 
 /**
  * What the next round will fetch, and what it dropped from.

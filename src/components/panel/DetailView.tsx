@@ -2,7 +2,7 @@ import { Calendar, ImageOff, Link2, MapPin, ScanEye } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { STATUS } from '../../data/constants';
-import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
+import { ALL_PARCELS, PARCEL_BY_ID, refreshParcel, subscribeParcels } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
 import { fdate, fmtRai, numDate, sizeRowLabel } from '../../lib/format';
 import { popupKind } from '../../map/popups';
@@ -193,6 +193,18 @@ export function DetailView() {
      unit from the previous dot would keep being shown. */
   useEffect(() => { setPicked(null); }, [id]);
 
+  /* One refresh per selection. `?id=` on the server doubles as the on-demand
+     LED report sync — the case's report sheet carries the winning bid and the
+     per-round ผลการขาย the page scrape flattened — and the returned row
+     replaces this parcel in place, so the panel shows LED's numbers right
+     after the click instead of after the next reload. In flight the current
+     snapshot keeps rendering; a ~3s first click with no spinner is fine.
+     Parcels publish in place, so the panel needs its own subscription to
+     repaint on the refresh. */
+  const [, setRev] = useState(0);
+  useEffect(() => subscribeParcels(() => setRev(v => v + 1)), []);
+  useEffect(() => { if (id != null) void refreshParcel(id); }, [id]);
+
   if (!p) {
     return (
       <div className="px-6 py-11 text-center text-[12.5px] leading-[1.8] text-dim">
@@ -217,21 +229,16 @@ export function DetailView() {
   /* Only rounds LED has actually dated — see the rounds table below. */
   const scheduledRounds = p.rounds.filter((r) => r.date != null);
 
-  /* LED prints one committee-set price per lot (ราคาที่กำหนดโดยคณะกรรมการ
-     กำหนดราคาทรัพย์). The scraper stored that figure in officer_price; the
-     committee_price column instead holds the page's floor figure on
-     group-sale sheets — a copy of the opening price (ผบ.2545/2562 carried
-     80,177,600 there while LED's committee value is 98,329,928) — or plain 0.
-     A genuinely distinct committee_price wins, officer_price is the
-     fallback, and neither may repeat the opening price: doing so would
-     present a round figure as a committee decision. */
-  const firstPrice = p.hist[0]?.v ?? null;
-  const committeePrice: number | null =
-    p.committeePrice != null && p.committeePrice > 0 && p.committeePrice !== firstPrice
-      ? p.committeePrice
-      : p.enforcementOfficerPrice != null && p.enforcementOfficerPrice > 0 && p.enforcementOfficerPrice !== firstPrice
-        ? p.enforcementOfficerPrice
-        : null;
+  /* LED's committee-set price (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์) reaches
+     this component already merged in liveData: led_price first — that is LED's
+     own committee figure, and the NAS dataset is exactly where committee_price
+     holds a distinct wrong floor, which is what kept printing 80,177,600 where
+     the user reads 98,329,928 (ผบ.2545/2562) — then the scraped committee_price
+     column when it carries a figure of its own. The officer's number never
+     stands in here: ราคาประเมินของเจ้าพนักงานบังคับคดี is a different field
+     with its own row below, and printing it under the committee label was the
+     very labelling the user called wrong. */
+  const committeePrice = p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
 
   /* Index of the round the lot sold at, from LED's status code 1. Falls back to
      the first round LED marks as a sale by label, because a parcel can arrive

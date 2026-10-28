@@ -27,6 +27,14 @@ export function PriceHeadline({
   const fmt = useMoney();
   const next = nextRoundPrice(p, now);
   const perWah = p.perWah || p.td?.perSqWa;
+  /* LED's committee figure (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์) is the
+     number the user reads as THE price — ผบ.2545/2562's relisted floor is
+     80,177,600 while LED's committee value is 98,329,928 — so when the ledger
+     carries it (liveData merges led_price-first into committeePrice), it leads
+     and the round ladder demotes to context. The discount badge keeps
+     describing the next round against its opening. Sold lots skip it: their
+     headline is the winning bid, which p.price already carries. */
+  const committee = p.committeePrice != null && p.committeePrice > 0 ? p.committeePrice : null;
 
   /* Sold, or no future round scheduled: there is no next-round price to lead
      with, so fall back to the latest known price rather than inventing one. */
@@ -46,7 +54,7 @@ export function PriceHeadline({
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <div className="text-2xl font-bold text-accent">{fmt(next.price)}</div>
+        <div className="text-2xl font-bold text-accent">{fmt(committee ?? next.price)}</div>
         {badge && (
           <span
             title={`รอบถัดไปลดจากราคาเปิด ${Math.round(next.discountPct)}%`}

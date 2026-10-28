@@ -51,6 +51,10 @@ export interface SellRound {
   price?: number | null;
   /** Discount in force for this round, in percent. */
   discountPct?: number | null;
+  /** The winning bid LED's report sheet printed for this round (028). Only
+   *  set on ขายได้ rounds; the graph plots this instead of the scheduled
+   *  price when present. */
+  soldPrice?: number | null;
 }
 
 export interface Mortgage { amount: number; bank: string }
