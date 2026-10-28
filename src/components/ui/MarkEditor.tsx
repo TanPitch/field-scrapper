@@ -15,8 +15,13 @@ import { useTipProps } from './Tip';
  * was pressed (mousedown moved focus to the button, selectionStart collapsed),
  * so "styling text" wrapped nothing. Every toolbar button now swallows
  * mousedown — the click still fires, but focus and the highlighted range stay
- * in the textarea. No preview box: the user asked for it removed; the markup is
- * the thing they type, and the cell next door can be glimpsed for reassurance.
+ * in the textarea. That was still not enough in the field: palette buttons and
+ * the programmatically-peeked range could leave selectionStart collapsed, so
+ * the editor keeps its own copy of the selection (updated on
+ * mouseup/keyup/select) and wraps from it whenever the live one has collapsed.
+ *
+ * A ล้าง button empties the field being edited — clearing a หมายเหตุ without
+ * having to select-all-and-delete.
  *
  * Click-away and Escape COMMIT, not discard — losing a typed note to a stray
  * click would be hostile.
@@ -32,6 +37,19 @@ export function MarkEditor({
   const [v, setV] = useState(text);
   const ta = useRef<HTMLTextAreaElement>(null);
   const box = useRef<HTMLDivElement>(null);
+  /* The selection is remembered outside the DOM. Even with mousedown
+     swallowed on every button, the textarea's own selectionStart can read
+     collapsed when a button is pressed (palette swatches move the caret,
+     some engines purify the range on the programmatic peek), so "select
+     text, click a style" wrapped nothing — the visible bug the user filed.
+     mouseup / keyup / select re-record the range as the caret moves;
+     wrapTag falls back to the remembered one whenever the live selection
+     has collapsed. */
+  const sel = useRef<[number, number]>([text.length, text.length]);
+  const rememberSel = () => {
+    const el = ta.current;
+    if (el) sel.current = [el.selectionStart ?? 0, el.selectionEnd ?? 0];
+  };
   const [picker, setPicker] = useState<'' | 'emoji' | 'bg' | 'fg'>('');
 
   useEffect(() => {
@@ -54,17 +72,26 @@ export function MarkEditor({
   const wrapTag = (flag: 'b' | 'i' | 'u' | 'bg' | 'fg', hex?: string) => {
     const el = ta.current;
     if (!el) return;
-    const s = el.selectionStart ?? 0, e = el.selectionEnd ?? s;
+    /* Live selection first, the remembered one as fallback — see sel. The
+       remembered range belongs to the same v (nothing else edits between the
+       events that record it and this click). */
+    let s = el.selectionStart ?? 0, e = el.selectionEnd ?? s;
+    if (s === e && sel.current[0] !== sel.current[1]) {
+      s = Math.min(sel.current[0], v.length);
+      e = Math.min(sel.current[1], v.length);
+    }
     const open = flag === 'bg' || flag === 'fg' ? `<${flag}=#${hex}>` : `<${flag}>`;
     const close = `</${flag}>`;
     const mid = v.slice(s, e);
     /* Toggling off: a selection that is exactly one wrap unwraps. */
     if (mid === `${open}${mid.slice(open.length, mid.length - close.length)}${close}`) {
       const inner = mid.slice(open.length, mid.length - close.length);
+      sel.current = [s, s + inner.length];
       setV(v.slice(0, s) + inner + v.slice(e));
       requestAnimationFrame(() => { el.focus(); el.setSelectionRange(s, s + inner.length); });
       return;
     }
+    sel.current = [s + open.length, s + open.length + mid.length];
     setV(v.slice(0, s) + open + mid + close + v.slice(e));
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(s + open.length, s + open.length + mid.length); });
   };
@@ -153,11 +180,25 @@ export function MarkEditor({
         autoFocus
         value={v}
         onChange={e => setV(e.target.value)}
+        onSelect={rememberSel}
+        onMouseUp={rememberSel}
+        onKeyUp={rememberSel}
         rows={3}
         className="mb-2 w-full resize-y rounded-[6px] border border-line2 bg-bg px-2 py-1 text-[12px] leading-snug outline-none focus:border-accent"
       />
 
-      <div className="flex justify-end gap-1.5">
+      <div className="flex items-center gap-1.5">
+        {/* Clear: empties THIS field (the one being edited), not the other
+            column's text — the commit that follows nothing typed is the last
+            non-empty previous value's absence, i.e. a blank cell. */}
+        <button
+          type="button"
+          className="mr-auto rounded-[6px] border border-line2 px-2 py-1 text-[11px] text-dim hover:bg-panel2 hover:text-ink"
+          onMouseDown={keepSel}
+          onClick={() => { setV(''); sel.current = [0, 0]; }}
+        >
+          ล้าง
+        </button>
         <button
           type="button"
           className="rounded-[6px] border border-line2 px-2 py-1 text-[11px] text-dim hover:bg-panel2"

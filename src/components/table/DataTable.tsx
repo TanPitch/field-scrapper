@@ -1,6 +1,6 @@
 import { ChevronUp, Pin } from 'lucide-react';
 import { useClipTip, useTipProps } from '../ui/Tip';
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { COL_DEFS, PIN_W, ROW_H, STATUS } from '../../data/constants';
 import { useMoney } from '../../hooks/useMoney';
 import { useParcels } from '../../hooks/useParcels';
@@ -245,7 +245,17 @@ const GripIcon = () => (
  *
  * This state belongs to DataTable, not to this module — a hook at module scope
  * runs outside any component and React throws "invalid hook call" immediately. */
-type AnnotEdit = { id: number; field: 'name' | 'note'; at: { x: number; y: number } } | null;
+type AnnotEdit = {
+  id: number;
+  field: 'name' | 'note';
+  /** Viewport coords where the fixed popover renders. */
+  at: { x: number; y: number };
+  /** The pencil that opened it. The popover glues itself to this element: it
+   *  is re-placed on scroll and resize so it stays next to its cell, and the
+   *  initial cell-rect guess gets corrected with the panel's measured height
+   *  before first paint. */
+  el: HTMLElement;
+} | null;
 
 /** `onEdit` comes from DataTable, which owns the popover. This cell must not hold
  *  the state itself: every row would then own a copy, and the popover would have
@@ -287,7 +297,7 @@ const a = useAnnotations(s => s.layers[`parcel-${id}`]);
           const y = r.bottom + 4 + H <= window.innerHeight
             ? r.bottom + 4
             : Math.max(8, r.top - H - 4);
-          onEdit({ id, field, at: { x: r.left, y } });
+          onEdit({ id, field, at: { x: r.left, y }, el: e.currentTarget });
         }}
         {...useTipProps(text ? 'คลิกเพื่อแก้ไข' : 'คลิกเพื่อใส่ชื่อ/หมายเหตุของคุณ')}
         className="grid size-[16px] flex-none cursor-pointer place-items-center rounded-[4px] text-[9px] text-dim2 opacity-0 transition hover:bg-panel2 hover:text-accent focus-visible:opacity-100 group-hover/annot:opacity-100"
@@ -324,6 +334,37 @@ export function DataTable() {
   const [resizing, setResizing] = useState<ColKey | null>(null);
   /** Which parcel's name/note editor is open, if any. */
   const [annotEdit, setAnnotEdit] = useState<AnnotEdit>(null);
+  /* The editor glues itself to the pencil that opened it: clamped to the right
+     edge (a ชื่อกำกับ column near the screen's edge used to spill itself
+     off-screen), flipped above the cell using the panel's MEASURED height (the
+     old flat 290px guess left a ~70px hole between the panel and the cell it
+     edits — the "editor is far from my cell" report), and re-placed on every
+     scroll and resize so it follows its cell instead of being left behind by
+     the scrolling table. Fires before paint, so the corrected position is what
+     the user first sees.
+     place() is a no-op loop-guarded state write when nothing moved. */
+  const EDIT_W = 264;
+  const annotBoxRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!annotEdit) return;
+    const place = () => {
+      const H = annotBoxRef.current?.offsetHeight ?? 240;
+      const r = annotEdit.el.getBoundingClientRect();
+      const x = Math.max(8, Math.min(r.left, window.innerWidth - EDIT_W - 12));
+      const y = r.bottom + 6 + H <= window.innerHeight
+        ? r.bottom + 6
+        : Math.max(8, r.top - H - 6);
+      setAnnotEdit((cur) =>
+        !cur || (cur.at.x === x && cur.at.y === y) ? cur : { ...cur, at: { x, y } });
+    };
+    place();
+    window.addEventListener('resize', place);
+    document.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      document.removeEventListener('scroll', place, true);
+    };
+  }, [annotEdit]);
   const setLayer = useAnnotations(s => s.setLayer);
   const parcelAnnots = useAnnotations(s => s.layers);
 
@@ -608,7 +649,7 @@ on release the table snaps to the new order with no movement. */
           );
         })()}
 {annotEdit && (
-          <div className="fixed z-[98]" style={{ left: annotEdit.at.x, top: annotEdit.at.y }}>
+          <div ref={annotBoxRef} className="fixed z-[98]" style={{ left: annotEdit.at.x, top: annotEdit.at.y }}>
             {/* The WYSIWYG-flavoured markup editor: toolbar over ONE textarea,
                 whichever column was clicked. Spreading `cur` keeps the other
                 field's text and the legacy style flags — setLayer replaces the

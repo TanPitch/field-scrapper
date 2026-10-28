@@ -207,9 +207,15 @@ body.reduce-motion .spin-keep {
   color: #98a095;
 }
 /* The collapsed ⓘ shares the tray's dark surface, which turns the control into
-   a dark chip on a dark map edge. Give the button its own light surface. */
+   a dark chip on a dark map edge. The ENTIRE background must go, not just the
+   colour: MapLibre paints a translucent sheet plus a dark ⓘ glyph as
+   background-image, and a background-color rule alone left that glued on top,
+   so the chip still read grey on the user's screen. Own solid light surface,
+   own glyph redrawn dark to sit on it — any transparency would let the dark
+   tray bleed through and the button reads grey again. */
 .maplibregl-ctrl-attrib-button {
-  background-color: rgba(241, 243, 238, 0.9) !important;
+  background-color: #f1f3ee !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8.6' fill='none' stroke='%234a5347' stroke-width='1.7'/%3E%3Ccircle cx='12' cy='8' r='1.15' fill='%234a5347'/%3E%3Cpath d='M10.95 10.9h2.1v6h-2.1z' fill='%234a5347'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-scale {
   background: rgba(10, 12, 10, 0.55) !important;
