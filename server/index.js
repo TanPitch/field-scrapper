@@ -20,6 +20,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { router as usersRouter, requireAdmin, SESSION_COOKIE } from "./users.js";
 import { mapStatus as mapLotStatus } from "./mapStatus.js";
+import { syncCaseReport } from "./ledReport.js";
 
 const { Pool } = pg;
 
@@ -269,6 +270,29 @@ app.get("/api/status", async (_req, res) => {
 app.get("/api/parcels", async (req, res) => {
     const province = req.query.province ? Number(req.query.province) : null;
     const onlyActive = req.query.active === "1";
+    const idRaw = Number(req.query.id);
+    const onlyId = Number.isInteger(idRaw) && idRaw > 0 ? idRaw : null;
+
+    /* ?id= is the detail panel's refresh call, and doubling as the on-demand
+       LED report sync keeps the panel one round trip behind the click: this
+       case's report sheet (holding the winning bid and the per-round ผลการขาย)
+       is pulled, applied and the SELECT below reads the fresh rows. Only a
+       single-parcel fetch may fire LED calls - a plain list load covering a
+       province would otherwise post hundreds of 2.6s-gap reports blocking the
+       response. Cases already stamped skip themselves; each sync is memoised. */
+    if (onlyId != null) {
+        const pend = await pool.query(`
+            SELECT DISTINCT case_no, case_year
+              FROM auction_lots
+             WHERE parcel_id = $1 AND led_report_seen IS NULL
+               AND case_no <> '' AND case_year IS NOT NULL`, [onlyId]);
+        for (const c of pend.rows) {
+            try { await syncCaseReport(pool, c.case_no, c.case_year); } catch (e) {
+                console.warn("[ledReport] sync failed for", `${c.case_no}/${c.case_year}`,
+                    String(e?.message ?? e).slice(0, 120));
+            }
+        }
+    }
 
     const { rows } = await pool.query(`
         SELECT p.id, p.deed_number, p.land_title, p.tumbol, p.district_name,
@@ -288,6 +312,10 @@ app.get("/api/parcels", async (req, res) => {
                l.asset_type, l.size_unit, l.size_rai, l.size_ngan, l.size_wa,
                l.start_price, l.start_price_src, l.status, l.next_round_date,
                l.closed_at, l.close_reason, l.close_code, l.committee_price, l.led_price,
+               /* sold_price comes from LED's reports.asp answer sheet (the real
+                  winning bid), stamped by server/ledReport.js - see 028. The
+                  ladder's price column stays the scheduled figure. */
+               l.sold_price,
                l.officer_price, l.expert_price, l.published_date,
                /* When the ingest last saw this lot, so the panel can stamp the
                   data with a freshness date instead of asserting LED's state
@@ -311,7 +339,8 @@ app.get("/api/parcels", async (req, res) => {
                           'label', r.status_label,
                           'is_held', r.is_held,
                           'discount_pct', r.discount_pct,
-                          'price', r.price) ORDER BY r.idx)
+                          'price', r.price,
+                          'sold_price', r.sold_price) ORDER BY r.idx)
                   FROM auction_rounds r WHERE r.lot_id = l.id) AS rounds,
                (SELECT count(*) FROM lot_images i WHERE i.lot_id = l.id)::int AS img_count,
                /* The stored filenames, so the detail panel can show the real
@@ -339,7 +368,8 @@ FROM parcels p
          WHERE l.id IS NOT NULL
            AND ($1::int IS NULL OR p.province_code = $1)
            AND ($2::bool IS NOT TRUE OR l.status = 'active')
-         ORDER BY p.id`, [province, onlyActive]);
+           AND ($3::bigint IS NULL OR p.id = $3)
+         ORDER BY p.id`, [province, onlyActive, onlyId]);
 
     res.json({
         type: "FeatureCollection",
@@ -394,6 +424,11 @@ FROM parcels p
                 startPrice: toNum(r.start_price),
                 committeePrice: toNum(r.committee_price),
                 ledPrice: toNum(r.led_price),
+                /* The real winning bid from LED's report sheet (028). Separate
+                   from the ladder on purpose: an unsynced sold lot sends null
+                   here, and the client prints '-' rather than the scheduled
+                   figure it would otherwise paste as a sale. */
+                soldPrice: toNum(r.sold_price),
                 officerPrice: toNum(r.officer_price),
                 expertPrice: toNum(r.expert_price),
                 bidSecurity: toNum(r.bid_security),
@@ -442,15 +477,46 @@ app.get("/api/parcels/:id", async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: "no such parcel" });
     const p = rows[0];
 
-    const { rows: lots } = await pool.query(`
+    let { rows: lots } = await pool.query(`
         SELECT * FROM auction_lots WHERE parcel_id = $1
          ORDER BY first_round_date DESC, id DESC`, [id]);
+    if (!lots.length) return res.status(404).json({ error: "parcel has no lot" });
 
-    const { rows: rounds } = await pool.query(`
+    /* First visit of a case = its LED report sheet has never been pulled.
+       The sheet carries the real winning bid and the per-round ผลการขาย the
+       page scrape flattened, so pull it now (memoised per case, ~3s first
+       click) and re-read. A LED outage must not take the panel down - stale
+       data is better than a 500. */
+    const seen = new Set();
+    for (const l of lots) {
+      if (l.led_report_seen != null || !l.case_no || !l.case_year) continue;
+      const key = `${l.case_no}/${l.case_year}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      try { await syncCaseReport(pool, l.case_no, l.case_year); } catch (e) {
+        console.warn("[ledReport] sync failed for", key, String(e?.message ?? e).slice(0, 120));
+      }
+    }
+    /* The sync only ran once for a fresh case, but it may have refreshed
+       labels, added history rounds or stamped a sold price - re-read both
+       queries so the response is what was just fetched, not the pre-sync read. */
+    const requery = (sql, params) => seen.size ? pool.query(sql, params) : Promise.resolve({ rows: lots });
+    if (seen.size) {
+      lots = (await pool.query(`SELECT * FROM auction_lots WHERE parcel_id = $1 ORDER BY first_round_date DESC, id DESC`, [id])).rows;
+    }
+
+    let { rows: rounds } = await pool.query(`
         SELECT r.* FROM auction_rounds r
           JOIN auction_lots l ON l.id = r.lot_id
          WHERE l.parcel_id = $1
          ORDER BY l.first_round_date DESC, r.idx`, [id]);
+    if (seen.size) {
+      rounds = (await pool.query(`
+          SELECT r.* FROM auction_rounds r
+            JOIN auction_lots l ON l.id = r.lot_id
+           WHERE l.parcel_id = $1
+           ORDER BY l.first_round_date DESC, r.idx`, [id])).rows;
+    }
 
     const { rows: images } = await pool.query(`
         SELECT i.* FROM lot_images i
@@ -508,12 +574,18 @@ app.get("/api/parcels/:id", async (req, res) => {
                 bidSecurity: toNum(l.bid_security),
                 nextRound: toNum(l.next_round_price),
             },
+            /* The winning bid LED's report sheet printed - nothing to do with
+               the ladder above. Null while the lot never sold or the case's
+               report has not been pulled yet. */
+            soldPrice: toNum(l.sold_price),
+            ledReportSeen: isoDate(l.led_report_seen),
             status: l.status, closeCode: l.close_code, closeReason: l.close_reason,
             closedAt: isoDate(l.closed_at), nextRoundDate: isoDate(l.next_round_date),
             rounds: rounds.filter((r) => r.lot_id === l.id).map((r) => ({
                 idx: r.idx, date: isoDate(r.round_date),
                 statusCode: r.status_code, statusLabel: r.status_label,
                 isHeld: r.is_held, discountPct: r.discount_pct, price: toNum(r.price),
+                soldPrice: toNum(r.sold_price),
             })),
             images: images.filter((i) => i.lot_id === l.id).map((i) => ({
                 kind: i.kind,
@@ -703,6 +775,41 @@ app.post("/api/admin/coord-gaps/parse", requireAdmin, async (req, res) => {
         }
         res.json({ results });
     } catch (e) { console.error("[coord-gaps/parse]", e); res.status(500).json({ error: e.message }); }
+});
+
+/**
+ * Bulk pull of LED's report sheets for cases we have never synced
+ * (auction_lots.led_report_seen IS NULL). @ajax-admin panel
+ * invoking one POST per batch with ?limit= up to 20:
+ *
+ *     curl -X POST 'http://localhost:8787/api/admin/sync/led-reports?limit=10'
+ *
+ * scope=sold (default) works through the sold cases first - those carry the
+ * winning bid the panel's ราคาที่ขายได้ prints - and scope=all does ordinary
+ * listings too (their labels refresh from ผลการขาย). Each case costs one LED
+ * hit at a 2.6s politeness gap, so twenty cases take about a minute; a LED
+ * failure is recorded on the batch and skipped, never fatal to the run.
+ */
+app.post("/api/admin/sync/led-reports", requireAdmin, async (req, res) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 20);
+    const scope = req.query.scope === "all" ? "all" : "sold";
+    const { rows } = await pool.query(`
+        SELECT case_no, case_year, count(*)::int AS lots
+          FROM auction_lots
+         WHERE led_report_seen IS NULL AND case_no <> '' AND case_year IS NOT NULL
+           AND ($1 = 'all' OR close_reason = 'sold')
+         GROUP BY case_no, case_year
+         ORDER BY count(*) DESC
+         LIMIT $2`, [scope, limit]);
+    const done = [];
+    for (const r of rows) {
+        try {
+            done.push(await syncCaseReport(pool, r.case_no, r.case_year));
+        } catch (e) {
+            done.push({ case: `${r.case_no}/${r.case_year}`, error: String(e?.message ?? e).slice(0, 160) });
+        }
+    }
+    res.json({ scope, remaining: done.some((d) => d.error) ? "retry-later" : "next", done });
 });
 
 /** The values the parcels.geo_status CHECK constraint actually allows. */
