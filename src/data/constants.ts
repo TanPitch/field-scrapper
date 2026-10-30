@@ -1,5 +1,5 @@
 import type {
-  BasemapId, ColDef, ColKey, FloodConfig, LightboxField, LngLat, Overlay, PopupConfig, PopupField, PopupKind, Status,
+  BasemapId, ColDef, ColKey, FloodConfig, LightboxField, LngLat, Overlay, PopupConfig, PopupField, PopupKind, Status, Theme,
 } from '../types';
 
 export const MIN_ZOOM = 12;
@@ -26,6 +26,29 @@ export const PIN_W = 34;
 export const RAIL_GAP = 12;
 export const ACCENT = '#B8F13F';
 export const AREA_COLOR = '#FF7A6B';
+
+/** Default accent per theme, used when the user has not picked a primary colour.
+ *  Moved here from LookPane: canvas paint (the price chart, map paint
+ *  properties) cannot read CSS vars and must resolve the same hex the DOM's
+ *  --accent does — see effectiveAccent(). */
+export const THEME_ACCENT: Record<Theme, string> = {
+  graphite: '#B8F13F', oled: '#B8F13F', slate: '#58A6FF',
+  sand: '#FFB454', forest: '#3DDC97', rose: '#FF7AA2', mono: '#FFFFFF',
+};
+
+/** Text/label ink a canvas pill can print on `hex` so it stays readable.
+ *
+ *  The pills painted over the price chart (ประกาศขาย and friends) previously
+ *  hard-coded a dark ink that only worked on the lime default — on the slate
+ *  theme the accent turns blue and the old ink became mud. One luminance rule
+ *  keeps the pairing automatic for every theme and every user-chosen primary. */
+export function inkOn(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#101210';
+  const n = parseInt(m[1], 16);
+  const l = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+  return l > 150 ? '#121605' : '#FFFFFF';
+}
 
 /** Multi-script Noto Sans from the MapLibre glyph server (Thai block included). */
 export const MAP_FONTS = ['Noto Sans Regular'];

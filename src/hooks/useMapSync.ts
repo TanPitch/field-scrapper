@@ -130,9 +130,14 @@ export function useMapSync(): void {
   /* status colours → dots + label plates (reColor feeds the "นำกลับมาขายใหม่" dots) */
   useEffect(() => { if (mapReady) { applyPaint(); refreshPlates(); } }, [mapReady, popColors, reColor]);
 
-  /* ring colour setting → selection ring + dashed siblings */
+  /* ring colour setting → selection ring + dashed siblings. Also the theme
+     accent and the user's primary colour: a ring/success colour that follows
+     the theme must be repainted when the theme (or the colour pick) changes,
+     not only when the ring setting moves. */
   const ringColor = useApp(s => s.ringColor);
-  useEffect(() => { if (mapReady) applyRingPaint(); }, [mapReady, ringColor]);
+  const theme = useApp(s => s.theme);
+  const accentColor = useApp(s => s.accentColor);
+  useEffect(() => { if (mapReady) applyRingPaint(); }, [mapReady, ringColor, theme, accentColor]);
 
   /* The popup and the detail panel resolve a parcel through PARCEL_BY_ID, so the
      cascade has to reach that index too - otherwise the dot picks a unit by the

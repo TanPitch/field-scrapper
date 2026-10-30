@@ -20,6 +20,8 @@ import { api, type ApiParcelProps, type ApiRound } from '../lib/api';
 import { landKindOf } from '../components/ui/LandKindIcon';
 import { groupUnitsByParcel, representativeUnit, type CondoUnitOrder } from '../lib/condoUnits';
 import type { HistPoint, Parcel, PriceEvent, SellRound, Status } from '../types';
+import { inkOn } from './constants';
+import { effectiveAccent } from '../store/useApp';
 import { FALLBACK_PARCELS } from './mockData';
 
 /** Where the data currently on screen came from. Surfaced in the UI. */
@@ -62,6 +64,10 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
     /* The winning bid LED's report sheet printed for this round (028) — only
        present on ขายได้ rounds, and only on a server that has ledReport.js. */
     soldPrice: r.sold_price ?? null,
+    /* The report sheet's own outcome word for this round (029). History rows
+       born from the report carry it as their only label; the panel shows it as
+       a second line whenever it disagrees with the lists label. */
+    ledLabel: r.led_label ?? null,
   }));
 }
 
@@ -134,7 +140,10 @@ function mapEvents(status: Status, rounds: SellRound[], roundToHist: number[], h
      current announce date, so the oldest point is a history row; stamping
      ประกาศขาย on it told the user the 2025 committee round was an announcement. */
   const announceAt = hist.findIndex((pt) => pt.d === announceTs);
-  out.push({ idx: announceAt >= 0 ? announceAt : 0, label: 'ประกาศขาย', color: '#B8F13F', ink: '#151B06' });
+  /* Resolved through the accent store, not a fixed lime hex: the pill must ride
+     whatever primary the active theme (or the user's colour pick) resolves to. */
+  const acc = effectiveAccent();
+  out.push({ idx: announceAt >= 0 ? announceAt : 0, label: 'ประกาศขาย', color: acc, ink: inkOn(acc) });
   if (status === 'sold') {
     const sold = rounds.find((r) => r.statusCode === 1);
     const at = roundToHist[rounds.indexOf(sold ?? rounds[0])] ?? -1;
@@ -279,7 +288,15 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     ledTs: isoTs(p.ledSeen),
     hist,
     events: mapEvents(status, rounds, roundToHist, hist, announceTs),
-    resell: false,
+    /* Resale in LED's own vocabulary: this listing is on the market again after
+       a winning bid was already printed inside it — the `sold` guard above is
+       the most recent code-1 round. Determined from the rounds themselves, not
+       a server column, because LED marks the relisting that way (a second sale
+       order under the same case) and every earlier consumer of `resell` treated
+       it as an attribute to be fixed later, which left ขายได้-then-back lots
+       wearing a plain กำลังขาย. Not sold/inactive even when such a lot has
+       already failed a relist round — those statuses come later and win. */
+    resell: status === 'sale' && sold != null,
     imgs: p.imageCount ?? 0,
     /* Real photographs, resolved against the API's static mount. An empty
        array means nothing has been fetched yet — which the carousel renders as
@@ -426,7 +443,13 @@ export async function loadParcels(provinceCode?: number): Promise<{
   }
 
   const now = Date.now();
-  const rows = r.data.features.map((f) => featureToParcel(f, now)).filter((p): p is Parcel => p != null);
+  /* The น.ส.3 class titles (น.ส.3ก., น.ส.3เลขที่…) are titled land LED carries
+     for completeness — not auction assets priced like ฉ.4, and the project has
+     deliberately parked the class. The server drops them at the SQL layer
+     (WHERE land_title NOT ILIKE '%น.ส.3%'); this mirror keeps an older server
+     from leaking them back through the same /api/parcels route. */
+  const feats = r.data.features.filter((f) => !f.properties.landTitle?.includes('น.ส.3'));
+  const rows = feats.map((f) => featureToParcel(f, now)).filter((p): p is Parcel => p != null);
 
   /* Only a confirmed match is user-facing. A resolver that returned a row has
      not necessarily answered the right one - TD takes a bare deed number and can
@@ -456,7 +479,10 @@ export async function loadParcels(provinceCode?: number): Promise<{
   const visible = verdictsKnown ? shown : rows;
 
   publish(visible, 'api');
-  return { kind: 'api', count: visible.length, error: null, hidden: rows.length - visible.length };
+  /* Hidden = everything the features carried but the UI will not: unresolved
+     deeds and น.ส.3 titles together. Counted from the raw feature list so a
+     title excluded here cannot be counted twice. */
+  return { kind: 'api', count: visible.length, error: null, hidden: r.data.features.length - visible.length };
 }
 
 /** Subscribe to "the parcel collection was replaced". */

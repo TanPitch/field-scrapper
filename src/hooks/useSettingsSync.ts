@@ -47,7 +47,7 @@ const SYNCED_PREFS = [
   'labelSold', 'labelNextDate', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
   'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'chartForecastSolid', 'chartTodayLine',
   'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed',
-  'detailRowHidden', 'detailRowOrder', 'soldPriceHeadline', 'hidePrevSaleRounds', 'filters', 'sort',
+  'detailRowHidden', 'detailRowOrder', 'soldPriceHeadline', 'hidePrevSaleRounds', 'roundGroupLabels', 'filters', 'sort',
   'overlays', 'flood', 'landOn', 'cctvOn', 'sensOn', 'transportOn', 'transportOpacity', 'sensOpacity',
   'searchLimit', 'logLimit', 'bottomH', 'forceArea', 'cascade', 'gkey',
   'avatarColor', 'avatarCfg', 'twoFa', 'pinnedIds', 'ringColor',

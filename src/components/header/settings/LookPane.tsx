@@ -1,4 +1,4 @@
-import { LB_FIELDS } from '../../../data/constants';
+import { LB_FIELDS, THEME_ACCENT } from '../../../data/constants';
 import { patchApp, useApp } from '../../../store/useApp';
 import { formatMoney } from '../../../lib/format';
 import { ColorButton } from '../../ui/ColorButton';
@@ -67,9 +67,7 @@ export function LookPane() {
     </>
   );
 }
-/** Default accent per theme, used when the user has not picked a primary colour. */
-const THEME_ACCENT: Record<Theme, string> = {
-  graphite: '#B8F13F', oled: '#B8F13F', slate: '#58A6FF',
-  sand: '#FFB454', forest: '#3DDC97', rose: '#FF7AA2', mono: '#FFFFFF',
-};
-const getThemeAccent = (t: Theme): string => THEME_ACCENT[t] ?? '#B8F13F';
+/** The theme's own accent for the picker's reset value. One table, one source
+ *  of truth — the copy used to live here while the chart and the map needed
+ *  the same values, and the two had to be edited in lockstep. */
+const getThemeAccent = (t: Theme): string => THEME_ACCENT[t] ?? THEME_ACCENT.graphite;

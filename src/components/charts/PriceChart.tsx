@@ -1,9 +1,9 @@
 import { Chart, type ChartConfiguration } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import { ACCENT } from '../../data/constants';
 import { fdate, dfmtShort } from '../../lib/format';
 import { fmtMoneyNow } from '../../hooks/useMoney';
-import { getApp, patchApp, toast, useApp } from '../../store/useApp';
+import { getApp, patchApp, toast, useApp, effectiveAccent } from '../../store/useApp';
+import { inkOn } from '../../data/constants';
 import type { ChartTick, Parcel } from '../../types';
 import { evFlagPlugin, setupCharts, todayLinePlugin } from './chartSetup';
 import { nextRoundPrice } from '../../lib/price';
@@ -159,6 +159,10 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
   const showFc = useApp(s => s.chartForecast);
   /* Draw the forecast leg in full ink instead of dashed/faded (ผู้ใช้จะตั้งได้). */
   const solidFc = useApp(s => s.chartForecastSolid);
+  /* The accent the line/pills paint with resolves here too — a theme flip must
+     rebuild the chart to re-ink the canvas, just like the toggles above. */
+  const theme = useApp(s => s.theme);
+  const accentUser = useApp(s => s.accentColor);
 
   useEffect(() => {
     const canvas = cv.current;
@@ -191,9 +195,20 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
        in styling is what separates "sold" from "will be". */
     const isFcLeg = (i: number) => i > realEnd;
 
+    /* Canvas cannot read a CSS var, so the accent the line paints with is
+       resolved here — once per chart build — and rides the colour choices
+       below. */
+    const acc = effectiveAccent();
+
+    /* The announce pill is the accent's flag on this chart. The parcel's event
+       log carries the colour each event was mapped with — at data-load time,
+       possibly under another theme — so the announce entry is re-inked to the
+       accent that applies right now. Sold/dead events wear status colours,
+       which do not follow the theme. */
     const evs = p.events
       .map(e => ({ ...e, d: p.hist[e.idx]?.d }))
-      .filter(e => e.d != null && e.d <= now);
+      .filter(e => e.d != null && e.d <= now)
+      .map(e => (e.label === 'ประกาศขาย' ? { ...e, color: acc, ink: inkOn(acc) } : e));
     const thai = { family: "'Noto Sans Thai',sans-serif" };
     const tick = { color: '#666D62', font: { family: 'Noto Sans Thai', size: 9 } };
     const cfg: ChartConfiguration<'line', Pt[]> = {
@@ -201,7 +216,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
       data: {
         datasets: [{
           data: pts.map(h => ({ x: h.d, y: h.v })),
-          borderColor: ACCENT, borderWidth: 2, pointRadius: 4,
+          borderColor: acc, borderWidth: 2, pointRadius: 4,
           pointHoverRadius: 6, pointHitRadius: 14,
           /* Per-segment styling. p1DataIndex is the *later* endpoint of the
              segment, so `> realEnd` picks out exactly the forecast leg and
@@ -209,7 +224,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
              setting asks for full ink everywhere. */
           segment: {
             borderDash: c => (isFcLeg(c.p1DataIndex) && !solidFc ? [5, 4] : undefined),
-            borderColor: c => (isFcLeg(c.p1DataIndex) && !solidFc ? fade(ACCENT, 0.45) : ACCENT),
+            borderColor: c => (isFcLeg(c.p1DataIndex) && !solidFc ? fade(acc, 0.45) : acc),
             borderWidth: c => (isFcLeg(c.p1DataIndex) && !solidFc ? 1.5 : 2),
           },
           /* The forecast point is hollow, so it reads as "not yet" on its own
@@ -217,7 +232,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
              switches the leg to full ink but keeps the point hollow — the
              future stays marked as not-yet. */
           pointBackgroundColor: c => (isFcLeg(c.dataIndex) && !solidFc ? 'transparent' : '#fff'),
-          pointBorderColor: c => (isFcLeg(c.dataIndex) && !solidFc ? fade(ACCENT, 0.45) : ACCENT),
+          pointBorderColor: c => (isFcLeg(c.dataIndex) && !solidFc ? fade(acc, 0.45) : acc),
           pointStyle: () => 'circle',
           /* Sharp corners. tension 0.3 curved between points, which smoothed a
              discrete auction ladder into a shape the data never took — and a
@@ -235,7 +250,20 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
             backgroundColor: '#0B0D0B', borderColor: '#333A31', borderWidth: 1, titleColor: '#8F968C', bodyColor: '#F1F3EE',
             displayColors: false, padding: 8,
             titleFont: { ...thai, weight: 600, size: 11 }, bodyFont: { ...thai, size: 11 },
-            callbacks: { title: it => fdate(it[0].parsed.x as number), label: it => fmtMoneyNow(it.parsed.y as number) },
+            callbacks: {
+              title: it => fdate(it[0].parsed.x as number),
+              label: it => fmtMoneyNow(it.parsed.y as number),
+              /* The pills carry the SHORT tag (one word per row), so the full
+                 LED wording rides the tooltip instead: any event whose pill is
+                 within ~65px of the hovered point is repeated here verbatim. */
+              beforeBody: it => {
+                const px = it[0]?.element?.x;
+                if (px == null) return;
+                const sc = ch.scales.x;
+                const near = evs.filter(ev => Math.abs(sc.getPixelForValue(ev.d) - px) <= 65);
+                return near.map(ev => `${ev.label} · ${fdate(ev.d)}`);
+              },
+            },
           },
         },
         scales: {
@@ -244,11 +272,11 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
         },
       },
       plugins: [
-        evFlagPlugin(evs),
-        /* Vertical line at today, so "how stale is this" is readable at a glance.
-           Toggleable in settings — it is useful for a live lot and clutter on a
-           closed one. */
+        /* Today's line draws UNDER the event pills: events are facts, today is
+           a reference. The today pill itself sits at the plot bottom, so the
+           two can no longer collide even when they overlap in date. */
         ...(showToday ? [todayLinePlugin(now)] : []),
+        evFlagPlugin(evs),
       ],
     };
     const ch = new Chart<'line', Pt[]>(canvas, cfg);
@@ -309,8 +337,10 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     };
     /* showToday and priceBath must be deps: toggling either in settings re-renders
        this component, but the Chart instance is only rebuilt by this effect. Leaving
-       them out meant the toggle appeared to do nothing until the parcel changed. */
-  }, [p, showToday, showFc, priceBath, solidFc]);
+       them out meant the toggle appeared to do nothing until the parcel changed.
+       theme/accentColor too — a canvas cannot read a CSS var, so a colour switch
+       rebuilds the chart to re-ink line and pills. */
+  }, [p, showToday, showFc, priceBath, solidFc, theme, accentUser]);
 
   useEffect(() => { if (chart.current) applyChartRange(chart.current, p); }, [range, p]);
 

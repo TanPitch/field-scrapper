@@ -55,6 +55,11 @@ export interface SellRound {
    *  set on ขายได้ rounds; the graph plots this instead of the scheduled
    *  price when present. */
   soldPrice?: number | null;
+  /** ผลการขาย as the LED report printed it (029) — carried by history rows
+   *  born from the report, whose date-slot label is otherwise empty. Shown as
+   *  a second line in the price table whenever it tells the lists label
+   *  something it does not already say. */
+  ledLabel?: string | null;
 }
 
 export interface Mortgage { amount: number; bank: string }

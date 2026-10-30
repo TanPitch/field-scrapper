@@ -66,7 +66,7 @@ function PinsPop({ close }: { close: () => void }) {
   return (
     <>
       <div className={sdG}>หมุดบนแผนที่</div>
-      {row('#B8F13F', 'ที่ดิน', landOn, v => patchApp({ landOn: v }))}
+      {row('var(--accent)', 'ที่ดิน', landOn, v => patchApp({ landOn: v }))}
       {row('#FFC94D', 'กล้อง CCTV', cctvOn, v => patchApp({ cctvOn: v }))}
       {row('#4C9AFF', 'เซ็นเซอร์น้ำ/เขื่อน', sensOn, v => patchApp({ sensOn: v }),
         <button className={rowBtn} {...useTipProps('ตั้งค่า — opacity')} onClick={() => { close(); showRight('pins-settings'); }}><Settings2 size={12} /></button>)}
@@ -190,7 +190,7 @@ export function Rail({ small, floating = false }: { small: boolean; floating?: b
             {...useSideTip(title)}
             onClick={e => click(id, e.currentTarget)}
             className={`mx-auto grid size-10 flex-none cursor-pointer place-items-center rounded-[10px] border transition ${
-              isOn(id) ? 'border-[rgba(184,241,63,.28)] bg-accent-dim text-accent' : 'border-transparent text-dim hover:bg-panel2 hover:text-ink'}`}
+              isOn(id) ? 'border-accent/30 bg-accent-dim text-accent' : 'border-transparent text-dim hover:bg-panel2 hover:text-ink'}`}
           >
             <Icon size={19} />
           </button>

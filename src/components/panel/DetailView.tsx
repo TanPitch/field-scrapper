@@ -46,7 +46,7 @@ const isPlaceholderStatus = (s: string): boolean => PLACEHOLDER_STATUSES.has(s.t
    newest order — the one still live — keeps plain numbers. */
 const SALE_ORDER_GAP = 60 * 864e5;
 
-function saleOrderLabels(rounds: { date: number | null }[]): { text: string; prev: boolean }[] {
+function saleOrderLabels(rounds: { date: number | null }[]): { text: string; plain: string; prev: boolean }[] {
   const order: number[] = [];
   let g = 0;
   let prev: number | null = null;
@@ -65,6 +65,7 @@ function saleOrderLabels(rounds: { date: number | null }[]): { text: string; pre
   });
   return order.map((cur, i) => ({
     text: cur === g ? `${within[i]}` : `${String.fromCharCode(65 + cur)}${within[i]}`,
+    plain: `${within[i]}`,
     prev: cur !== g,
   }));
 }
@@ -198,6 +199,8 @@ export function DetailView() {
   const showKindIcon = useApp(s => s.showLandKindIcon);
   const highlightSold = useApp(s => s.highlightSoldRounds);
   const hidePrev = useApp(s => s.hidePrevSaleRounds);
+  /* นัดที่ grouping: on = A1/B1 letters per sale order, off = plain 1..N. */
+  const groupRounds = useApp(s => s.roundGroupLabels);
   const rowOrder = useApp(s => s.detailRowOrder);
   const rowHidden = useApp(s => s.detailRowHidden);
   /* Parcels the court is selling with this one (LED group sale); select() fills
@@ -253,7 +256,11 @@ export function DetailView() {
   const daysLeft = upcoming != null ? Math.ceil(((upcoming.date as number) - now) / 864e5) : null;
   const hasUpcoming = daysLeft != null && daysLeft <= 10;
   const kind = popupKind(p);
-  const chipBg = p.status === 'sale' ? popColors.sale : p.status === 'sold' ? popColors.sold : '#2A2F2A';
+  /* The chip rides the status colour map through popupKind: the resale kind
+     ('re') gets its own colour, and 'sale'/'sold'/'cancelled'/'inactive' read
+     the same user-tuneable palette the map dots use. The old inline ternary
+     let a resale lot wear the sale red under a black dot on the map. */
+  const chipBg = popColors[kind] ?? '#2A2F2A';
   const chipInk = '#fff';
   /* Rounds that actually have a date — see the rounds table below. */
   const elev = p.elevation ?? null;
@@ -576,7 +583,10 @@ export function DetailView() {
             const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : lab.prev ? 'text-dim2' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
             return (
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t border-line text-[11.5px] ${cls}`}>
-                <div className="px-2 py-1.5">{lab.text}</div>
+                {/* Group on = A2/B1 per sale order; group off = the plain
+                    in-order count, the letters dropped. Both variants are the
+                    same computation, so a settings flip never re-derives it. */}
+                <div className="px-2 py-1.5">{groupRounds ? lab.text : lab.plain}</div>
                 {/* The date is always shown — it is the one thing a reader needs
                     to place the round. Only a round LED has nothing to say
                     about goes quiet. */}
@@ -593,6 +603,18 @@ export function DetailView() {
                       round has happened or not. The old seeded ไม่มีผู้ซื้อ fabricator
                       is gone — real rows carry LED's own label. */}
                   {isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status}
+                  {/* The report sheet's own word for this round, below the
+                      lists label. Only shown when it adds something: same word
+                      = noise. `ledLabel` arrives only on rows the report
+                      dated (029 source='report'), so old data shows nothing. */}
+                  {r.ledLabel && r.ledLabel.trim() && r.ledLabel.trim() !== r.status.trim() && (
+                    <span
+                      {...useTipProps('ผลการขายจากรายงานของ LED — อ่านแยกจากป้ายนัดขาย')}
+                      className="mt-[1px] block text-[10px] leading-[1.35] text-dim2"
+                    >
+                      ผลรายงาน: {r.ledLabel.trim()}
+                    </span>
+                  )}
                 </div>
               </div>
             );

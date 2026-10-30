@@ -84,7 +84,7 @@ export function PriceHeadline({
         {badge && (
           <span
             title={`รอบถัดไปลดจากราคาเปิด ${Math.round(next.discountPct)}%`}
-            className="rounded-full border border-[#3F6B2A] bg-[#1B2A12] px-[7px] py-[1px] font-display text-[11px] font-semibold text-[#B8F13F]"
+            className="rounded-full border border-accent/40 bg-accent-dim px-[7px] py-[1px] font-display text-[11px] font-semibold text-accent"
           >
             {badge}
           </span>

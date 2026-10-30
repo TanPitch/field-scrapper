@@ -1,6 +1,6 @@
 import type { ExpressionSpecification, GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 import { ACCENT, AREA_COLOR, MAP_FONTS, WMS_BASE } from '../data/constants';
-import { getApp } from '../store/useApp';
+import { getApp, effectiveAccent } from '../store/useApp';
 import type { Overlay, Status } from '../types';
 import { fc, getMap, hasLayer, requireMap } from './mapRef';
 import { markerScale } from './pins';
@@ -337,13 +337,23 @@ export function applyPaint(): void {
   if (map.getLayer('parcels-halo')) map.setPaintProperty('parcels-halo', 'circle-radius', radiusExpr(5.5));
   applyRingPaint();
 }
-/** Ring colour: the user's setting when set, otherwise the theme accent. */
+/** Ring colour: the user's setting when set, otherwise the theme accent. Also
+ *  re-inks the search / cctv / bus / water selection rings (which pins.tsx
+ *  paints by the same rule at creation) and the draw-meta dot, so a theme or
+ *  primary-colour switch repaints every selection ring at once instead of
+ *  only the parcel one. */
 export function applyRingPaint(): void {
   const map = getMap();
   if (!map) return;
-  const col = getApp().ringColor || ACCENT;
+  const col = getApp().ringColor || effectiveAccent();
   if (map.getLayer('parcels-halo')) map.setPaintProperty('parcels-halo', 'circle-stroke-color', col);
   if (map.getLayer('parcels-ring')) map.setPaintProperty('parcels-ring', 'line-color', col);
+  if (map.getLayer('fs-search-sel-ring')) map.setPaintProperty('fs-search-sel-ring', 'circle-stroke-color', col);
+  if (map.getLayer('fs-sel-ring')) map.setPaintProperty('fs-sel-ring', 'circle-stroke-color', col);
+  if (map.getLayer('fs-pin-sel-ring')) map.setPaintProperty('fs-pin-sel-ring', 'circle-stroke-color', col);
+  if (map.getLayer('draw-meta-d')) {
+    map.setPaintProperty('draw-meta-d', 'circle-color', col);
+  }
 }
 export function applyLabelLayout(): void {
   const s = getApp();

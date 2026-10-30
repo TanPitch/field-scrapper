@@ -58,6 +58,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const chartForecastSolid = useApp(s => s.chartForecastSolid);
   const labelNextDate = useApp(s => s.labelNextDate);
   const hlSold = useApp(s => s.highlightSoldRounds);
+  const hidePrev = useApp(s => s.hidePrevSaleRounds);
+  const groupRounds = useApp(s => s.roundGroupLabels);
   const condoUnitOrder = useApp(s => s.condoUnitOrder);
   const soldPriceHeadline = useApp(s => s.soldPriceHeadline);
   
@@ -229,6 +231,16 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <span className={fl}>สีรอบถัดไปอ่อนลง</span>
         <Switch checked={hlSold} onChange={v => patchApp({ highlightSoldRounds: v })} />
       </div>
+      {/* นัดหมายแสดงเป็น A1/B1 ตามชุดการขาย หรือนับตรง 1..N ไม่ใส่ตัวอักษร */}
+      <div className={frow}>
+        <span className={fl}>จัดกลุ่มนัดตามชุดการขาย</span>
+        <Switch checked={groupRounds} onChange={v => patchApp({ roundGroupLabels: v })} />
+      </div>
+      <div className={frow}>
+        <span className={fl}>ซ่อนรอบก่อนหน้า</span>
+        <Switch checked={hidePrev} onChange={v => patchApp({ hidePrevSaleRounds: v })} />
+      </div>
+      <Hint>ซ่อนรอบก่อนหน้า — ซ่อนนัดของชุดขายเก่าในแปลงที่ถูกประกาศขายซ้ำ (ปุ่มเดียวกันยังอยู่บนตารางในแผงรายละเอียด)</Hint>
 
       <div className={setSec}>กราฟราคา</div>
       <div className={frow}>

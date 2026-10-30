@@ -8,7 +8,7 @@ import { CctvPopup } from '../components/pins/CctvPopup';
 import { MIN_ZOOM } from '../data/constants';
 import { PARCEL_BY_ID, ALL_PARCELS } from '../data/liveData';
 import { select, showRight } from '../store/actions';
-import { getApp, patchApp } from '../store/useApp';
+import { getApp, patchApp, effectiveAccent } from '../store/useApp';
 import type { BBox, CctvPin, LngLat, MarkerSize, SearchHit, SensorPin, TransportPin } from '../types';
 import { fc, getMap, hasLayer, ptF, setSourceData, setVisibility } from './mapRef';
 
@@ -21,6 +21,14 @@ export function currentBbox(): BBox | null {
   const b = map.getBounds();
   return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
 }
+
+/** Selection-ring paint: the user's ring colour when one is set, otherwise the
+ *  accent the active theme resolves to. Same rule the parcel layers paint by
+ *  (layers.ts applyRingPaint); the three search/cctv/bus/water rings here used
+ *  to be hard-coded lime and stayed lime under every other theme. Kept as a
+ *  function rather than read once, since layers are created before settings
+ *  can change. */
+const ringCol = (): string => getApp().ringColor || effectiveAccent();
 
 const markerImageHalf = 5; // 36px canvas / pixelRatio 2 / 2
 const smallLandRadius = 7.5; // current small land dot radius
@@ -282,7 +290,7 @@ export function initPinLayers(): void {
   if (!map.getLayer('fs-search-sel-ring')) {
     map.addLayer({
       id: 'fs-search-sel-ring', type: 'circle', source: 'fs-search-sel-src',
-      paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 },
+      paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': ringCol(), 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 },
     });
   }
 
@@ -326,12 +334,12 @@ export function initPinLayers(): void {
   floodLabelImages.clear();
   /* transient flash ring (gotoItem) and the persistent cctv/bus/water selection */
   addSrc('fs-sel-src');
-  if (!map.getLayer('fs-sel-ring')) map.addLayer({ id: 'fs-sel-ring', type: 'circle', source: 'fs-sel-src', paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 } });
+  if (!map.getLayer('fs-sel-ring')) map.addLayer({ id: 'fs-sel-ring', type: 'circle', source: 'fs-sel-src', paint: { 'circle-radius': 17 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': ringCol(), 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 } });
   addSrc('fs-pin-sel-src');
   if (!map.getLayer('fs-pin-sel-ring')) {
     map.addLayer({
       id: 'fs-pin-sel-ring', type: 'circle', source: 'fs-pin-sel-src',
-      paint: { 'circle-radius': 12 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': '#B8F13F', 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 },
+      paint: { 'circle-radius': 12 * markerScale(), 'circle-color': 'rgba(184,241,63,0)', 'circle-stroke-color': ringCol(), 'circle-stroke-width': 3, 'circle-stroke-opacity': 1 },
     });
   }
 

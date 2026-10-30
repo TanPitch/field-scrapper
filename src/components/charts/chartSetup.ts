@@ -61,7 +61,10 @@ export function todayLinePlugin(now: number): Plugin<'line'> {
             const w = ctx.measureText(label).width + 10;
             const h = 13;
             const x0 = Math.min(Math.max(cx - w / 2, chartArea.left), chartArea.right - w);
-            const y0 = chartArea.top;
+            /* Bottom of the plot, not the top: the top strip is where the price
+               events sit (one stacked row each), and the วันนี้ pill used to
+               paint straight over them when today crossed a marked date. */
+            const y0 = chartArea.bottom - h;
             ctx.fillStyle = 'rgba(0,0,0,.5)';
             ctx.fillRect(x0, y0, w, h);
             ctx.fillStyle = 'rgba(255,255,255,.7)';
@@ -96,9 +99,13 @@ function pill(
 }
 
 /**
- * Dashed vertical flags + pill labels for in-view price events. Events outside the
- * visible window get pinned to the corresponding edge with an outward arrow, so a
- * zoomed view still shows that ประกาศขาย / นำกลับมาขายใหม่ exists and on which side.
+ * Dashed vertical flags + pill labels for price events. One placement pass for
+ * every event — in-view and edge-pinned alike — with greedy row stacking, so
+ * two events landing near each other (a relist announced days after the first
+ * sale expired) paint side by side in rows instead of over each other. Events
+ * outside the visible window get pinned to the corresponding edge with an
+ * outward arrow. The full word still reaches the user on hover — the price
+ * tooltip repeats the whole label for any event near the cursor.
  */
 export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
   return {
@@ -108,47 +115,118 @@ export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
       const x = chart.scales.x;
       if (!evs.length || !chartArea) return;
       ctx.save();
-      const off: { ev: EventFlag; side: 'left' | 'right' }[] = [];
-      evs.forEach(ev => {
-        /* Straight from the scale. The x axis is linear, so getPixelForValue is
-           exact for any date rather than interpolated between ticks — and ev.d
-           is the date of a point that is actually plotted, since the caller
-           filters events against the same window it plots.
+      ctx.font = PILL_FONT;
 
-           Do not "improve" this by snapping to the nearest rendered point. That
-           was tried and made the flags land on neighbouring dots, which read as
-           a second dot at the same date. Verified against the real dataset:
-           no parcel has two rounds sharing a date, so the nearest point is
-           only ever correct by accident. */
+      /* Desired geometry: pill width from the SHORT label (the tag is what is
+         drawn), x from the scale. Straight from the scale — the x axis is
+         linear, so getPixelForValue is exact for any date rather than
+         interpolated between ticks — and ev.d is the date of a point that is
+         actually plotted, since the caller filters events against the same
+         window it plots.
+
+         Do not "improve" this by snapping to the nearest rendered point. That
+         was tried and made the flags land on neighbouring dots, which read as
+         a second dot at the same date. Verified against the real dataset:
+         no parcel has two rounds sharing a date, so the nearest point is
+         only ever correct by accident. */
+      type Want = {
+        ev: EventFlag; short: string; w: number;
+        x0: number; px: number; pinned: 'left' | 'right' | null;
+      };
+      const want: Want[] = evs.map((ev) => {
+        const short = shortLabel(ev.label);
+        const w = ctx.measureText(short).width + 14;
         const px = x.getPixelForValue(ev.d);
-        if (px < chartArea.left || px > chartArea.right) {
-          off.push({ ev, side: px < chartArea.left ? 'left' : 'right' });
-          return;
+        const inside = px >= chartArea.left && px <= chartArea.right;
+        if (inside) {
+          return {
+            ev, short, w, px, pinned: null,
+            x0: Math.min(Math.max(px - w / 2, chartArea.left), chartArea.right - w),
+          };
         }
-        ctx.strokeStyle = ev.color; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(px, chartArea.top + 15); ctx.lineTo(px, chartArea.bottom); ctx.stroke();
-        ctx.setLineDash([]);
-        const w = ctx.measureText(ev.label).width + 14;
-        const x0 = Math.min(Math.max(px - w / 2, chartArea.left), chartArea.right - w);
-        ctx.fillStyle = ev.color;
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(x0, chartArea.top, w, 13, 3); else ctx.rect(x0, chartArea.top, w, 13);
-        ctx.fill();
-        ctx.fillStyle = ev.ink; ctx.textBaseline = 'middle';
-        ctx.fillText(ev.label, x0 + 7, chartArea.top + 7);
+        return {
+          ev, short, w, px, pinned: px < chartArea.left ? 'left' : 'right',
+          x0: px < chartArea.left ? chartArea.left + 2 : chartArea.right - w - 2,
+        };
       });
-      /* stack off-graph pills under the in-view ones so nothing overlaps */
-      off.forEach(({ ev, side }, i) => {
-        const y = chartArea.top + 15 + i * 16;
-        if (y + 13 > chartArea.bottom) return;
-        /* Pin to the edge the event sits beyond. No arrow character in the text:
-           pill() already draws a triangular tip on that side, so the glyph was
-           saying the same thing twice - and ↩/↪ are exactly the kind of symbol
-           that renders as a tofu box wherever the Thai font lacks the glyph. */
-        if (side === 'left') pill(ctx, ev.label, chartArea.left + 2, y, ev.color, ev.ink, 'left');
-        else pill(ctx, ev.label, chartArea.right - 2, y, ev.color, ev.ink, 'right');
+
+      /* Row assignment happens before anything draws, so a pill never paints
+         over one that already claimed the spot. Rows stride 16px (13px pill +
+         3px air) down from the top edge of the plot, and the plot bottom is a
+         hard cap: out of room means skipped, not drawn over the x axis. */
+      const ROW_H = 16;
+      const maxRow = Math.floor((chartArea.bottom - chartArea.top - 13) / ROW_H);
+      type Placed = { x0: number; w: number; row: number };
+      const placed: Placed[] = [];
+      const fits = (cand: Want, row: number): boolean =>
+        placed.every((p) =>
+          p.row !== row
+          /* 1px of air: two rounds a day apart deserve visible separation. */
+          || cand.x0 + cand.w + 1 < p.x0
+          || p.x0 + p.w + 1 < cand.x0,
+        );
+
+      /* Dashed date lines first, full plot height — the pills then sit on top
+         of them, and a date stays traceable even where a pill is skipped. */
+      want.forEach(wp => {
+        if (wp.pinned) return;
+        ctx.strokeStyle = wp.ev.color; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(wp.px, chartArea.top); ctx.lineTo(wp.px, chartArea.bottom); ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      want.forEach(wp => {
+        let row = 0;
+        while (row <= maxRow && !fits(wp, row)) row++;
+        if (row > maxRow) return;
+        placed.push({ x0: wp.x0, w: wp.w, row });
+        const y = chartArea.top + row * ROW_H;
+        if (wp.pinned) {
+          /* Pin to the edge the event sits beyond. No arrow character in the
+             text: pill() already draws a triangular tip on that side, so the
+             glyph was saying the same thing twice - and ↩/↪ are exactly the
+             kind of symbol that renders as a tofu box wherever the Thai font
+             lacks the glyph. */
+          pill(ctx, wp.short, wp.pinned === 'left' ? chartArea.left + 2 : chartArea.right - 2, y, wp.ev.color, wp.ev.ink, wp.pinned);
+        } else {
+          ctx.fillStyle = wp.ev.color;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(wp.x0, y, wp.w, 13, 3); else ctx.rect(wp.x0, y, wp.w, 13);
+          ctx.fill();
+          ctx.fillStyle = wp.ev.ink; ctx.textBaseline = 'middle';
+          ctx.fillText(wp.short, wp.x0 + 7, y + 7);
+        }
       });
       ctx.restore();
     },
   };
+}
+
+/** Pill font the event tags are measured AND drawn with. Stated once so a
+ *  different plugin order cannot change pill width between measure and draw. */
+const PILL_FONT = "600 9px 'Noto Sans Thai'";
+
+/* Longest prefix first — นำกลับมาขายใหม่ must be matched before a tail rule
+ * could clip it to nonsense. Each entry reads the LED word as the tag LED's
+ * own pages print: the pills are tags, the tooltip carries the full sentence. */
+const SHORT_PREFIXES: [string, string][] = [
+  ['นำกลับมาขายใหม่', 'นำกลับมาขาย'],
+  ['งดขายในนัดที่เหลือ', 'งดขาย'],
+  ['งดขายไม่มีผู้สู้ราคา', 'งดขาย'],
+  ['ประกาศขาย', 'ประกาศ'],
+  ['ขายออกแล้ว', 'ขายออก'],
+  ['ถอนการยึด', 'ถอนการยึด'],
+  ['ยกเลิก', 'ยกเลิก'],
+  ['หมดอายุ', 'หมดอายุ'],
+];
+
+/** The one word a pill keeps, so a stack of events fits the plot: the chart
+ *  tags หมดอายุประกาศ ไม่มีผู้สู้ราคา as หมดอายุ, and the price tooltip speaks
+ *  the full label on hover. */
+export function shortLabel(label: string): string {
+  for (const [pfx, short] of SHORT_PREFIXES) {
+    if (label.startsWith(pfx)) return short;
+  }
+  const first = label.split(/\s+/)[0] ?? label;
+  return first.length > 14 ? `${first.slice(0, 13)}…` : first;
 }

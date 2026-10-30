@@ -395,14 +395,17 @@ body.reduce-motion .spin-keep {
   letter-spacing: -0.015em;
   padding: 0 3px;
 }
-/* discount badge sitting beside the next-round price, in both popup kinds */
+/* discount badge sitting beside the next-round price, in both popup kinds.
+   Painted from --accent rather than the lime it used to hard-code, so the
+   badge follows the theme (and any user-chosen primary) exactly like the
+   bordered pill in PriceHeadline does. */
 .pop-disc {
   font: 600 10.5px 'Noto Sans Thai', sans-serif;
   padding: 1px 6px;
   border-radius: 99px;
-  border: 1px solid rgba(63, 107, 42, 0.55);
-  background: #1b2a12;
-  color: #b8f13f;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
   white-space: nowrap;
   align-self: center;
 }

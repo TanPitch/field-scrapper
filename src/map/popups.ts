@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { STATUS } from '../data/constants';
 import { PARCEL_BY_ID } from '../data/liveData';
 import { fmtMoneyNow } from '../hooks/useMoney';
-import { esc, fmtRai, isSqm, numDate, sizeRowLabel } from '../lib/format';
+import { esc, fdate, fmtRai, isSqm, numDate, sizeRowLabel } from '../lib/format';
 import { openPriceHtml, priceHtmlFull } from '../lib/priceHtml';
 import { discountBadge, nextRoundPrice } from '../lib/price';
 import { shortPrice } from '../lib/landType';
@@ -30,6 +30,11 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      big. It used to be a text chip in the header row, where it competed with the
      status and pushed the unit price off a short popup. */
   if (landKindLabel(p)) rows += row('ประเภทที่ดิน', landKindLabel(p)!);
+  /* ประกาศขาย — the date the lists page published this sale order. The field
+     list already offers it (วันประกาศขาย in POP_FIELDS) and countRows counted
+     it, but no row printed: enabling the field made the popup denser while
+     saying nothing. Same wording the detail panel's row uses. */
+  if (cfg.announce && p.announce > 0) rows += row('ประกาศขาย', fdate(p.announce));
   /* A ห้องชุด is sold per square metre of floor, so its price per ตร.วา would be
      a division against the whole building's plot - a number that looks real and
      means nothing. Hidden rather than shown as a dash. */

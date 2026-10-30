@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER, DEFAULT_FLOOD, DEFAULT_LB_CFG, DEFAULT_OVERLAYS, DEFAULT_POPUP_CFG,
-  DEFAULT_POP_COLORS, MIN_BH,
+  DEFAULT_POP_COLORS, MIN_BH, ACCENT, THEME_ACCENT,
 } from '../data/constants';
 import type { AvatarCfg } from '../components/ui/AvatarPicker';
 import type { CondoUnitOrder } from '../lib/condoUnits';
@@ -15,6 +15,18 @@ export const EMPTY_FILTERS: Filters = {
   text: '', status: [], minWah: null, maxWah: null, minPrice: null, maxPrice: null, minElev: null, maxElev: null, province: '',
   provinces: [], tambons: [], amps: [], propertyTypes: [],
 };
+
+/**
+ * The accent the CSS is actually resolving right now: the user's override when
+ * one is set, else the current theme's own accent. Canvas paint (chart line,
+ * map paint properties, price-event colours) cannot read CSS vars, so anything
+ * that draws by hand resolves through this instead of hard-coding ACCENT —
+ * which silently lied under every non-graphite theme.
+ */
+export function effectiveAccent(): string {
+  const s = getApp();
+  return s.accentColor || THEME_ACCENT[s.theme] || ACCENT;
+}
 
 export interface Toast { id: number; msg: string; warn: boolean; out: boolean }
 export type SetTab = 'map' | 'popup' | 'search' | 'look' | 'about' | 'draw' | 'server' | 'user' | 'users' | 'gaps';
@@ -52,6 +64,9 @@ export interface AppState {
   /** Rounds from earlier sale orders (resale history): false = shown dimmed,
       true = hidden. See saleOrderLabels in DetailView. */
   hidePrevSaleRounds: boolean;
+  /** The นัดที่ column reads A1, B2 … when a lot was re-listed (grouped by
+   *  sale order); off = the plain in-order count, letters dropped. */
+  roundGroupLabels: boolean;
   /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
   showLandKindIcon: boolean;
   priceBath: boolean;
@@ -189,6 +204,7 @@ export const useApp = create<AppState>(set => ({
   detailRowOrder: [],
   soldPriceHeadline: 'sold',
   hidePrevSaleRounds: false,
+  roundGroupLabels: true,
   showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,

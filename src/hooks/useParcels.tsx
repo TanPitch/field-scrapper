@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { computeRows, emptyReason, type RowInputs, type RowSets } from '../lib/visibility';
-import { ALL_PARCELS, loadParcels, subscribeParcels, getDataOrigin, type DataSourceKind } from '../data/liveData';
+import { computeRows, dataPass, emptyReason, type RowInputs, type RowSets } from '../lib/visibility';
+import { ALL_PARCELS, loadParcels, PARCEL_BY_ID, subscribeParcels, getDataOrigin, type DataSourceKind } from '../data/liveData';
 import { framePoints, getMap } from '../map/mapRef';
+import { deselect } from '../store/actions';
 import { useApp } from '../store/useApp';
 
 export interface ParcelsValue extends RowSets {
@@ -44,6 +45,22 @@ export function ParcelsProvider({ children, provinceCode }: { children: ReactNod
   const [loading, setLoading] = useState(true);
 
   useEffect(() => subscribeParcels(() => setVersion((v) => v + 1)), []);
+
+  /* A selection the current view no longer contains lets itself go. Hide a
+     status, tighten a filter or type into the search box, and the parcel left
+     open in the right panel used to stay open — visible on the panel yet
+     unreachable from map and table, with its selection ring stranded. A
+     re-published collection can also drop the selected id outright (a lot the
+     server corrected out). Both cases clear the selection here: deselect() is
+     exactly the dismissal the popup-X button performs. Runs on `version` too,
+     because PARCEL_BY_ID is what the new data replaced. */
+  useEffect(() => {
+    const sel = useApp.getState().selectedId;
+    if (sel == null) return;
+    const parcel = PARCEL_BY_ID.get(sel);
+    if (!parcel) { deselect(); return; }
+    if (!dataPass(parcel, { filters, statusVisible })) deselect();
+  }, [filters, statusVisible, version]);
 
   useEffect(() => {
     let live = true;

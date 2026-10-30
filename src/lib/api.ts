@@ -119,6 +119,9 @@ export interface ApiRound {
   /** The winning bid from LED's report sheet (028), for rounds that sold.
    *  Absent on older servers and on every round that did not sell. */
   sold_price?: number | null;
+  /** The report's own outcome word for this round (029) — the printed report's
+   *  ผลการขาย, kept apart from the lists label. Absent on older servers. */
+  led_label?: string | null;
 }
 
 export interface ApiParcelProps {
