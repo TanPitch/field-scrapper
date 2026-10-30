@@ -229,7 +229,7 @@ export function positionGroupRing(): void {
     /* Same radius as the solid halo (radiusExpr(5.5)); the line stroke is
        centred on the polygon edge, so pull it in half a stroke to keep the
        outer edge on the ring the user sees. */
-    const px = Math.max(1, (DOT_RADIUS + 5.5) * markerScale() - RING_W / 2);
+    const px = Math.max(1, (DOT_RADIUS + 2.5) * markerScale() - RING_W / 2);
     const mpp = (156543.03392 * Math.cos((map.getCenter().lat * Math.PI) / 180)) / Math.pow(2, map.getZoom());
     const rM = px * mpp;
     feats = ringPts.map((c) => ringPolygon(c, rM));
@@ -248,7 +248,7 @@ export function addCustomLayers(): void {
 
   if (!map.getSource('ring')) {
     map.addSource('ring', { type: 'geojson', data: fc([]) });
-    safeAddLayer({ id: 'parcels-ring', type: 'line', source: 'ring', paint: { 'line-color': s.ringColor || ACCENT, 'line-width': RING_W, 'line-dasharray': [2.5, 2.5], 'line-opacity': 0.95 } });
+    safeAddLayer({ id: 'parcels-ring', type: 'line', source: 'ring', paint: { 'line-color': s.ringColor || ACCENT, 'line-width': RING_W, 'line-dasharray': [1.5, 1], 'line-opacity': 0.95 } });
   }
   if (!map.getSource('parcels')) {
     map.addSource('parcels', { type: 'geojson', data: fc([]) });

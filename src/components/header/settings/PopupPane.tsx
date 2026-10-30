@@ -9,6 +9,7 @@ import {
   POP_KINDS,
   STATUS,
   STATUS_KEYS,
+  ACCENT,
 } from '../../../data/constants';
 import { DETAIL_ROWS } from '../../../lib/detailRows';
 import type { CondoUnitOrder } from '../../../lib/condoUnits';
@@ -63,6 +64,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
   const detailRowHidden = useApp(s => s.detailRowHidden);
   const detailRowOrder = useApp(s => s.detailRowOrder);
+
+  const ringColor = useApp(s => s.ringColor);
 
   /* Shown order = the saved order for rows it names, then anything it does not
      mention in built-in order. Appending the leftovers rather than sorting the
@@ -123,6 +126,21 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
       <div className={frow}><span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span><button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button><Switch checked={restrict} onChange={setRestrict} /></div>
       <div className={frow}><span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span><Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} /></div>
+      <div className={frow}>
+        <span className={fl}>สีวงแหวนหมุด</span>
+        <span className="flex items-center gap-2">
+          <ColorButton
+            value={ringColor || ACCENT}
+            title="สีวงแหวนหมุด"
+            onChange={hex => patchApp({ ringColor: hex })}
+            className="h-[26px] w-[34px] flex-none cursor-pointer rounded-md border border-line2 p-0"
+            style={{ background: ringColor || ACCENT }}
+          />
+          {ringColor && (
+            <button className={`${btn} flex-none`} onClick={() => patchApp({ ringColor: '' })}>รีเซ็ต</button>
+          )}
+        </span>
+      </div>
 
       <div className={setSec}>ป็อปอัพ</div>
       <div className={frow}><span className={fl}>ป็อปอัพหมุดที่ดิน</span><Seg<PopupMode> items={[['active', 'แสดงเมื่อเลือก'], ['all', 'แสดงทุกจุด']]} value={popupMode} onChange={v => patchApp({ popupMode: v })} /></div>

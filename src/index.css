@@ -444,12 +444,11 @@ body.reduce-motion .spin-keep {
   font: 400 11px 'Noto Sans Thai';
   opacity: 0.7;
 }
-/* data source + land-kind badges on the full popup */
+/* data xN badges on the full popup */
 .pop-kind {
   font: 500 9.5px 'Noto Sans Thai', sans-serif;
   padding: 1px 7px;
   border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(0, 0, 0, 0.22);
   color: #fff;
 }

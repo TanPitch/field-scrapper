@@ -34,14 +34,7 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      a division against the whole building's plot - a number that looks real and
      means nothing. Hidden rather than shown as a dash. */
   if (cfg.perWah && !isSqm(p.sizeUnit)) rows += row('ราคา/ตร.วา', fmtMoneyNow(p.perWah));
-  // if (cfg.announce) rows += row('ประกาศขาย', fdate(p.announce));
-  // if (cfg.soldTs && p.soldTs) rows += row('ขายออกแล้ว', fdate(p.soldTs));
-  // if (cfg.resale && p.resell) {
-  //   const ev = p.events.find(e => e.label === 'นำกลับมาขายใหม่');
-  //   if (ev) rows += row('นำกลับมาขายใหม่', fdate(p.hist[ev.idx].d));
-  // }
-  // ${esc(p.name)}
-  // if (cfg.deed) rows += row('เลขโฉนด', esc(p.deed));
+  rows += row('แหล่งข้อมูล', esc(p.dataSource));
   const bg = parcelPopupBg(p);
   /* The change-since-last-sold chip used to sit under the price. Removed: the
      user asked for the discount against the opening price only, and carrying two
@@ -106,19 +99,17 @@ function popupContent(p: Parcel): { html: string; bg: string } {
      its own line where it cannot be read as another attribute of the parcel. In
      the chip row it sat beside the status and the land-kind icon, where three
      pills of equal weight competed for one line. */
-  const srcLine = `<div class="pop-src-row">${esc(p.dataSource)}</div>`;
   return {
-    html: `<div class="pop-box" data-selectable>${units}`
-      + `<div class="pop-tags">
-        <span class="pop-tag">${STATUS[kind].th}</span>${kindBadge}
-      </div>`
+    html: `<div class="pop-box" data-selectable>
+        <div class="pop-tags">
+          <span class="pop-tag">${STATUS[kind].th}</span>${kindBadge}${units}
+        </div>`
       + priceHtmlFull(p)
       + `<div class="flex">`
         + openLine
         + `<div class="pop-name" data-tip="โฉนด">${nameLine}</div>
         </div>
         ${rows}
-        ${srcLine}
     </div>`,
     bg,
   };
@@ -194,7 +185,15 @@ export const getClickPopId = (): number | null => clickPopId;
  * selectedId *before* calling closeClickPopup(), so a programmatic close finds
  * nothing selected and does not recurse.
  */
-let onUserDismiss: (() => void) | null = null;
+/* var, not let, and no initializer: the import cycle popups → parcelLabels →
+   actions → popups can run actions' body while THIS body is paused on its
+   import of parcelLabels, and actions.ts registers the dismiss handler at
+   module scope. A `let` binding is still in its temporal dead zone at that
+   write — "Cannot access 'onUserDismiss' before initialization" — which broke
+   bun test as a whole and would break the browser bundle the same way. A
+   hoisted var starts as undefined; the early registration lands and nothing
+   ever resets it, because there is no initializer left to re-run. */
+var onUserDismiss: (() => void) | null;
 export function setPopupDismissHandler(fn: (() => void) | null): void {
   onUserDismiss = fn;
 }

@@ -20,6 +20,7 @@ import { esc, fdate, numDate } from '../lib/format';
 import { landTypeOf } from '../lib/landType';
 import { nextRoundPrice } from '../lib/price';
 import { getApp } from '../store/useApp';
+import { select } from '../store/actions';
 import type { Parcel } from '../types';
 import { getMap } from './mapRef';
 import { LandKindIcon } from '../components/ui/LandKindIcon';
@@ -120,13 +121,13 @@ function labelHtml(p: Parcel, showDate: boolean): string {
 export function unitBadge(p: { lotCount?: number | null }): string {
   const n = p.lotCount ?? 1;
   if (n <= 1) return '';
-  return `<span class="whitespace-nowrap rounded-full bg-black/45 px-[7px] py-[1px] text-[9.5px] font-semibold leading-none text-white">×${n}</span>`;
+  return `<span class="opacity-75">${n}</span>`;
 }
 
 /** Same pill, positioned in the popup's top-right corner by the close button. */
 export function unitBadgeCorner(p: { lotCount?: number | null }): string {
   const html = unitBadge(p);
-  return html ? `<span class="pop-units">${html}</span>` : '';
+  return html ? `<span class="pop-kind">${html}</span>` : '';
 }
 
 /**
@@ -186,6 +187,21 @@ export function syncParcelLabels(parcels: Parcel[], showNextDate: boolean): void
       node.innerHTML = html;
       node.dataset.html = html;
       node.setAttribute('data-tip', `${p.name} · ${fdate(p.announce)}`);
+    }
+    /* Clicking the marker badge (not only the dot) selects the parcel.
+     * The overlay host must stay pointer-events:none so map gestures pass
+     * beneath it; the badge itself opts back in. A click whose pointer moved
+     * more than a few px was a map drag that happened to start on the badge —
+     * selecting land because the user panned the map is hostile, so ignore it. */
+    if (node.dataset.selHk !== String(p.id)) {
+      node.dataset.selHk = String(p.id);
+      node.classList.add('pointer-events-auto', 'cursor-pointer');
+      let downX = 0, downY = 0;
+      node.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
+      node.addEventListener('click', (e) => {
+        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) return;
+        select(p.id, { fly: false });
+      });
     }
   });
 

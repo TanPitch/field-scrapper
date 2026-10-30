@@ -84,7 +84,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
        cap: min(760px, full-viewport-minus-header) — on a small screen the
        drawer still fills what is left; on a big one it stops at 760px so the
        panel does not tower. Edit just the 760px to taste. */
-    <div className={`fs-panel absolute right-2.5 top-[calc(100%+8px)] z-[85] h-[min(760px,calc(100vh-var(--header-h)-20px))] w-[640px] max-w-[calc(100vw-20px)] isolate animate-tin overflow-hidden rounded-[14px] border border-line2 shadow-[0_22px_60px_rgba(0,0,0,.6)] ${glassLevel === 'none' ? 'bg-panel' : 'bg-[rgba(18,21,18,.82)] backdrop-blur-md'}`}>
+    <div className={`fs-panel absolute right-2.5 top-[calc(100%+8px)] z-[85] h-[calc(100vh-var(--header-h)-20px)] md:h-[calc(100vh-var(--header-h)-100px)] w-[640px] max-w-[calc(100vw-20px)] isolate animate-tin overflow-hidden rounded-[14px] border border-line2 shadow-[0_22px_60px_rgba(0,0,0,.6)] ${glassLevel === 'none' ? 'bg-panel' : 'bg-[rgba(18,21,18,.82)] backdrop-blur-md'}`}>
       <div className="relative z-10 flex h-full flex-col">
       <div className="flex items-center border-b border-line px-4 py-3 text-[13px] font-semibold">
         ตั้งค่าทั่วไป
