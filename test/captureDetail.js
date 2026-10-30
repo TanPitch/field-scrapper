@@ -14,6 +14,16 @@ import { Client } from "pg";
 const deed = process.argv[2] ?? "34062";
 const provCode = process.argv[3] ?? "83";
 const line = (s) => console.log("  " + s);
+/* Amphur / tambon narrowing. ขอนแก่น alone lists 121 pages; a deed can sit past
+   page 30 and never be reached. LED's own search form takes ampur/tumbol as
+   POST fields (scrapeByProvince deletes them to see the whole province), so
+   naming them here shrinks the listing to a handful of pages.
+     bun captureDetail.js <deed> <province> [ampur] [tumbol]   */
+const ampurArg = process.argv[4] ?? "";
+const tumbolArg = process.argv[5] ?? "";
+/* LED_PAGES: one page ≈ 1.2 s of politeness, so raising the cap only ever
+   costs pacing time. Default is ample for a narrowed search. */
+const maxPages = Number(process.env.LED_PAGES || 30);
 
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
@@ -24,7 +34,7 @@ const led = new LedClient({ baseDelayMs: 1200, verbose: false });
 await led.open();
 
 const fields = {
-  province: provName, ampur: "", tumbol: "", asset_type: "", person1: "", bid_date: "",
+  province: provName, ampur: ampurArg, tumbol: tumbolArg, asset_type: "", person1: "", bid_date: "",
   price_begin: "", price_end: "", rai_if: "1", rai: "", quaterrai_if: "1", quaterrai: "",
   wa_if: "1", wa: "", search: "ok", page: "1",
 };
@@ -32,7 +42,7 @@ fields.oseckey = led.seckey;
 fields.seckey = led.seckey;
 
 let res = null, found = null;
-for (let pg = 1; pg <= 30 && !found; pg++) {
+for (let pg = 1; pg <= maxPages && !found; pg++) {
   fields.page = String(pg);
   res = await led.search(fields, { expectRows: false });
   if (!res.rowCount) break;

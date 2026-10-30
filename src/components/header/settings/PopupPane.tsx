@@ -62,6 +62,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const groupRounds = useApp(s => s.roundGroupLabels);
   const condoUnitOrder = useApp(s => s.condoUnitOrder);
   const soldPriceHeadline = useApp(s => s.soldPriceHeadline);
+  const roundsPreview = useApp(s => s.roundsPreview);
+  const roundsGroupBorder = useApp(s => s.roundsGroupBorder);
   
   const sectionsCollapsed = useApp(s => s.sectionsCollapsed);
   const detailRowHidden = useApp(s => s.detailRowHidden);
@@ -231,6 +233,26 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
         <span className={fl}>สีรอบถัดไปอ่อนลง</span>
         <Switch checked={hlSold} onChange={v => patchApp({ highlightSoldRounds: v })} />
       </div>
+      <div className={frow}>
+        <span className={fl}>พรีวิวรอบเก่า</span>
+        <Select
+          value={roundsPreview == null ? 'all' : String(roundsPreview)}
+          items={[
+            { v: '4', l: '4 รอบ' },
+            { v: '6', l: '6 รอบ' },
+            { v: '8', l: '8 รอบ' },
+            { v: '12', l: '12 รอบ' },
+            { v: 'all', l: 'ทั้งหมด' },
+          ]}
+          onChange={v => patchApp({ roundsPreview: v === 'all' ? null : Number(v) })}
+        />
+      </div>
+      <Hint>จำนวนรอบขายล่าสุด (รวมทุกชุดการขาย) ที่แสดงในตาราง — เลือก ทั้งหมด เพื่อแสดงทุกนัด นับจากรอบล่าสุดย้อนหลัง</Hint>
+      <div className={frow}>
+        <span className={fl}>เส้นประแบ่งกลุ่มรอบ</span>
+        <Switch checked={roundsGroupBorder} onChange={v => patchApp({ roundsGroupBorder: v })} />
+      </div>
+      <Hint>ขีดเส้นประท้านล่างตาราง คั่นระหว่างชุดการขาย A/B กับชุดปัจจุบัน</Hint>
       {/* นัดหมายแสดงเป็น A1/B1 ตามชุดการขาย หรือนับตรง 1..N ไม่ใส่ตัวอักษร */}
       <div className={frow}>
         <span className={fl}>จัดกลุ่มนัดตามชุดการขาย</span>

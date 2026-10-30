@@ -67,6 +67,8 @@ export interface AppState {
   /** The นัดที่ column reads A1, B2 … when a lot was re-listed (grouped by
    *  sale order); off = the plain in-order count, letters dropped. */
   roundGroupLabels: boolean;
+  roundsPreview: number | null;
+  roundsGroupBorder: boolean;
   /** Show the land-kind (ว่าง / มีสิ่งปลูกสร้าง) badge icon. */
   showLandKindIcon: boolean;
   priceBath: boolean;
@@ -205,6 +207,8 @@ export const useApp = create<AppState>(set => ({
   soldPriceHeadline: 'sold',
   hidePrevSaleRounds: false,
   roundGroupLabels: true,
+  roundsPreview: 6,
+  roundsGroupBorder: true,
   showLandKindIcon: true,
   priceBath: false,
   priceSpace: true,

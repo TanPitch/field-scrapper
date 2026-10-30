@@ -1,4 +1,5 @@
-import { Calendar, ImageOff, Link2, MapPin, ScanEye } from 'lucide-react';
+import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye } from 'lucide-react';
+import { getMap } from '../../map/mapRef';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import { STATUS } from '../../data/constants';
@@ -46,7 +47,7 @@ const isPlaceholderStatus = (s: string): boolean => PLACEHOLDER_STATUSES.has(s.t
    newest order — the one still live — keeps plain numbers. */
 const SALE_ORDER_GAP = 60 * 864e5;
 
-function saleOrderLabels(rounds: { date: number | null }[]): { text: string; plain: string; prev: boolean }[] {
+function saleOrderLabels(rounds: { date: number | null }[]): { text: string; plain: string; prev: boolean; sep: boolean }[] {
   const order: number[] = [];
   let g = 0;
   let prev: number | null = null;
@@ -67,6 +68,9 @@ function saleOrderLabels(rounds: { date: number | null }[]): { text: string; pla
     text: cur === g ? `${within[i]}` : `${String.fromCharCode(65 + cur)}${within[i]}`,
     plain: `${within[i]}`,
     prev: cur !== g,
+    /* True on the first row of each later sale order — the เส้นประแบ่งกลุ่มรอบ
+       setting draws its dashed divider only under a row like this. */
+    sep: i > 0 && order[i - 1] !== cur,
   }));
 }
 
@@ -206,6 +210,8 @@ export function DetailView() {
   /* Parcels the court is selling with this one (LED group sale); select() fills
      and clears it around every selection. */
   const groupIds = useApp(s => s.groupIds);
+  const roundsPreview = useApp(s => s.roundsPreview);
+  const roundsGroupBorder = useApp(s => s.roundsGroupBorder);
   /* Which unit of a condominium building this panel is showing.
      null means "whatever the map picked", which is the representative unit, so
      opening a dot shows the same unit the user clicked rather than whichever
@@ -439,6 +445,22 @@ export function DetailView() {
           </span>
         )}
 
+        {/* Zoom straight back onto the parcel from wherever the user has panned
+            the map while reading the panel. Centered on the parcel's own
+            coordinate — a subdistrict-fallback dot now, but that is the dot the
+            map draws for it. */}
+        <button
+          type="button"
+          {...useTipProps('ซูมแผนที่ไปยังแปลงนี้')}
+          onClick={() => {
+            const map = getMap();
+            if (map && p.lat && p.lng) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
+          }}
+          className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+        >
+          <Crosshair size={12} /> ซูม
+        </button>
+
         {units.length > 1 && (
           <span
             {...useTipProps(`มีอีก ${units.length} ที่ซ้อนกัน`)}
@@ -566,8 +588,13 @@ export function DetailView() {
              `prev`), so the hidden state cannot empty the table. The map keeps
              the ORIGINAL index — soldFrom() indexes p.rounds, and roundLabels
              is built positionally over scheduledRounds. */
+          /* พรีวิวรอบเก่า: a null preview (ทั้งหมด) keeps every round, otherwise
+             only the newest N dated rounds across all sale orders survive. Each
+             kept row holds its own order letter+number — an A4 after the trim
+             is still that order's fourth round, not a renumbered one. */
           scheduledRounds
             .map((r, i) => ({ r, i, lab: roundLabels[i] }))
+            .filter(({ i }) => roundsPreview == null || i >= scheduledRounds.length - roundsPreview)
             .filter(({ lab }) => !(hidePrev && lab.prev))
             .map(({ r, i, lab }) => {
             const future = r.date != null && r.date > now;
@@ -582,7 +609,7 @@ export function DetailView() {
                orders dim only when the sold tint is not already speaking. */
             const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : lab.prev ? 'text-dim2' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
             return (
-              <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t border-line text-[11.5px] ${cls}`}>
+              <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t ${lab.sep && roundsGroupBorder ? 'border-dashed border-line2' : 'border-line'} text-[11.5px] ${cls}`}>
                 {/* Group on = A2/B1 per sale order; group off = the plain
                     in-order count, the letters dropped. Both variants are the
                     same computation, so a settings flip never re-derives it. */}
@@ -602,7 +629,11 @@ export function DetailView() {
                       thing that decides this now; a real label is shown whether the
                       round has happened or not. The old seeded ไม่มีผู้ซื้อ fabricator
                       is gone — real rows carry LED's own label. */}
-                  {isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status}
+                  {/* One line per row: a long งดขาย phrasing scrolls the table,
+                      so it clips with its ellipsis instead. */}
+                  <span className="block whitespace-nowrap overflow-hidden text-ellipsis">
+                    {isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status}
+                  </span>
                   {/* The report sheet's own word for this round, below the
                       lists label. Only shown when it adds something: same word
                       = noise. `ledLabel` arrives only on rows the report
