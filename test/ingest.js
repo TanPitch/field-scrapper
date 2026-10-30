@@ -458,24 +458,66 @@ async function upsertLot(client, lot, parcelId, stats) {
     return id;
 }
 
+/* One round, one owner schedule (029). The ingest owns the dated rows by
+   (lot_id, round_date) and LED's undated slots by (lot_id, idx); rows the
+   report sync wrote (source='report' — history this payload never carries)
+   are not this module's rows and survive both the upsert and the cleanup. */
 async function upsertRounds(client, lotId, lot) {
     const rounds = lot.bid?.rounds ?? [];
     for (const r of rounds) {
         if (r.statusCode === null && !r.date) continue;
+        if (r.date) {
+            await client.query(
+                `INSERT INTO auction_rounds
+                   (lot_id, idx, round_date, status_code, status_label, is_held, discount_pct, price, scraped_at, source)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now(), 'lists')
+                 ON CONFLICT (lot_id, round_date) WHERE round_date IS NOT NULL DO UPDATE SET
+                   idx          = EXCLUDED.idx,
+                   status_code  = EXCLUDED.status_code,
+                   status_label = EXCLUDED.status_label,
+                   is_held      = EXCLUDED.is_held,
+                   discount_pct = EXCLUDED.discount_pct,
+                   price        = EXCLUDED.price,
+                   scraped_at   = now(),
+                   source       = 'lists'`,
+                [lotId, r.idx, isoDate(r.date), int(r.statusCode), txt(r.status_label),
+                 Boolean(r.is_held), int(r.discount_pct ?? 0), num(r.price)],
+            );
+        } else {
+            await client.query(
+                `INSERT INTO auction_rounds
+                   (lot_id, idx, round_date, status_code, status_label, is_held, discount_pct, price, scraped_at, source)
+                 VALUES ($1,$2,NULL,$4,$5,$6,$7,$8, now(), 'lists')
+                 ON CONFLICT (lot_id, idx) WHERE round_date IS NULL AND idx IS NOT NULL DO UPDATE SET
+                   status_code  = EXCLUDED.status_code,
+                   status_label = EXCLUDED.status_label,
+                   is_held      = EXCLUDED.is_held,
+                   discount_pct = EXCLUDED.discount_pct,
+                   price        = EXCLUDED.price,
+                   scraped_at   = now(),
+                   source       = 'lists'`,
+                [lotId, r.idx, int(r.statusCode), txt(r.status_label),
+                 Boolean(r.is_held), int(r.discount_pct ?? 0), num(r.price)],
+            );
+        }
+    }
+
+    /* The payload IS the schedule, so every ingest-written row whose date or
+       slot it no longer carries is stale — last cycle's leftovers, or the
+       cross-cycle rounds of ผบ.2255/2562 stuck at idx 9..18 — and dies here.
+       A completely empty payload means LED's row gave us nothing at all: that
+       is a scrape hiccup, not a schedule change, so touching nothing is the
+       safe move (a report row can never be mistaken for this cleanup's rows;
+       it is source='report'). */
+    const dates = rounds.filter((r) => r.date).map((r) => isoDate(r.date));
+    const slots = rounds.filter((r) => !r.date && r.statusCode !== null).map((r) => r.idx);
+    if (dates.length || slots.length) {
         await client.query(
-            `INSERT INTO auction_rounds
-               (lot_id, idx, round_date, status_code, status_label, is_held, discount_pct, price, scraped_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now())
-             ON CONFLICT (lot_id, idx) DO UPDATE SET
-               round_date   = EXCLUDED.round_date,
-               status_code  = EXCLUDED.status_code,
-               status_label = EXCLUDED.status_label,
-               is_held      = EXCLUDED.is_held,
-               discount_pct = EXCLUDED.discount_pct,
-               price        = EXCLUDED.price,
-               scraped_at   = now()`,
-            [lotId, r.idx, isoDate(r.date), int(r.statusCode), txt(r.status_label),
-             Boolean(r.is_held), int(r.discount_pct ?? 0), num(r.price)],
+            `DELETE FROM auction_rounds
+              WHERE lot_id = $1 AND source = 'lists'
+                AND ((round_date IS NOT NULL AND round_date <> ALL($2::date[]))
+                  OR (round_date IS NULL AND idx IS NOT NULL AND idx <> ALL($3::int[])))`,
+            [lotId, dates, slots],
         );
     }
 }

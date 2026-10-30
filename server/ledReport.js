@@ -6,11 +6,18 @@
  * only source with the per-round outcome (ผลการขาย) and the winning bid, so
  * this module pulls one case's sheet and applies it:
  *
- *   - existing rounds with the same date get status_label refreshed and —
- *     when the outcome is ขายได้ — their sold_price stored;
- *   - report rows for dates the lot has no round for get a NEW row: the
- *     suspend-and-relist history (ผบ.2545/2562 shows six งดขายไม่มีผู้สู้ราคา
- *     rounds here while newbidreg only lists the next cycle);
+ *   - existing rounds with the same date get led_label (the report's ผลการขาย)
+ *     refreshed into its own column and — when the outcome is ขายได้ — their
+ *     sold_price stored. The lists label and code stay untouched: the schedule
+ *     (test/ingest.js, SELL_STATUS[code]) and the report may disagree about
+ *     the same date and the panel shows both lines;
+ *   - report rows for dates BEFORE the lot's first round get a NEW row (idx
+ *     NULL, source='report') — the suspend-and-relist history (ผบ.2545/2562
+ *     shows six งดขายไม่มีผู้สู้ราคา rounds here while newbidreg only lists
+ *     the next cycle). Future or unseen dates the ingest's lists payload
+ *     does not carry are skipped: that is what said the cross-cycle
+ *     contamination of ผบ.2255/2562 in the first place; this sheet owns the
+ *     outcomes, the ingest owns which rounds exist;
  *   - the lot's winning bid is stamped on auction_lots.sold_price;
  *   - every lot of the case gets led_report_seen stamped, which is what keeps
  *     the bulk sync from re-pulling the same sheet forever.
@@ -176,28 +183,55 @@ async function applyCase(pool, caseNo, year) {
   for (const lot of lots) {
     const mine = rows.filter((r) => deedAb(r.deed).has(String(lot.deed_number ?? "")));
     if (!mine.length) continue;
-    let neg = -100; /* scratch idx for fresh rows, decremented per insert */
+
+    /* History rows allowed for this lot: only dates before its first dated
+       round. min() over the stored rows, not auction_lots.first_round_date -
+       a lot whose ingest run has not landed yet has no first_round_date, and
+       history for such a lot is still valid report data. Cast to text so the
+       comparison below is string-to-string: pg hands back a local-midnight
+       Date for a date column, and re-stringifying it through toISOString
+       shifts the day back one in the +7 timezone. */
+    const md = await pool.query(
+      `SELECT min(round_date)::text AS min_date FROM auction_rounds
+        WHERE lot_id = $1 AND round_date IS NOT NULL`, [lot.id]);
+    const minDate = md.rows[0]?.min_date ?? null;
 
     for (const r of mine) {
       if (!r.date) continue;
       const sold = r.outcome.startsWith("ขายได้") ? r.soldPrice : null;
-      /* Matching an existing round: refresh the LED label and (when the row
-         sold) the winning bid. status_code stays ours - the ingest already
-         encodes its own family for those rows. */
+      /* Matching an existing round: the outcome goes to its own column and,
+         when the row sold, the winning bid. status_code and status_label are
+         the lists page's words — the report may call the same date something
+         else and overwriting them is how ผบ.2255/2562's labels got crossed
+         between two sale orders' cycles. */
       const upd = await pool.query(
         `UPDATE auction_rounds
-            SET status_label = $3,
+            SET led_label = $3,
                 sold_price = COALESCE($4, sold_price)
           WHERE lot_id = $1 AND round_date = $2
           RETURNING id`, [lot.id, r.date, r.outcome, sold]);
       if (upd.rowCount > 0) { roundsUpdated += 1; continue; }
 
+      /* No such date: a new row is history ONLY when it predates everything
+         the lists schedule knows. Any other unseen date is a round the lists
+         page does not know about either — writing it would interleave the
+         report's view into the ingest's schedule (the contamination bug),
+         and the value is worse than the risk: the next ingest payload will
+         carry the real future rounds when LED prints them. */
+      if (minDate === null || !(r.date < minDate)) continue;
+
       await pool.query(
-        `INSERT INTO auction_rounds (lot_id, idx, round_date, status_code, status_label, price, sold_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [lot.id, --neg, r.date, codeFor(r.outcome), r.outcome, r.appraisal, sold]);
+        `INSERT INTO auction_rounds (lot_id, idx, round_date, status_code, status_label, price, sold_price, led_label, source)
+         VALUES ($1, NULL, $2, $3, $4, $5, $6, $4, 'report')`,
+        [lot.id, r.date, codeFor(r.outcome), r.outcome, r.appraisal, sold]);
       roundsInserted += 1;
     }
+
+    /* idx is NOT touched. It stopped being display order with 029: the API
+       orders rounds by round_date, and the ingest's cleanup relies on the
+       (lot's rows keyed) idx slots staying exactly what the lists payload
+       said they were. Renumbering every row chronologically was what broke
+       the ingest's upsert key in the first place. */
 
     /* The lot's winning bid: its latest sold round. NULL when the report has
        no ขายได้ row for this deed - staying null means "unsold", never 0. */
@@ -210,30 +244,10 @@ async function applyCase(pool, caseNo, year) {
       await pool.query(`UPDATE auction_lots SET sold_price = $2 WHERE id = $1`, [lot.id, bid.rows[0].sold_price]);
       lotsSold += 1;
     }
-
-    /* Renumber idx = chronological rank, so `ORDER BY r.idx` keeps reading as
-       the sale's timeline even with history rows prepended. Two passes: the
-       first clears space with distinct negatives (a plain -id would overflow
-       smallint on later rows and would not be distinct either), the second
-       writes the final rank. */
-    await pool.query(`
-      WITH negated AS (
-          SELECT id, -row_number() OVER (ORDER BY id) AS idx
-            FROM auction_rounds WHERE lot_id = $1)
-      UPDATE auction_rounds r SET idx = negated.idx
-        FROM negated WHERE negated.id = r.id`, [lot.id]);
-    await pool.query(`
-      WITH ranked AS (
-          SELECT id, row_number() OVER (
-                     ORDER BY CASE WHEN round_date IS NULL THEN 1 ELSE 0 END,
-                              round_date NULLS LAST, id) AS rank
-            FROM auction_rounds WHERE lot_id = $1)
-      UPDATE auction_rounds r SET idx = ranked.rank
-        FROM ranked WHERE ranked.id = r.id`, [lot.id]);
   }
 
-  /* Even a sheet with no rows for our deed was fetched and learned - stamp it
-     so one unsynced case cannot poll the bulk loop forever. */
+  /* The sheet was fetched and learned even when it holds nothing for our
+     deed, so one unsynced case cannot poll the bulk loop forever. */
   await pool.query(
     `UPDATE auction_lots SET led_report_seen = now()
       WHERE case_no = $1 AND case_year = $2`, [caseNo, yearForDb]);

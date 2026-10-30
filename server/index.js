@@ -337,10 +337,11 @@ app.get("/api/parcels", async (req, res) => {
                           'date', r.round_date,
                           'status_code', r.status_code,
                           'label', r.status_label,
+                          'led_label', r.led_label,
                           'is_held', r.is_held,
                           'discount_pct', r.discount_pct,
                           'price', r.price,
-                          'sold_price', r.sold_price) ORDER BY r.idx)
+                          'sold_price', r.sold_price) ORDER BY r.round_date NULLS LAST, r.id)
                   FROM auction_rounds r WHERE r.lot_id = l.id) AS rounds,
                (SELECT count(*) FROM lot_images i WHERE i.lot_id = l.id)::int AS img_count,
                /* The stored filenames, so the detail panel can show the real
@@ -366,6 +367,13 @@ app.get("/api/parcels", async (req, res) => {
 FROM parcels p
           LEFT JOIN auction_lots l ON l.parcel_id = p.id
          WHERE l.id IS NOT NULL
+         /* The น.ส.3 class deeds (น.ส.3ก. / น.ส.3เลขที่…) are not what this map
+            sells: they are titled land LED carries for completeness, unpriced
+            in the same auction terms as ฉ.4, and the project has parked them
+            (196 + 2 rows here). Excluding them here keeps every consumer of
+            this endpoint — map, table, counts — off a parcel class that has
+            no sale to describe. */
+           AND p.land_title NOT ILIKE '%น.ส.3%'
            AND ($1::int IS NULL OR p.province_code = $1)
            AND ($2::bool IS NOT TRUE OR l.status = 'active')
            AND ($3::bigint IS NULL OR p.id = $3)
@@ -509,13 +517,13 @@ app.get("/api/parcels/:id", async (req, res) => {
         SELECT r.* FROM auction_rounds r
           JOIN auction_lots l ON l.id = r.lot_id
          WHERE l.parcel_id = $1
-         ORDER BY l.first_round_date DESC, r.idx`, [id]);
+         ORDER BY l.first_round_date DESC, r.round_date NULLS LAST, r.id`, [id]);
     if (seen.size) {
       rounds = (await pool.query(`
           SELECT r.* FROM auction_rounds r
             JOIN auction_lots l ON l.id = r.lot_id
            WHERE l.parcel_id = $1
-           ORDER BY l.first_round_date DESC, r.idx`, [id])).rows;
+           ORDER BY l.first_round_date DESC, r.round_date NULLS LAST, r.id`, [id])).rows;
     }
 
     const { rows: images } = await pool.query(`
