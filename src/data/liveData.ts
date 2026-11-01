@@ -209,6 +209,23 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
 
   const announceTs = isoTs(p.publishedDate as string | null) ?? now;
   const rounds = mapRounds((p.rounds as RoundRow[]) ?? []);
+  /* 312583: the report sheet stamps the FINAL outcome on every remaining นัด
+     row of the listing — six ขายได้ rows here — and one of them (idx1, the
+     round the chart breaks at and the ขายออก event anchors on) still carried
+     an earlier read's echo, 850,000 where the report's own answer (and the
+     lot-level soldPrice) say 790,000. So the last code-1 round inherits the
+     lot-level figure BEFORE the history is built — but only inside the
+     current listing: a pre-announce code-1 row belongs to an earlier sale
+     order with its own reported price (221345-style relist), which a relist
+     must not rewrite. The code-1 sold/fallback derivation below is untouched
+     (it keys on the code, not the value). */
+  if (p.soldPrice != null) {
+    for (const r of rounds) {
+      if (r.statusCode === 1 && r.date != null && r.date >= announceTs) {
+        r.soldPrice = p.soldPrice as number | null;
+      }
+    }
+  }
   const status = mapStatus(p.status, rounds);
 
   /* LED's committee figure (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์), merged

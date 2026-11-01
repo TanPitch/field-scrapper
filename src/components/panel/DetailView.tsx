@@ -40,20 +40,46 @@ const isPlaceholderStatus = (s: string): boolean => PLACEHOLDER_STATUSES.has(s.t
 
 /* Sale-order grouping. LED re-lists land after a failed sale and its นัด count
    restarts from 1, so one flat 1..N down the whole history misrepresents the
-   table (ผบ.754/2562 carries six separate sale orders). A gap longer than 60
-   days between consecutive dated rounds starts a new order: LED's own นัด
-   spacing inside one order is weeks (runs of ≤ 1 month), while resell gaps
-   measure months. Letters count up from the OLDEST order (A, B, C …); the
-   newest order — the one still live — keeps plain numbers. */
+   table (ผบ.754/2562 carries six separate sale orders). Three boundaries start
+   a new order:
+     gap   — longer than 60 days between consecutive dated rounds; LED's own
+             นัด spacing inside one order runs weeks while resell gaps measure
+             months.
+    adjacent — closer than 14 days. LED's minimum in-listing spacing is ~21 days,
+             so a near-adjacent pair is a relist landing right after the old
+             order's last นัด (ผบ.4681/2568 lot 221345: last A round 10/03,
+             first B round 13/03 — a 3-day gap no 60-day rule would ever split).
+     announce — the current listing's publish point: everything dated at or
+             after `announceTs` IS the current order and never splits further,
+             even if a งดขาย suspension stretched past 60 days inside it. The
+             crossing itself always splits (the tail of the previous order can
+             sit < 60 days behind the new listing's first นัด).
+   Letters count up from the OLDEST order (A, B, C …); the newest order — the
+   one still live — keeps plain numbers. Same-day rounds stay in one order:
+   only a positive sub-14-day gap is a relist, a 0 gap is duplicate rows. */
 const SALE_ORDER_GAP = 60 * 864e5;
+const SALE_ORDER_ADJACENT = 14 * 864e5;
 
-function saleOrderLabels(rounds: { date: number | null }[]): { text: string; plain: string; prev: boolean; sep: boolean }[] {
+/** Exported for the probe check (bun) — same testable-pure-function pattern as
+ *  server/mapStatus.js. Rendering stays in the component. */
+export function saleOrderLabels(
+  rounds: { date: number | null }[],
+  announceTs?: number | null,
+): { text: string; plain: string; prev: boolean; sep: boolean }[] {
   const order: number[] = [];
   let g = 0;
   let prev: number | null = null;
   rounds.forEach((r) => {
     if (r.date != null) {
-      if (prev != null && r.date - prev > SALE_ORDER_GAP) g++;
+      if (prev != null) {
+        const entering = announceTs != null && prev < announceTs && r.date >= announceTs;
+        const inListing = entering || (announceTs != null && prev >= announceTs);
+        if (!inListing) {
+          const gap = r.date - prev;
+          if (gap > SALE_ORDER_GAP || (gap > 0 && gap < SALE_ORDER_ADJACENT)) g++;
+        }
+        if (entering) g++;
+      }
       prev = r.date;
     }
     order.push(g);
@@ -72,6 +98,35 @@ function saleOrderLabels(rounds: { date: number | null }[]): { text: string; pla
        setting draws its dashed divider only under a row like this. */
     sep: i > 0 && order[i - 1] !== cur,
   }));
+}
+
+/* The status cell shows whatever LED reported, clipped to one line. LED's
+   outcome is one canonical phrase followed by a qualifier the cell has no room
+   for — มาตรา 309, which นัด the result came from — so the phrase goes into
+   the cell and the hover tip carries the qualifier. Longest first: งดขาย must
+   match only after every fuller งดขาย… phrase has had its chance. A phrase
+   that matched is a deliberate prefix, so the rest is safe to expose as the
+   tip; anything that matched nothing is left alone (the ellipsis already
+   clips it, and we cannot guess where its phrase ends). */
+const STATUS_HEADS = [
+  'งดขายในนัดที่เหลือ',
+  'งดขายไม่มีผู้สู้ราคา',
+  'งดขาย(ส่ง)ประกาศมิชอบ',
+  'งดขาย (ส่ง)ประกาศมิชอบ',
+  'งดขาย (ป.วิ.อ.แพ่ง มาตรา 309)',
+  'งดขาย(ป.วิ.อ.แพ่ง มาตรา 309)',
+  'โจทก์แถลงงดขาย',
+  'ถอนการยึด',
+  'ขายได้',
+  'งดขาย',
+];
+
+function splitStatus(s: string): { head: string; rest: string } {
+  const t = s.trim();
+  for (const ph of STATUS_HEADS) {
+    if (t.startsWith(ph)) return { head: ph, rest: t.slice(ph.length).trim() };
+  }
+  return { head: t, rest: '' };
 }
 
 const tdStatusShort = (s: string): string =>
@@ -272,8 +327,10 @@ export function DetailView() {
   const elev = p.elevation ?? null;
   /* Only rounds LED has actually dated — see the rounds table below. */
   const scheduledRounds = p.rounds.filter((r) => r.date != null);
-  /* นัดที่ label per round, plus which rows belong to earlier sale orders. */
-  const roundLabels = saleOrderLabels(scheduledRounds);
+  /* นัดที่ label per round, plus which rows belong to earlier sale orders.
+     The announce point anchors which order is the current one — see
+     saleOrderLabels. */
+  const roundLabels = saleOrderLabels(scheduledRounds, p.announce);
 
   /* LED's committee-set price (ราคาที่กำหนดโดยคณะกรรมการกำหนดราคาทรัพย์) reaches
      this component already merged in liveData: led_price first — that is LED's
@@ -608,6 +665,31 @@ export function DetailView() {
                uniform, so "no dimming" means genuinely none. Earlier sale
                orders dim only when the sold tint is not already speaking. */
             const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : lab.prev ? 'text-dim2' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
+            /* What the cell actually says after the placeholder rule — ''
+               or '-'. splitStatus then peels LED's canonical outcome phrase:
+               งดขาย (ป.วิ.อ.แพ่ง มาตรา 309) shows its phrase in the cell and
+               the มาตรา qualifier rides the hover tip instead of pushing the
+               line to overflow. */
+            const shown = isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status;
+            const st = splitStatus(shown);
+            /* LED prints a group sale's verdict on the tables of only SOME of
+               the siblings (ผบ.754/2562's งดขายไม่มีผู้สู้ราคา sits on 24653's
+               rows alone; 161371's own table shows nothing for that date — the
+               same reason its next-round price takes the sibling's verdict).
+               When this lot's own cell is silent and the parcels share a
+               ขายรวม group, the siblings' rows for the same date speak
+               through the tip. */
+            let sibTip: string | null = null;
+            if (groupIds.length > 1 && (shown === '' || isPlaceholderStatus(r.status))) {
+              const parts: string[] = [];
+              for (const gid of groupIds) {
+                if (gid === p.id) continue;
+                const q = PARCEL_BY_ID.get(gid);
+                const sr = q?.rounds.find((x) => x.date != null && x.date === r.date);
+                if (q?.deedNo && sr) parts.push(`${q.deedNo} — ${isPlaceholderStatus(sr.status) ? '-' : sr.status}`);
+              }
+              if (parts.length) sibTip = `ขายรวมกัน: ${parts.join(' · ')}`;
+            }
             return (
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t ${lab.sep && roundsGroupBorder ? 'border-dashed border-line2' : 'border-line'} text-[11.5px] ${cls}`}>
                 {/* Group on = A2/B1 per sale order; group off = the plain
@@ -631,21 +713,29 @@ export function DetailView() {
                       is gone — real rows carry LED's own label. */}
                   {/* One line per row: a long งดขาย phrasing scrolls the table,
                       so it clips with its ellipsis instead. */}
-                  <span className="block whitespace-nowrap overflow-hidden text-ellipsis">
-                    {isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status}
+                  <span
+                    className="block whitespace-nowrap overflow-hidden text-ellipsis"
+                    {...((st.rest || sibTip) ? useTipProps(st.rest || sibTip!) : {})}
+                  >
+                    {shown}
                   </span>
                   {/* The report sheet's own word for this round, below the
                       lists label. Only shown when it adds something: same word
                       = noise. `ledLabel` arrives only on rows the report
                       dated (029 source='report'), so old data shows nothing. */}
-                  {r.ledLabel && r.ledLabel.trim() && r.ledLabel.trim() !== r.status.trim() && (
-                    <span
-                      {...useTipProps('ผลการขายจากรายงานของ LED — อ่านแยกจากป้ายนัดขาย')}
-                      className="mt-[1px] block text-[10px] leading-[1.35] text-dim2"
-                    >
-                      ผลรายงาน: {r.ledLabel.trim()}
-                    </span>
-                  )}
+                  {(() => {
+                    if (!r.ledLabel || !r.ledLabel.trim()) return null;
+                    const rl = splitStatus(r.ledLabel);
+                    if (rl.head === st.head && rl.rest === st.rest) return null;
+                    return (
+                      <span
+                        {...useTipProps(rl.rest || 'ผลการขายจากรายงานของ LED — อ่านแยกจากป้ายนัดขาย')}
+                        className="mt-[1px] block whitespace-nowrap overflow-hidden text-ellipsis text-[10px] leading-[1.35] text-dim2"
+                      >
+                        ผลรายงาน: {r.ledLabel.trim()}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             );

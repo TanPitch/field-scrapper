@@ -75,6 +75,43 @@ Worked example:
 งดขาย, งดขาย, งดขายไม่มีผู้สู้ราคา, งดขาย   ->  round 4 is -10%
 ```
 
+### The discount is per-listing, not per-lot
+
+The -10% ladder counts only rounds **inside the current listing** — rounds dated
+at/after the lot's release date (`published_date` = the announce point
+`p.announce` is built from). A relist re-sets the floor, it does not add to it:
+ผบ.754/2562 carries four งดขายไม่มีผู้สู้ราคา rows wedged *before* its relist
+announcement and they must not price the new order's round 2 at -30%.
+Undated rounds count as the current listing (the boundary cannot place them).
+
+Group sales share the event: the sibling's ไม่มีผู้สู้ราคา rounds inside the
+same listing window deepen the sibling price too (ผบ.754/2562: LED printed the
+verdict only on 24653's table; 161371 inherits -10%). See `lib/group.ts` +
+`lib/price.ts`; pinned in `test/ladderBoundary.test.js`.
+
+Two LED labelling behaviours the rule leans on:
+
+- **The report sheet stamps the final outcome on every remaining นัด row.**
+  Once a sale concludes, each remaining dated round of that listing reads
+  ขายได้ with the same sold price (312583: six consecutive code-1 rows around
+  one actual sale) — so "last code-1 round" is not the sale round; the
+  lot-level `sold_price` is the report's own word, and the chart's terminal
+  break (`mapHist` stops at the first ขายได้) rides the round it hits first.
+- **A "no result yet" row can carry the last verdict as its label.** The lists
+  pages stamp code 0/10 rows with the same งดขายไม่มีผู้สู้ราคา wording, so the
+  *label*, not the code, is the deciding evidence — that is why
+  `isNoBidRound` reads both.
+
+### Sale-order cadence (used by the panel's A/B grouping)
+
+Inside one listing LED spaces นัด ~21 days (minimum 14 by law). So: a gap
+> 60 days = new sale order; a gap < 14 days (nonzero) = an *adjacent relist*
+(the new order lands right behind the old order's last นัด —
+ผบE.3247/2567 lot 221345 splits A|B on a 3-day gap); crossing
+`p.announce` is always the current order, and inside it nothing splits even
+when a งดขาย suspension exceeds 60 days. Same-day rows are duplicate rows, not
+a relist.
+
 ### Code 6 is not a failed sale
 
 ถอนการยึด means the seizure was lifted. **LED removes the listing.** The land

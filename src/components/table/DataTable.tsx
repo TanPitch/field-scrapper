@@ -188,6 +188,12 @@ case 'roundLast': {
     return r.round.status;
     }
       case 'roundNext': {
+    /* A sold lot has no round to buy into, whatever stale 'live' schedule row
+       the scrape left behind — plan the นัดถัดไป columns themselves out: the
+       number, the date and the status all read '-' (header uses +นัดที่, +
+       วันที่ already handled by the empty r). Same rule the popups follow:
+       soldPrice != null counts even before the status field catches up. */
+    if (p.status === 'sold' || p.soldPrice != null) return '-';
     const r = nextUpcomingRound(p);
     if (!r) return '-';
     if (c.sub === 0) return r.index + 1;

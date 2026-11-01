@@ -151,11 +151,17 @@ export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
       });
 
       /* Row assignment happens before anything draws, so a pill never paints
-         over one that already claimed the spot. Rows stride 16px (13px pill +
-         3px air) down from the top edge of the plot, and the plot bottom is a
-         hard cap: out of room means skipped, not drawn over the x axis. */
+         over one that already claimed the spot. The pills live in the band the
+         chart reserves BELOW the x-axis labels (layout.padding.bottom=60 in
+         PriceChart): three rows stride 16px from just under the tick text, so
+         a tag stack never covers dots, grid or axis labels — the วันนี้ pill
+         alone keeps its seat inside the plot bottom. The band is a hard cap:
+         out of room means skipped, not drawn over the axis or canvas edge.
+         The 1px x-overlap rule is unchanged — two rounds a day apart deserve
+         visible separation wherever in the band they landed. */
       const ROW_H = 16;
-      const maxRow = Math.floor((chartArea.bottom - chartArea.top - 13) / ROW_H);
+      const BAND_TOP = 14;
+      const BAND_ROWS = 3;
       type Placed = { x0: number; w: number; row: number };
       const placed: Placed[] = [];
       const fits = (cand: Want, row: number): boolean =>
@@ -177,10 +183,10 @@ export function evFlagPlugin(evs: EventFlag[]): Plugin<'line'> {
 
       want.forEach(wp => {
         let row = 0;
-        while (row <= maxRow && !fits(wp, row)) row++;
-        if (row > maxRow) return;
+        while (row < BAND_ROWS && !fits(wp, row)) row++;
+        if (row >= BAND_ROWS) return;
         placed.push({ x0: wp.x0, w: wp.w, row });
-        const y = chartArea.top + row * ROW_H;
+        const y = chartArea.bottom + BAND_TOP + row * ROW_H;
         if (wp.pinned) {
           /* Pin to the edge the event sits beyond. No arrow character in the
              text: pill() already draws a triangular tip on that side, so the

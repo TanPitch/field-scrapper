@@ -42,7 +42,7 @@ export function SearchBox() {
   const popColors = useApp(s => s.popColors);
   const cctvList = useApp(s => s.cctvList);
   const sensList = useApp(s => s.sensList);
-  const { query, online, onlineStale, dropOpen, lastFullBBox } = useSearch();
+  const { query, online, onlineStale, dropOpen, lastFullBBox, wide } = useSearch();
   const patch = useSearch(s => s.patch);
 
   const [value, setValue] = useState('');
@@ -58,8 +58,10 @@ export function SearchBox() {
   /* ---------- run a search ---------- */
   /* `drop` controls the title-bar dropdown only; results always go to the panel. */
   const runSearch = useCallback((q: string, fresh: boolean, drop = true) => {
-    if (!q.trim()) { patch({ dropOpen: false, query: '', rows: [] }); setSearchSelection(null); plotSearch([]); return; }
-    patch({ query: q, dropOpen: drop });
+    if (!q.trim()) { patch({ dropOpen: false, query: '', rows: [], wide: false }); setSearchSelection(null); plotSearch([]); return; }
+    /* Each fresh run starts bbox-scoped again; the "ค้นในทุกพื้นที่" button is
+       opt-in per search, and a new query must not inherit the last one's scope. */
+    patch({ query: q, dropOpen: drop, wide: false });
     if (!fresh) return;
     openResults();
     const map = getMap(); if (!map) return;
@@ -97,27 +99,38 @@ const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch
     if (bounds && useSearch.getState().lastFullBBox) frozenBBox.current = bounds as BBox;
   }, [bounds, query]);
 
-  const { rows, parcelRows, pinRows, onlineRows } = useMemo(() => {
+  const { rows, parcelRows, pinRows, onlineRows, hiddenParcels } = useMemo(() => {
     const t = query.trim().toLowerCase();
     const bb = frozenBBox.current as BBox | null;
     const limit = getApp().searchLimit;
+    /* Case numbers carry a season and letters both above and below the slash
+       (ผบ.754/2562, ผบE.4642/2568), so the match is the same substring test the
+       name/deed probes use, against LED's own `ผบ../ปี` string. */
+    const match = (p: typeof ALL_PARCELS[number]): boolean =>
+      p.name.toLowerCase().includes(t) || p.deed.toLowerCase().includes(t)
+      || p.province.includes(t) || p.caseNo.toLowerCase().includes(t);
+    /* Parcel hits are bbox-scoped first. When none land in view, the dropdown
+       offers the out-of-view matches (hiddenParcels) behind one button instead
+       of silently showing "ไม่พบ" — the land may be real, just off-screen. */
     const parcels: Row[] = [];
-    if (t && bb) {
+    let hiddenParcels = 0;
+    if (t) {
       for (const p of ALL_PARCELS) {
-        if (parcels.length >= limit) break;
-        if ((p.name.toLowerCase().includes(t) || p.deed.toLowerCase().includes(t) || p.province.includes(t)) && inBbox([p.lng, p.lat], bb)) {
-          parcels.push({ rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name, sub: fmt(p.price), dot: parcelDot(p), parcelId: p.id });
-        }
+        if (!match(p)) continue;
+        const inArea = !bb || inBbox([p.lng, p.lat], bb);
+        const row: Row = { rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name, sub: fmt(p.price), dot: parcelDot(p), parcelId: p.id };
+        if ((wide || inArea) && parcels.length < limit) parcels.push(row);
+        else if (!inArea) hiddenParcels++;
       }
     }
     const pins: Row[] = t && bb ? matchPins(t, bb).slice(0, limit).map(h => ({ rid: 'c' + h.id, kind: h.kind as Row['kind'], ll: h.ll, name: h.name, sub: h.sub, hit: h })) : [];
     const onl: Row[] = online.status === 'done'
       ? online.list.filter(x => bb && inBbox([x.lng, x.lat], bb)).slice(0, limit).map((x, i) => ({ rid: 'o' + i, kind: 'place' as const, ll: [x.lng, x.lat] as LngLat, name: x.name, sub: x.src, place: x }))
       : [];
-    return { rows: [...parcels, ...pins, ...onl], parcelRows: parcels, pinRows: pins, onlineRows: onl };
+    return { rows: [...parcels, ...pins, ...onl], parcelRows: parcels, pinRows: pins, onlineRows: onl, hiddenParcels };
     // cctvList / sensList are inputs of matchPins
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, online, fmt, popColors, cctvList, sensList]);
+  }, [query, online, fmt, popColors, cctvList, sensList, wide]);
 
 /* Only internet hits get a marker. Land parcels, cctv, water and bus already have
      their own markers on the map — plotting them again would stack a duplicate
@@ -223,14 +236,22 @@ const rowKb = (r: Row) => rows.indexOf(r) === kb;
           className="fs-panel absolute left-0 right-0 top-[calc(100%+6px)] z-[80] max-h-[380px] overflow-y-auto rounded-[11px] border border-line2 bg-panel shadow-[0_16px_40px_rgba(0,0,0,.55)]"
           onPointerDown={e => e.preventDefault()} /* keep focus in the input while clicking a result */
         >
-          <div className={`${groupCls} sticky top-0 bg-panel`}><Database size={12} />ในระบบ</div>
+          <div className={`${groupCls} sticky top-0 bg-panel`}><Database size={12} />ในระบบ{wide ? ' · ทุกพื้นที่' : ' · พื้นที่ที่เห็น'}</div>
           {parcelRows.length ? parcelRows.map(r => (
             <div key={r.rid} className={rowCls(rowKb(r))} onClick={() => pick(r)}>
               <span className="inline-block size-[7px] shrink-0 rounded-full" style={{ background: r.dot }} />
               <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
               <span className="max-w-[130px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2">{r.sub}</span>
             </div>
-          )) : <div className={noteCls}>ไม่พบสถานที่</div>}
+          )) : hiddenParcels > 0 ? (
+            <button
+              type="button"
+              className="w-full cursor-pointer border-t border-none px-[13px] py-2 text-left text-[11.5px] text-accent transition hover:bg-panel2"
+              onClick={() => patch({ wide: true })}
+            >
+              ไม่พบในพื้นที่ที่แสดง — ค้นในทุกพื้นที่ ({hiddenParcels} แปลง)
+            </button>
+          ) : <div className={noteCls}>ไม่พบสถานที่</div>}
 
           {pinRows.length > 0 && (
             <>

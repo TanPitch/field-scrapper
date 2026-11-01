@@ -53,6 +53,7 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
   const reColor = useApp(s => s.reColor);
   const chartTick = useApp(s => s.chartTick);
   const showLandKindIcon = useApp(s => s.showLandKindIcon);
+  const autoDeselect = useApp(s => s.autoDeselect);
   const chartTodayLine = useApp(s => s.chartTodayLine);
   const chartForecast = useApp(s => s.chartForecast);
   const chartForecastSolid = useApp(s => s.chartForecastSolid);
@@ -130,6 +131,8 @@ export function PopupPane({ onClose }: { onClose: () => void }) {
       <div className={`${setSec} !mt-0.5`}>หมุดบนแผนที่</div>
       <div className={frow}><span className={fl}>แสดงหมุดเฉพาะจุดในพื้นที่</span><button className={btn} {...useTipProps('เปิดแผงพื้นที่กรองจุด')} onClick={() => { onClose(); showRight('area'); }}><ScanLine size={14} />ตั้งค่าพื้นที่</button><Switch checked={restrict} onChange={setRestrict} /></div>
       <div className={frow}><span className={fl}>แสดงหมุดแม้อยู่นอกจอ</span><Switch checked={override} disabled={!restrict} onChange={v => patchApp({ override: v })} /></div>
+      {/* คลิกพื้นที่ว่างเพื่อยกเลิกเลือก: off = วงแหวนกับแผงรายละเอียดอยู่ครบแม้คลิกพลาดบนแผนที่ */}
+      <div className={frow}><span className={fl}>คลิกพื้นที่ว่างเพื่อยกเลิกเลือก</span><Switch checked={autoDeselect} onChange={v => patchApp({ autoDeselect: v })} /></div>
       <div className={frow}>
         <span className={fl}>สีวงแหวนหมุด</span>
         <span className="flex items-center gap-2">

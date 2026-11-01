@@ -105,7 +105,15 @@ const sqWa = (rai, ngan, wa) =>
     (Number(rai) || 0) * 400 + (Number(ngan) || 0) * 100 + (Number(wa) || 0);
 
 const toNum = (v) => (v === null || v === undefined ? null : Number(v));
-const isoDate = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
+/* LED's dates are set at Asia/Bangkok; .toISOString() slices UTC. A publish
+ * that is already the next calendar day in Bangkok (ผบE.4642/2568 was stamped
+ * 2026-07-22T17:00Z = 23 ก.ค. 00:00 local) rendered one day behind LED's own
+ * page. Format in Bangkok directly: en-CA yields YYYY-MM-DD, which every
+ * client already parses. */
+const bkkDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit",
+});
+const isoDate = (v) => (v ? bkkDate.format(new Date(v)) : null);
 
 /* ------------------------------------------------------------------ meta */
 
@@ -389,6 +397,19 @@ FROM parcels p
              * because its quota is 20/day and TD is the primary source. */
             const lat = r.lat ?? r.td_lat ?? r.dol_lat;
             const lng = r.lng ?? r.td_lon ?? r.dol_lon;
+            /* 294549: the report sheet (028) stamps the real winning bid, but
+               the lot's close fields can still say something else, so the map
+               sold a sold lot as กำลังขาย while the detail panel showed its
+               ราคาที่ขายได้. The report's word wins — but only when the round
+               carrying the price is the listing's LAST dated round: a resell
+               lot's old sale row predates its new rounds, and calling those
+               sold would freeze a live listing. mapStatus.js stays the pure
+               close-fields rule; this report-side correction lives at the one
+               call site that has the rounds in hand. */
+            const rr = Array.isArray(r.rounds) ? r.rounds.filter((x) => x.date != null) : [];
+            const lastDated = rr[rr.length - 1] ?? null;
+            const reportSold = lastDated != null && toNum(lastDated.sold_price) != null;
+            const mapped = mapStatus(r.status, r.close_reason, r.close_code);
             return {
             type: "Feature",
             geometry: lat == null || lng == null
@@ -423,7 +444,7 @@ FROM parcels p
                  * lots left the popup showing a dash for a size LED had given us. */
                 wah: sqWa(r.size_rai, r.size_ngan, r.size_wa),
                 askingPrice: toNum(r.start_price), askingSource: r.start_price_src,
-                status: mapStatus(r.status, r.close_reason, r.close_code),
+                status: reportSold ? "sold" : mapped,
                 nextRound: isoDate(r.next_round_date),
                 closeReason: r.close_reason,
                 /* The LED cascade's opening price — what the "smart price"
@@ -937,5 +958,15 @@ app.listen(PORT, () => {
     console.log(`  GET /api/parcels/:id`);
 });
 
-process.on("SIGTERM", () => pool.end().then(() => process.exit(0)));
-process.on("SIGINT", () => pool.end().then(() => process.exit(0)));
+let stopping = false;
+const shutdown = () => {
+    /* A double end() throws "Cannot use a pool after calling end on the
+       matching pool" as an unhandled rejection — Docker's stop sequence sends
+       SIGINT then SIGTERM on the same container, and a Ctrl-C in a terminal
+       can do the same. One flag makes the pair idempotent. */
+    if (stopping) return;
+    stopping = true;
+    pool.end().catch(() => {}).finally(() => process.exit(0));
+};
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

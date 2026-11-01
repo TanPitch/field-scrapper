@@ -4,6 +4,103 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-01 — search beyond the view, detail-panel rules, the announce boundary
+
+The 12-item batch plus a root-cause pass over six reported bugs. One idea runs
+through most of it: **the current listing's announcement is the boundary.**
+Everything dated at/after `p.announce` is the live sale; everything before it is
+LED's printed history and no longer drives prices, labels or the chart.
+
+- **Title search now finds land outside the view.** Searching a case number
+  (e.g. `ผบE.4642/2568`) first looks inside the visible map area; when matches
+  exist there, they are shown as today, and when they do not, a
+  **"ค้นในทุกพื้นที่ (N แปลง)"** button appears under the box. Pressing it
+  re-runs the match nationwide, the group headers note the scope
+  (· พื้นที่ที่เห็น / · ทุกพื้นที่), and hidden match counts are stated. A fresh
+  search resets the wide flag. `SearchBox.tsx` matches on `caseNo` too, so a
+  case number no longer has to read like a title.
+- **Detail-panel rules.**
+  - ขนาดห้อง and ขนาดที่ดิน are one setting: the row's built-in label changes
+    with the lot (ห้องชุด shows ขนาดห้อง) and the hide/order switch aliases
+    both to the canonical ขนาดที่ดิน (`lib/detailRows.ts`).
+  - The rounds' status cell keeps LED's canonical phrase (งดขาย, งดขายไม่มีผู้สู้ราคา,
+    งดขาย (ป.วิ.อ.แพ่ง มาตรา 309), โจทก์แถลงงดขาย, ถอนการยึด, ขายได้, …) and the
+    qualifier the cell has no room for rides the hover tip. The ผลรายงาน line is
+    canonical-parsed too and only shows when the phrase or the qualifier
+    actually differs from the cell above it.
+  - A silent group-sale row speaks through its sibling: hovering an empty/'-'
+    status cell on a ขายรวม lot lists the sibling deeds' outcome for the same
+    นัด date (LED prints the verdict on some siblings' tables only — ผบ.754/2562
+    put งดขายไม่มีผู้สู้ราคา on 24653's rows and left 161371's blank).
+- **The discount ladder is per-listing.** Rounds dated before the announcement
+  never deepen the discount and keep the ledger's own price; ผบ.754/2562's four
+  pre-relist ไม่มีผู้สู้ราคา rows no longer price the live round 2 at −30%.
+  Group-sale siblings share the event: `nextRoundPrice` merges the
+  ไม่มีผู้สู้ราคา rounds of `groupOf()` siblings inside the same listing window
+  (161371 shows −10% with no own verdict row). Non-group lots cost nothing — the
+  sibling scan is gated on the group signal. Group helpers moved from
+  `store/actions.ts` into map-free `lib/group.ts`. Pinned in
+  `test/ladderBoundary.test.js` (9 assertions: boundary, cap, sibling share,
+  relist labels).
+- **กลุ่มการขาย labels handle adjacent relists.** A new order starts at a >60d
+  gap, at a **<14d gap** (LED's in-listing spacing is ~21 days, so a
+  near-adjacent pair is a relist landing right behind the last นัด —
+  ผบE.3247/2567 lot 221345: last A round 10/03, first B round 13/03), and at
+  the announce crossing; inside the current listing nothing splits, even when
+  a งดขาย suspension exceeds 60 days. Same-day rows stay in one order.
+- **Graph word tags moved out of the plot.** Event pills (งดขาย, นำกลับมาขาย,
+  ขายออก…) draw in a reserved band *below* the x-axis labels — 3 rows × 16px
+  under `layout.padding.bottom = 60` — with the same 1px-overlap greedy stack
+  and edge-arrow pinning. The วันนี้ pill stays inside the plot; dashed date
+  lines stay inside the plot. The full wording is still on the price tooltip
+  (`PriceChart.tsx`, beforeBody, line 277; interaction defaults live in
+  `chartSetup.ts`, lines 12-13, mode `nearest`,
+  `intersect: false`).
+- **ซ่อนรอบก่อนหน้า now owns the chart.** With the toggle on, history points
+  dated before the announcement drop from the line (the announce point
+  survives, so the window never empties) and the event pills ride the same
+  filter. `plotOf()` gained the hidePrev argument and `applyChartRange` shares
+  it, so the y-axis cannot drift from what is drawn.
+- **Table: sold lots show no next นัด.** นัดถัดไป (นัดที่ / วันที่ / สถานะ) all
+  print `-` when the lot is sold — a sold lot has nothing to buy into.
+- **Settings: คลิกพื้นที่ว่างเพื่อยกเลิกเลือก.** A switch in the settings popup
+  (หมุดบนแผนที่ section, on by default). Off = a stray click on empty map space
+  keeps the selection (rings + panel); panel ✕ and popup close still deselect.
+  Synced like the other prefs.
+- **RCA fixes (six reported cases, each re-verified after the fix against the
+  live dataset through the edited modules):**
+  - *Wrong announce date by one day* — `isoDate` sliced UTC, so a publish
+    stamped 2026-07-22T17:00Z (23 ก.ค. Bangkok) rendered 22 ก.ค.
+    (ผบE.4642/2568). Dates are now formatted in Asia/Bangkok.
+  - *Sold lot shown as กำลังขาย* (ผบE.375/2568 lot 294549) — the report sheet
+    (028) can carry the winning bid while the close fields still say active.
+    The features builder now forces `sold` when the round carrying
+    `sold_price` is the listing's LAST dated round; `mapStatus.js` stays the
+    pure close-fields rule, so a resell lot's older sale row never freezes a
+    live listing.
+  - *Stale winning-bid echo in the chart* (ผบE.2141/2567 lot 312583) — LED's
+    report stamps the final outcome on every remaining นัด row; the round the
+    chart breaks at carried an earlier read (850,000) where the report said
+    790,000. `featureToParcel` re-inks every code-1 round *of the current
+    listing* with the lot-level soldPrice before the history is built;
+    pre-announce rows keep their own order's price.
+  - *Pool double-end crash* — Docker's stop sequence sends SIGINT+SIGTERM and
+    the second `pool.end()` died as an unhandled rejection; the shutdown is
+    now idempotent.
+- **Verification:** `tsc` clean, build clean, `bun test` 149 tests / 27 files —
+  all pass except the two environmental DB-timeout failures
+  (`coordQueue.integration`, network-class). The frontend↔backend ladder
+  agreement is 0 mismatches over 58,358 priced rounds; the agreement test's
+  stored-price leg still reports pre-existing DB-vs-rule drift on 4 lots
+  (9722, 10055 rounding, 10380, 11085/11086 — the จปฐ-vs-committee floor),
+  which predates this batch.
+- **Browser-visible (confirm on screen):** the ค้นในทุกพื้นที่ flow, the
+  autoDeselect switch, ขนาดห้อง hide, price-table and status tips, sibling
+  hover, chart bottom tags + padding, hidePrev chart filter, sold `-` cells,
+  and the A/B grouping labels on lot 221345.
+
+## Unreleased (previously)
+
 ### 2026-10-23 — accounts for real, group-sale rings, price-graph rules
 
 - **Account function works: every setting now follows the user between

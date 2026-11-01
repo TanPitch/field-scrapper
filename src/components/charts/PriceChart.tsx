@@ -93,7 +93,7 @@ export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
      axis from the full ladder (scheduled future rounds included) while the
      constructor plotted past-only, and the mismatch pushed the today line into
      the past. */
-  const { pts, f0, f1, next } = plotOf(p, getApp().chartForecast, Date.now());
+  const { pts, f0, f1, next } = plotOf(p, getApp().chartForecast, Date.now(), getApp().hidePrevSaleRounds);
   if (!pts.length) return;
   const { min, max } = chartWindow(f0, f1, next?.date, getApp().chartRange);
   const vis = pts.filter(h => h.d >= min && h.d <= max);
@@ -117,7 +117,7 @@ export function applyChartRange(ch: Chart<'line', Pt[]>, p: Parcel): void {
  * further rounds" is not "a next round somewhere". A lot whose rounds are all
  * still ahead shows its single first point, styled as forecast — a lone hollow
  * marker, since a line needs two. */
-export function plotOf(p: Parcel, showFc: boolean, now: number): {
+export function plotOf(p: Parcel, showFc: boolean, now: number, hidePrev = false): {
   pts: { d: number; v: number }[];
   /** Index of the last real (past) point; -1 when every point is forecast. */
   realEnd: number;
@@ -125,7 +125,12 @@ export function plotOf(p: Parcel, showFc: boolean, now: number): {
   f1: number;
   next: { date: number; price: number } | null;
 } {
-  const past = p.hist.filter(h => h.d <= now);
+  /* ซ่อนรอบก่อนหน้า also owns the chart: with it on, history points dated
+     before the current listing's announcement drop out, the same rows the
+     round table dims/hides. The announce point itself survives (>=), so the
+     window never empties — liveData anchors that point for every real lot;
+     a fixture lacking it can legitimately plot nothing and is drawn empty. */
+  const past = p.hist.filter(h => h.d <= now && (!hidePrev || h.d >= p.announce));
   const next = showFc ? nextRoundPrice(p, now) : null;
   const lastPast = past[past.length - 1] ?? null;
   /* The forecast point only makes sense beyond the last real one: a "next"
@@ -159,6 +164,10 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
   const showFc = useApp(s => s.chartForecast);
   /* Draw the forecast leg in full ink instead of dashed/faded (ผู้ใช้จะตั้งได้). */
   const solidFc = useApp(s => s.chartForecastSolid);
+  /* ซ่อนรอบก่อนหน้า: pre-announcement history points drop out of the chart,
+     matching the round table. A boolean dep here rebuilds the canvas, like the
+     other toggles. */
+  const hidePrev = useApp(s => s.hidePrevSaleRounds);
   /* The accent the line/pills paint with resolves here too — a theme flip must
      rebuild the chart to re-ink the canvas, just like the toggles above. */
   const theme = useApp(s => s.theme);
@@ -171,7 +180,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     const now = Date.now();
     /* Plot points and the x window come from one helper — see plotOf — so the
        axis could never disagree with the data it frames. */
-    const { pts, realEnd, f0, f1, next } = plotOf(p, showFc, now);
+    const { pts, realEnd, f0, f1, next } = plotOf(p, showFc, now, hidePrev);
     /* No past rounds and no computable next round: there is nothing to draw
        and everything below reads pts[0]. Safe to return here because this is
        an effect body, not the render - an early return between hooks is what
@@ -208,6 +217,10 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
     const evs = p.events
       .map(e => ({ ...e, d: p.hist[e.idx]?.d }))
       .filter(e => e.d != null && e.d <= now)
+      /* The pills ride the same hidePrev rule the plot does: a flag for a
+         round the chart no longer shows would sit outside the axis window and
+         pin three arrow pills to the left edge for no visible reason. */
+      .filter(e => !hidePrev || (e.d as number) >= p.announce)
       .map(e => (e.label === 'ประกาศขาย' ? { ...e, color: acc, ink: inkOn(acc) } : e));
     const thai = { family: "'Noto Sans Thai',sans-serif" };
     const tick = { color: '#666D62', font: { family: 'Noto Sans Thai', size: 9 } };
@@ -243,6 +256,11 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+        /* Bottom padding reserves the band the event pills draw into (see
+           evFlagPlugin): 14px past the x-axis labels + three 16px pill rows.
+           Without it the band would sit outside the canvas and the tags would
+           clip or paint over the tick text. */
+        layout: { padding: { bottom: 60 } },
         events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
         plugins: {
           legend: { display: false },
@@ -339,8 +357,9 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
        this component, but the Chart instance is only rebuilt by this effect. Leaving
        them out meant the toggle appeared to do nothing until the parcel changed.
        theme/accentColor too — a canvas cannot read a CSS var, so a colour switch
-       rebuilds the chart to re-ink line and pills. */
-  }, [p, showToday, showFc, priceBath, solidFc, theme, accentUser]);
+       rebuilds the chart to re-ink line and pills. hidePrev joins them: the
+       plot re-filters and the pills re-filter in the same rebuild. */
+  }, [p, showToday, showFc, priceBath, solidFc, theme, accentUser, hidePrev]);
 
   useEffect(() => { if (chart.current) applyChartRange(chart.current, p); }, [range, p]);
 

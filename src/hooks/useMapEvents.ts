@@ -94,9 +94,13 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
            without this guard the *second* click on an already-selected marker
            opened a popup even in 'all' mode, where clicking is supposed to do
            nothing but fill the right-hand panel. */
+        /* The autoDeselect setting owns this branch: clicking empty map space
+           clears the selection only when the user left it on — everything else
+           (panel close, popup ✕) still deselects, so the setting only widens
+           what survives a stray click. */
         if (id === s.selectedId) { if (s.popupMode === 'active') toggleClickPopup(id); }
         else select(id, { fly: false });
-      } else if (s.selectedId != null) deselect();
+      } else if (s.autoDeselect && s.selectedId != null) deselect();
     };
     /* Right-click anywhere to copy the coordinate under the pointer. Temporary, for
      * checking resolved positions against TD and DOL by hand.

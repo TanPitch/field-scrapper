@@ -1,10 +1,11 @@
 import { BASEMAPS, DEFAULT_COL_HIDDEN, DEFAULT_COL_ORDER } from '../data/constants';
-import { PARCEL_BY_ID, ALL_PARCELS, diagnoseParcels } from '../data/liveData';
+import { PARCEL_BY_ID, diagnoseParcels } from '../data/liveData';
 import { getMap, hasLayer } from '../map/mapRef';
 import { setGroupRing } from '../map/layers';
 import { closeClickPopup, closeHoverPopup, getClickPopId, getHoverPopId, openClickPopup, setPopupDismissHandler } from '../map/popups';
 import type { BasemapId, ColKey, Overlay, OverlayId, RightView } from '../types';
 import { EMPTY_FILTERS, getApp, patchApp, toast } from './useApp';
+import { groupOf } from '../lib/group';
 
 /**
  * Clear the selection only once nothing on screen refers to it any more.
@@ -36,48 +37,10 @@ export function setRpView(v: RightView): void {
 export function showRight(v: RightView): void { patchApp({ rpView: v, rightOpen: true }); }
 
 /**
- * Parcels that sell as one lot with `id` — LED's group sale ("ขายรวม").
- *
- * LED ships the group in two shapes, and ผบ.754/2562 (deeds 24653 ↔ 161371) is
- * why both must count: both lots have group_lot_count NULL and the same
- * case/year/order, and the ONLY evidence is the remark text — "ขายรวมกับที่ดินโฉนดเลขที่
- * 161371, ราคาประเมินรวม …". So a parcel is group-eligible when the plating
- * count says so OR its remark says ขายรวม; structured siblings come from the
- * case+year+order key, and any deed number named in an eligible remark joins
- * by deed number even if its own key or count disagrees. An order-key sibling
- * with neither signal stays out — same order, different land.
+ * Parcels that sell together with `id` — LED group sale sibling resolution
+ * lives in lib/group.ts so price.ts can share it without dragging the map
+ * modules into the price path; the click handler calls the same function.
  */
-const mentionsGroup = (remark?: string | null): boolean =>
-  !!remark && /ขายรวม|รวม\s*\d+\s*แปลง|ขายต่อเนื่อง|พร้อมกัน/.test(remark);
-
-function groupOf(id: number): number[] {
-  const p = PARCEL_BY_ID.get(id);
-  if (!p) return [id];
-  if (!p.caseNoRaw && !mentionsGroup(p.remark)) return [id];
-  const key = (q: typeof p) => [q.province, q.caseNoRaw ?? '', q.caseYear ?? '', q.order ?? ''].join('|');
-  const pool = ALL_PARCELS.filter((q) =>
-    (q.groupCount ?? 1) > 1 || mentionsGroup(q.remark)
-      ? q.caseNoRaw && key(q) === key(p)
-      : false);
-  if (!pool.length) return [id];
-  const sibs = new Set<number>([id]);
-  for (const q of pool) sibs.add(q.id);
-  /* Deed-number references are exact: the remark names the sibling's โฉนด, so
-     take them regardless of key or count. Scanning ALL_PARCELS once per select
-     is a few ms over ~6k parcels — cheaper than maintaining an index for a
-     lookup that happens one click at a time. */
-  const byDeed = new Map(ALL_PARCELS.map((q) => [q.deedNo, q]));
-  for (const q of [p, ...pool]) {
-    if (!q || !mentionsGroup(q.remark)) continue;
-    for (const m of q.remark!.matchAll(/โฉนด[^ ]*\s*เลขที่\s*([0-9,\s]{4,})/g)) {
-      for (const d of m[1].split(/[,\s]+/).filter(Boolean)) {
-        const other = byDeed.get(d);
-        if (other && other.id !== id) sibs.add(other.id);
-      }
-    }
-  }
-  return sibs.size > 1 ? [...sibs] : [id];
-}
 
 export function select(id: number, { fly = true }: { fly?: boolean } = {}): void {
 const p = PARCEL_BY_ID.get(id);

@@ -46,7 +46,7 @@ const SYNCED_PREFS = [
   'showLandKindIcon', 'priceBath', 'priceSpace', 'chartTick', 'markerSize',
   'labelSold', 'labelNextDate', 'labelOverlap', 'showCircleMeta', 'areaTagsOn', 'drawDistMode',
   'reduceMotion', 'highlightSoldRounds', 'chartForecast', 'chartForecastSolid', 'chartTodayLine',
-  'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed',
+  'condoUnitOrder', 'persistMapView', 'lastView', 'sectionsCollapsed', 'autoDeselect',
   'detailRowHidden', 'detailRowOrder', 'soldPriceHeadline', 'hidePrevSaleRounds', 'roundGroupLabels', 'roundsPreview', 'roundsGroupBorder', 'filters', 'sort',
   'overlays', 'flood', 'landOn', 'cctvOn', 'sensOn', 'transportOn', 'transportOpacity', 'sensOpacity',
   'searchLimit', 'logLimit', 'bottomH', 'forceArea', 'cascade', 'gkey',

@@ -47,6 +47,9 @@ export const deltaText = (d: PriceDelta): string => `${d.up ? '+' : ''}${d.pct}%
  *  - A no-bid round is itself held at the *undiscounted* price, so the count is
  *    incremented after that round's price is computed, never before.
  */
+import { groupOf, mentionsGroup } from './group';
+import { PARCEL_BY_ID } from '../data/liveData';
+
 export const DISCOUNT_STEP_PCT = 10;
 export const MAX_DISCOUNT_PCT = 30;
 
@@ -62,16 +65,65 @@ export interface LadderRound {
   price: number | null;
 }
 
-/** Walk every round and derive its discount and price. */
-export function priceLadder(rounds: SellRound[], startPrice: number | null): LadderRound[] {
+/**
+ * A round that deepened the discount: the ingest's no-bid code 3, or LED's own
+ * outcome label naming ไม่มีผู้สู้ราคา (0/10 means "no result yet" carries the
+ * same label on the lists page — the label does the deciding).
+ */
+const isNoBidRound = (round: SellRound): boolean =>
+  (round.statusCode != null ? Number(round.statusCode) : null) === NO_BID_CODE
+  || round.status.includes('ไม่มีผู้สู้ราคา');
+
+/**
+ * Walk every round and derive its discount and price.
+ *
+ * `announced` is the current listing's publish boundary (the announce point
+ * liveData anchors startPriceOf on). Rounds dated before it belong to earlier
+ * sale orders LED printed in its history, and history never deepens the
+ * ladder: ผบ.754/2562 carries FOUR งดขายไม่มีผู้สู้ราคา rows wedged before its
+ * relist announcement, and counting them priced round 2 of the live listing at
+ * -30% when LED had not even held round 1 twice. A relist re-sets the floor —
+ * it does not add to it.
+ *
+ * History rows keep the ledger's own price; the ladder's arithmetic is about
+ * the listing on sale now.
+ */
+export function priceLadder(rounds: SellRound[], startPrice: number | null, announced: number | null = null): LadderRound[] {
   let noBidCount = 0;
   return rounds.map((round, index) => {
-    const code = round.statusCode == null ? null : Number(round.statusCode);
-    const discountPct = Math.min(noBidCount * DISCOUNT_STEP_PCT, MAX_DISCOUNT_PCT);
-    const price = startPrice === null ? null : round2(startPrice * (1 - discountPct / 100));
-    if (code === NO_BID_CODE || round.status.includes('ไม่มีผู้สู้ราคา')) noBidCount++;
+    const inListing = announced == null || round.date == null || round.date >= announced;
+    const discountPct = inListing ? Math.min(noBidCount * DISCOUNT_STEP_PCT, MAX_DISCOUNT_PCT) : 0;
+    const price = !inListing || startPrice === null
+      ? round.price ?? null
+      : round2(startPrice * (1 - discountPct / 100));
+    if (inListing && isNoBidRound(round)) noBidCount++;
     return { round, index, discountPct, price };
   });
+}
+
+/**
+ * No-bid rounds a GROUP-SALE sibling contributes to this parcel's ladder.
+ *
+ * Lands sold together are one auction event: ผบ.754/2562 sold 24653 and
+ * 161371 as one lot, and 24653's round 1/6 returned งดขายไม่มีผู้สู้ราคา — a
+ * fact LED prints only on 24653's own table. The shared sale deepens both
+ * siblings' next-round price, so the sibling's งดขายไม่มีผู้สู้ราคา rows inside
+ * the same listing window are merged in here, where LED's own UI stops
+ * showing them. Returns 0 for the 99% of lots that are not group sales — the
+ * mention gate keeps the sibling scan off every ordinary marker.
+ */
+function siblingNoBidCount(p: Parcel, announced: number, beforeTs: number): number {
+  if (!((p.groupCount ?? 1) > 1) && !mentionsGroup(p.remark)) return 0;
+  let n = 0;
+  for (const id of groupOf(p.id)) {
+    if (id === p.id) continue;
+    const q = PARCEL_BY_ID.get(id);
+    if (!q) continue;
+    for (const r of q.rounds) {
+      if (r.date != null && r.date >= announced && r.date < beforeTs && isNoBidRound(r)) n++;
+    }
+  }
+  return n;
 }
 
 /** The opening price a lot started from. */
@@ -112,12 +164,20 @@ export function nextRoundPrice(p: Parcel, now: number = Date.now()): {
   const upcoming = p.rounds.find((r) => r.date != null && r.date >= now);
   if (upcoming?.date == null) return null;
 
-  /* The ladder counts no-bid rounds from the start of the lot, including the
-     ones already past, because that count is what set the discount in force. */
-  const ladder = priceLadder(p.rounds, startPrice);
-  const target = ladder.find((l) => l.round === upcoming);
-  const discountPct = target?.discountPct ?? 0;
-  const price = target?.price ?? startPrice;
+  /* The discount in force is built from no-bid rounds inside the CURRENT
+     listing only — the announce boundary (priceLadder above); history's
+     ไม่มีผู้สู้ราคา rows never re-deepen a relist. Undated rounds count as the
+     current listing (see priceLadder), and any round before `upcoming` in
+     order is already past. Group-sale siblings share the auction event, so
+     their no-bid rounds in the same window deepen this price too. */
+  const upcomingIdx = p.rounds.indexOf(upcoming);
+  const ownCount = p.rounds.slice(0, upcomingIdx)
+    .filter((r) => (r.date == null || r.date >= p.announce) && isNoBidRound(r)).length;
+  const discountPct = Math.min(
+    (ownCount + siblingNoBidCount(p, p.announce, upcoming.date)) * DISCOUNT_STEP_PCT,
+    MAX_DISCOUNT_PCT,
+  );
+  const price = round2(startPrice * (1 - discountPct / 100));
 
   return { price, startPrice, discountPct, date: upcoming.date };
 }

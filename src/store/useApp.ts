@@ -49,6 +49,9 @@ export interface AppState {
   condoUnitOrder: CondoUnitOrder;
   /** Restore the map to wherever it was left, rather than the default view. */
   persistMapView: boolean;
+  /** Clicking empty map space clears the selection. Off = the ring and panel
+   *  survive stray map clicks; the corner ✕ and panel close still deselect. */
+  autoDeselect: boolean;
   /** Last camera position, saved so the next login resumes there. */
   lastView: { lng: number; lat: number; zoom: number } | null;
   /** Collapse the settings sections down to their headers. */
@@ -200,6 +203,7 @@ export const useApp = create<AppState>(set => ({
   chartForecastSolid: false,
   condoUnitOrder: 'statusFirst',
   persistMapView: true,
+  autoDeselect: true,
   lastView: null,
   sectionsCollapsed: true,
   detailRowHidden: [],

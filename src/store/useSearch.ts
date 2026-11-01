@@ -24,6 +24,9 @@ interface SearchState {
   online: OnlineState;
   onlineStale: boolean;
   dropOpen: boolean;
+  /** True after the "ค้นในทุกพื้นที่" button: parcel hits are no longer
+   *  filtered to the search-time bbox. Reset by every fresh runSearch. */
+  wide: boolean;
   /** Resolved hits for the current query — shared with the right panel. */
   rows: SearchRow[];
   /** Set by SearchBox so the panel can navigate to a result. */
@@ -39,6 +42,7 @@ export const useSearch = create<SearchState>(set => ({
   online: { status: 'idle', list: [] },
   onlineStale: false,
   dropOpen: false,
+  wide: false,
   rows: [],
   onPick: null,
   rerun: null,
