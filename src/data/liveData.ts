@@ -51,24 +51,52 @@ interface RoundRow extends ApiRound {}
  * status_code is carried through because the price ladder is meaningless
  * without it: a no-bid round is the ingest's code 3, or LED's own งดขายไม่มีผู้สู้ราคา
  * label (the report sheet's history rows are code 10 but speak through the label).
+ *
+ * Placeholder promotion (ผบE.389/2569 RCA): the report sync deliberately
+ * writes the real outcome only into led_label — rewriting status_label is how
+ * ผบ.2255/2562's labels got crossed. When the lists page has not caught up and
+ * still says รอประกาศ/ยังไม่มีการเปิดประมูล while the report already names an
+ * outcome, the label is the absence of a result — the report's word is the
+ * result. Promote it here once, so the table, the popup, the chart and the
+ * price ladder (isNoBidRound reads the label) all see the same outcome without
+ * each surface growing its own override.
  */
+const PLACEHOLDER_STATUSES = new Set(['รอประกาศ', 'ยังไม่มีการเปิดประมูล']);
+
 function mapRounds(rows: RoundRow[]): SellRound[] {
-  return rows.map((r) => ({
-    date: isoTs(r.date),
-    /* The label from the database is authoritative; "รอประกาศ" arrives here for
-       an undated round and the panel blanks that cell rather than printing it. */
-    status: r.label ?? '',
-    statusCode: r.status_code ?? null,
-    price: r.price ?? null,
-    discountPct: r.discount_pct ?? null,
-    /* The winning bid LED's report sheet printed for this round (028) — only
-       present on ขายได้ rounds, and only on a server that has ledReport.js. */
-    soldPrice: r.sold_price ?? null,
-    /* The report sheet's own outcome word for this round (029). History rows
-       born from the report carry it as their only label; the panel shows it as
-       a second line whenever it disagrees with the lists label. */
-    ledLabel: r.led_label ?? null,
-  }));
+  return rows.map((r) => {
+    const status = r.label ?? '';
+    const led = (r.led_label ?? '').trim();
+    const real = led !== '' && !PLACEHOLDER_STATUSES.has(led);
+    const promote = real && PLACEHOLDER_STATUSES.has(status.trim());
+    /* LED's outcome vocabulary → the ingest's code. Only the codes other logic
+       branches on today: ขายได้ = sold, ไม่มีผู้สู้ราคา = no-bid deepens the
+       ladder (lib/price.ts). Anything else keeps the row's own code — no
+       guessing at numbers neither LED nor the ingest pin down. */
+    const code = promote
+      ? (led.startsWith('ขายได้') ? 1
+        : led.includes('ไม่มีผู้สู้ราคา') ? 3
+        : r.status_code ?? null)
+      : r.status_code ?? null;
+    return {
+      date: isoTs(r.date),
+      /* The label from the database is authoritative; "รอประกาศ" arrives here for
+         an undated round and the panel blanks that cell rather than printing it. */
+      status: promote ? led : status,
+      statusCode: code,
+      price: r.price ?? null,
+      discountPct: r.discount_pct ?? null,
+      /* The winning bid LED's report sheet printed for this round (028) — only
+         present on ขายได้ rounds, and only on a server that has ledReport.js. */
+      soldPrice: r.sold_price ?? null,
+      /* The report sheet's own outcome word for this round (029). History rows
+         born from the report carry it as their only label; the panel shows it as
+         a second line whenever it disagrees with the lists label. */
+      ledLabel: r.led_label ?? null,
+      /* Ingest provenance — lists slot number vs report row (null). */
+      idx: r.idx ?? null,
+    };
+  });
 }
 
 /**

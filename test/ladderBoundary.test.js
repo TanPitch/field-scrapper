@@ -152,3 +152,45 @@ describe("saleOrderLabels", () => {
     expect(ls.map((l) => l.prev)).toEqual([true, false, false, false]);
   });
 });
+
+/* Provenance mode (round idx from the ingest): the boundary is the row's own
+   source, not a date heuristic. Pinned on ผบE.3247/2567 lot 221345's real
+   shape: 12 report rows (two relisted orders, the second opening 3 days after
+   the first ended) then the live listing's six นัด. The announce-date fallback
+   misgrouped this lot — its 19/06 publish predates the live listing's first
+   นัด by two months, so 01/07 slid into the live order and printed 1-7. */
+describe("saleOrderLabels walks on round source (idx)", () => {
+  const d = (y, m, day) => Date.parse(`${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}T17:00:00Z`);
+  const rep = (ts) => ({ date: ts, idx: null });   // source='report'
+  const lst = (ts) => ({ date: ts, idx: 1 });      // source='lists'
+  const A = [rep(d(2025, 11, 25)), rep(d(2025, 12, 16)), rep(d(2026, 1, 6)),
+             rep(d(2026, 1, 27)), rep(d(2026, 2, 17)), rep(d(2026, 3, 10))];
+  const B = [rep(d(2026, 3, 13)), rep(d(2026, 4, 7)), rep(d(2026, 4, 28)),
+             rep(d(2026, 5, 19)), rep(d(2026, 6, 9)), rep(d(2026, 6, 30))];
+  const LIVE_1 = d(2026, 8, 19);
+  const LIVE = [lst(LIVE_1), lst(LIVE_1 + 21 * DAY), lst(LIVE_1 + 42 * DAY),
+                lst(LIVE_1 + 63 * DAY), lst(LIVE_1 + 84 * DAY), lst(LIVE_1 + 105 * DAY)];
+
+  test("221345: report rows letter A1-A6 / B1-B6, the live listing runs plain 1-6", () => {
+    const ls = saleOrderLabels([...A, ...B, ...LIVE]);
+    expect(ls.map((l) => l.text)).toEqual(
+      ["A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "B4", "B5", "B6", "1", "2", "3", "4", "5", "6"]);
+    expect(ls.map((l) => l.prev)).toEqual(
+      [...Array(12).fill(true), ...Array(6).fill(false)]);
+    /* The dashed order divider sits under B1 and under the live listing. */
+    expect(ls.map((l) => l.sep)).toEqual(
+      [false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, false]);
+  });
+
+  test("a lists-only lot (no report history) is one plain order", () => {
+    const ls = saleOrderLabels([...LIVE]);
+    expect(ls.map((l) => l.text)).toEqual(["1", "2", "3", "4", "5", "6"]);
+    expect(ls.map((l) => l.prev)).toEqual([false, false, false, false, false, false]);
+  });
+
+  test("announce param alone never regresses the fallback lots (all-idx-null rows)", () => {
+    const ann = LIVE_1 - 40 * DAY;
+    const ls = saleOrderLabels([rep(ann - 30 * DAY), rep(ann + 100 * DAY), rep(ann + 121 * DAY)], ann);
+    expect(ls.map((l) => l.text)).toEqual(["A1", "1", "2"]);
+  });
+});

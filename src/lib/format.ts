@@ -4,7 +4,17 @@ export const esc = (s: unknown): string =>
 
 export const debounce = <A extends unknown[]>(fn: (...a: A) => void, ms: number) => {
   let t: ReturnType<typeof setTimeout> | undefined;
-  return (...a: A) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  const wrapped = (...a: A) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...a), ms);
+  };
+  /* Cancel a still-pending call. The search box needs it when the user wipes
+     the text: the clear must also take the timer for the text that was typed
+     before it, or the box sits empty while a search for the deleted phrase
+     lands behind it — results, dropdown and the floating ค้นหาในพื้นที่นี้
+     button all reappearing over nothing. */
+  wrapped.cancel = () => clearTimeout(t);
+  return wrapped;
 };
 
 export const shortNum = (v: number): string =>

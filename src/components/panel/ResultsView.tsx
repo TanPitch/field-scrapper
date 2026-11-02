@@ -96,8 +96,11 @@ export function ResultsView() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs">{r.name}</div>
+                  {/* The sub line was place-only, which left the ที่ดิน group
+                      name-only — the case, the location, the size and the open
+                      price the title-bar row promises were dropped here. */}
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2">
-                    {r.kind === 'place' ? r.sub : ''}
+                    {r.sub}
                   </div>
                 </div>
               </div>

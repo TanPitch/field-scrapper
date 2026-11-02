@@ -4,6 +4,54 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-02 — provenance grouping, the led_label promotion, packed search rows
+
+Root-cause pass over two reported round-table bugs plus the search box, and a
+database backfill the panel had been waiting on.
+
+- **Round grouping now walks the row's own source, not a date guess.** The
+  ingest gives every lists-schedule row a slot number (`idx`) and leaves
+  report-history rows with idx null. Partitioning on that null/non-null split
+  is exact; the 2026-11-01 announce-crossing heuristic mislabeled
+  ผบE.3247/2567 (lot 221345) because its publish point (19/06) sits two months
+  before the live listing's first นัด (19/08), so the previous order's tail —
+  the 01/07/2569 row — slid into the live order and printed 1-7. The grouping
+  reads `rounds[].idx` now: report rows letter A1-A6, B1-B6 (chunked by the
+  same 60-day/<14-day split rules), the live listing always runs plain 1..N.
+  Lots with no idx anywhere (older ingests) keep the old announce rule as the
+  fallback. Pinned on 221345's real row shape in `test/ladderBoundary.test.js`
+  (now 12 tests).
+- **The report's outcome promotes into an unsettled round.** ledReport.js
+  deliberately writes the LED report's verdict only into `led_label`
+  (rewriting status_label is how ผบ.2255/2562's labels crossed between two
+  orders). But until the lists ingest catches up, the row still says
+  ยังไม่มีการเปิดประมูล/รอประกาศ — a placeholder. That placeholder is an
+  absence, not a status: when the report already names an outcome, liveData's
+  `mapRounds` promotes it (code 1 for ขายได้, code 3 for ไม่มีผู้สู้ราคา, own
+  code otherwise undecidable → null). ผบE.389/2569's round 1/6 now reads
+  งดขายไม่มีผู้สู้ราคา in the table, and the ladder prices the next round at
+  −10% — no case-id special cases, any future lot ingested the same way gets
+  the same treatment.
+- **Search rows carry the case and the money.** Title-bar dropdown and the
+  ผลการค้นหา panel both show, per land row: case number (ผบ../ปี), ตำบล
+  อำเภอ จังหวัด, size (ไร่-งาน-วา), and the open price LED starts the bidding
+  at — not just the static price cell. The clear (✕) button also cancels a
+  still-pending keystroke search, so wiping the text can no longer fire a
+  search for the deleted phrase behind the empty box, and keystroke searches
+  wait 400 ms.
+- **ระดับความสูง จาก ระดับน้ำทะเล backfiled onto the parcels.** The column was
+  empty for every row — `test/elevation.js` gates on
+  `geo_precision = 'parcel'`, a label only 231 rows carry, while 5,164 more
+  rows have real TD-resolved point geometry with the label null. The gate now
+  reads the point itself (`geom IS NOT NULL`), and the AWS Terrarium z14 run
+  (~9.2 m/px) filled every parcel the map can actually place. Parcels with no
+  coordinate at all stay NULL — those honestly have no height claim to make.
+- UI tweaks shipped with the batch (user's own edits): the next-round discount
+  badge is a red pill whose tip reads รอบถัดไปลด N%, map label hover tips name
+  the property type, the chart's point tooltip drops the date line, popup-kind
+  ordering in settings puts ยกเลิก/หมดอายุ before นำกลับมาขายใหม่, and the
+  round-table cell's parser pins LED's canonical heads for the hover tip.
+
 ### 2026-11-01 — search beyond the view, detail-panel rules, the announce boundary
 
 The 12-item batch plus a root-cause pass over six reported bugs. One idea runs

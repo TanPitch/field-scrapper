@@ -60,6 +60,10 @@ export interface SellRound {
    *  a second line in the price table whenever it tells the lists label
    *  something it does not already say. */
   ledLabel?: string | null;
+  /** Ingest provenance: the lists schedule's own slot number (1..8). Report
+   *  history rows carry idx null — that null/non-null split IS the listing
+   *  boundary for round grouping, not a date heuristic. */
+  idx?: number | null;
 }
 
 export interface Mortgage { amount: number; bank: string }

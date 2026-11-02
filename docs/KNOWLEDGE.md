@@ -463,3 +463,39 @@ no fix is needed — this is here so nobody "discovers" it again.
   reads from automated ones either way;
 - only `match` verdicts are user-facing; mismatches and no_result stay in the
   admin error group.
+
+---
+
+## 8. Round provenance: lists rows vs report rows (2026-11-02)
+
+`auction_rounds` rows are born in two places, and the difference is data an
+algorithm should read rather than reconstruct from dates:
+
+- **lists rows** — the schedules LED prints per case. The ingest stamps them
+  with their own slot number `idx` (1..8) and source `lists`. Rounds that have
+  not happened yet carry the placeholder phrase (รอประกาศ /
+  ยังไม่มีการเปิดประมูล) with code 0.
+- **report rows** — the ผลการขาย rows `ledReport.js` inserts for history the
+  lists schedule no longer shows. `idx` is null, source `report`, and the
+  label is the report's own outcome word.
+
+Rules that hang off this split:
+
+- **The current-listing boundary is `idx IS NOT NULL`, not the publish
+  date.** A publish point can sit months before the first นัด
+  (ผบE.3247/2567 lot 221345: published 19/06/2569, first live นัด 19/08),
+  which is exactly why matching rows to the announce date planted the
+  previous order's 01/07/2569 tail inside the live order.
+- **The report's verdict lives in `led_label` only — by design.** Rewriting
+  `status_label` from the report is how ผบ.2255/2562's labels got crossed
+  between two orders. The client (`liveData.mapRounds`) promotes `led_label`
+  onto a round whose lists label is still the placeholder; that is where the
+  งดขายไม่มีผู้สู้ราคา/−10% behaviour comes from on rows the lists page has
+  not re-scraped yet. ledReport only ever stamps rows it can date-match, so
+  the promotion is conservatively guarded: placeholder lists label, real
+  report word.
+- **Elevation is a column, not a layer.** `parcels.elevation_m` is filled by
+  `test/elevation.js` (AWS Terrarium z14, ±9.2 m/px). Gate on
+  `geom IS NOT NULL` — not on `geo_precision = 'parcel'`, a label only 231
+  rows carry while 5,164 real TD-resolved points hold NULL there. The run is
+  idempotent and disk-caches its tiles under `test/data/elevation-tiles`.

@@ -40,36 +40,71 @@ const isPlaceholderStatus = (s: string): boolean => PLACEHOLDER_STATUSES.has(s.t
 
 /* Sale-order grouping. LED re-lists land after a failed sale and its นัด count
    restarts from 1, so one flat 1..N down the whole history misrepresents the
-   table (ผบ.754/2562 carries six separate sale orders). Three boundaries start
-   a new order:
-     gap   — longer than 60 days between consecutive dated rounds; LED's own
-             นัด spacing inside one order runs weeks while resell gaps measure
-             months.
-    adjacent — closer than 14 days. LED's minimum in-listing spacing is ~21 days,
-             so a near-adjacent pair is a relist landing right after the old
-             order's last นัด (ผบ.4681/2568 lot 221345: last A round 10/03,
-             first B round 13/03 — a 3-day gap no 60-day rule would ever split).
-     announce — the current listing's publish point: everything dated at or
-             after `announceTs` IS the current order and never splits further,
-             even if a งดขาย suspension stretched past 60 days inside it. The
-             crossing itself always splits (the tail of the previous order can
-             sit < 60 days behind the new listing's first นัด).
+   table (ผบ.754/2562 carries six separate sale orders).
+
+   The listing boundary is provenance, not dates: the ingest gives every
+   lists-schedule row a slot number (idx) and leaves report-history rows with
+   idx null (ผบE.3247/2567 lot 221345: 12 report rows then the live listing's
+   own 6). Partitioning on idx is exact; the announce date only ever knew when
+   LED published, not which row belongs to what, and when the publish point
+   does not line up with the first นัด (221345's 19/06 publish vs 19/08 first
+   นัด) it planted the previous order's tail inside the live one.
+
+   Report rows (idx null) still split among themselves by the two date gaps
+   that survived what the data said:
+     gap    — longer than 60 days between consecutive dated rounds; LED's own
+              นัด spacing inside one order runs weeks while resell gaps measure
+              months.
+     adjacent — closer than 14 days. LED's minimum in-listing spacing is ~21
+              days, so a near-adjacent pair is a relist landing right after the
+              old order's last นัด (221345: last A round 10/03, first B round
+              13/03 — a 3-day gap no 60-day rule would ever split).
+   Lots ingested before the idx column existed have no provenance at all; for
+   them the old announce-crossing rule stays as the fallback. That is why the
+   `announced` parameter survives.
+
    Letters count up from the OLDEST order (A, B, C …); the newest order — the
    one still live — keeps plain numbers. Same-day rounds stay in one order:
    only a positive sub-14-day gap is a relist, a 0 gap is duplicate rows. */
 const SALE_ORDER_GAP = 60 * 864e5;
 const SALE_ORDER_ADJACENT = 14 * 864e5;
 
+export interface OrderRound { date: number | null; idx?: number | null }
+
 /** Exported for the probe check (bun) — same testable-pure-function pattern as
  *  server/mapStatus.js. Rendering stays in the component. */
 export function saleOrderLabels(
-  rounds: { date: number | null }[],
+  rounds: OrderRound[],
   announceTs?: number | null,
 ): { text: string; plain: string; prev: boolean; sep: boolean }[] {
+  /* Provenance mode: at least one row was born from the lists schedule. */
+  const hasIdx = rounds.some((r) => r.idx != null);
   const order: number[] = [];
   let g = 0;
+  let listingOpen = false;
   let prev: number | null = null;
   rounds.forEach((r) => {
+    if (hasIdx) {
+      /* The live listing's rows are one order that never splits — even when a
+         งดขาย suspension stretched past 60 days inside it. The first lists row
+         opens it; the rest join. */
+      if (r.idx != null) {
+        if (!listingOpen) { g++; listingOpen = true; }
+      } else if (r.date != null) {
+        /* Gap-split among the report rows only. */
+        if (prev != null) {
+          const gap = r.date - prev;
+          if (gap > SALE_ORDER_GAP || (gap > 0 && gap < SALE_ORDER_ADJACENT)) g++;
+        }
+      }
+      /* A dateless report row keeps its group, and a report row dated after a
+         live-listing row would be ingest corruption (ledReport inserts history
+         strictly before the lists' minimum date) — it stays put rather than
+         inventing an order. */
+      order.push(g);
+      if (r.date != null) prev = r.date;
+      return;
+    }
     if (r.date != null) {
       if (prev != null) {
         const entering = announceTs != null && prev < announceTs && r.date >= announceTs;
@@ -670,7 +705,14 @@ export function DetailView() {
                งดขาย (ป.วิ.อ.แพ่ง มาตรา 309) shows its phrase in the cell and
                the มาตรา qualifier rides the hover tip instead of pushing the
                line to overflow. */
-            const shown = isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status;
+
+            const parseStatus = (input: string) => {
+              const match = ["ยังไม่มีการเปิดประมูล", "งดขายไม่มีผู้สู้ราคา", "งดขายส่งประกาศมิชอบ", "งดขายในนัดที่เหลือ", "โจทก์แถลงงดขาย", "ถอนการยึด", "ขายได้", "งดขาย"].find(k => input.startsWith(k));
+              return match ? { part1: match, part2: input.replace(match, "").trim() } : { part1: input, part2: "" };
+            };
+            const shown_pre = isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status;
+            const shown = shown_pre;
+            const shown_tip = parseStatus(shown_pre).part2;
             const st = splitStatus(shown);
             /* LED prints a group sale's verdict on the tables of only SOME of
                the siblings (ผบ.754/2562's งดขายไม่มีผู้สู้ราคา sits on 24653's
@@ -715,7 +757,8 @@ export function DetailView() {
                       so it clips with its ellipsis instead. */}
                   <span
                     className="block whitespace-nowrap overflow-hidden text-ellipsis"
-                    {...((st.rest || sibTip) ? useTipProps(st.rest || sibTip!) : {})}
+                    {...((st.rest || sibTip || shown_tip) ? useTipProps(st.rest || sibTip || shown_tip!) : {})}
+
                   >
                     {shown}
                   </span>

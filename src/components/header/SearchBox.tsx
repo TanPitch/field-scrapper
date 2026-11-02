@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
-import { esc, debounce } from '../../lib/format';
+import { esc, debounce, fmtRai } from '../../lib/format';
+import { startPriceOf } from '../../lib/price';
 import { parcelDot } from '../../lib/parcelColor';
 import { onlineSearch, poiIcon } from '../../lib/onlineSearch';
 import { getMap } from '../../map/mapRef';
@@ -79,7 +80,7 @@ export function SearchBox() {
         patch({ online: { status: 'error', list: [] } });
       });
   }, [patch, openResults]);
-  const debounced = useMemo(() => debounce((q: string) => runSearch(q, true), 220), [runSearch]);
+  const debounced = useMemo(() => debounce((q: string) => runSearch(q, true), 400), [runSearch]);
 
   /* the map overlay button re-runs whatever is currently typed, results going to
      ผลการค้นหา only — the title-bar dropdown stays closed */
@@ -118,7 +119,16 @@ const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch
       for (const p of ALL_PARCELS) {
         if (!match(p)) continue;
         const inArea = !bb || inBbox([p.lng, p.lat], bb);
-        const row: Row = { rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name, sub: fmt(p.price), dot: parcelDot(p), parcelId: p.id };
+        /* The row read is the case the land belongs to, where it is, how big
+           and what LED opens the bidding at — a price alone made every row look
+           alike and forced the deed-hunt loop into the detail panel. caseNo is
+           the exact string LED publishes (ผบ../2569), so the row and the query
+           can meet mid-string. */
+        const row: Row = {
+          rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name,
+          sub: `${p.caseNo} · ${p.tambon} ${p.amp} ${p.province} · ${fmtRai(p.wah, p.sizeUnit)} · เปิด ${fmt(startPriceOf(p))}`,
+          dot: parcelDot(p), parcelId: p.id,
+        };
         if ((wide || inArea) && parcels.length < limit) parcels.push(row);
         else if (!inArea) hiddenParcels++;
       }
@@ -222,7 +232,7 @@ const rowKb = (r: Row) => rows.indexOf(r) === kb;
           <button
             type="button"
             aria-label="ล้างคำค้น"
-            onClick={() => { setValue(''); setKb(-1); runSearch('', true); closeDrop(); input.current?.focus(); }}
+            onClick={() => { setValue(''); setKb(-1); debounced.cancel(); runSearch('', true); closeDrop(); input.current?.focus(); }}
             className="grid size-[18px] shrink-0 cursor-pointer place-items-center rounded-full text-dim2 transition hover:bg-panel2 hover:text-ink"
           >
             <X size={12} />
@@ -241,7 +251,7 @@ const rowKb = (r: Row) => rows.indexOf(r) === kb;
             <div key={r.rid} className={rowCls(rowKb(r))} onClick={() => pick(r)}>
               <span className="inline-block size-[7px] shrink-0 rounded-full" style={{ background: r.dot }} />
               <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
-              <span className="max-w-[130px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2">{r.sub}</span>
+              <span className="max-w-[300px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[10.5px] text-dim2" data-tip={esc(r.sub)}>{r.sub}</span>
             </div>
           )) : hiddenParcels > 0 ? (
             <button

@@ -19,7 +19,11 @@
  *
  * Only parcels whose coordinate is genuinely the parcel's are sampled. A
  * subdistrict centroid is a fallback for showing the map at all, and its
- * elevation says nothing about the land being auctioned, so those stay NULL.
+ * elevation says nothing about the land being auctioned, so those stay NULL
+ * — but "parcel-level" is what the coordinate IS, not the geo_precision
+ * label: the resolve cascade writes real deed points for thousands of rows
+ * whose precision column is still null (5,164 of them on 2026-11-02, against
+ * 231 labelled). Gate on the point itself.
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -90,14 +94,12 @@ const { rows: targets } = await client.query(`
     SELECT id, deed_number, province_code, tumbol,
            ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lon
       FROM parcels
-     WHERE geo_precision = 'parcel'
-       AND ST_Y(geom::geometry) IS NOT NULL
+     WHERE ST_Y(geom::geometry) IS NOT NULL
        AND ST_X(geom::geometry) IS NOT NULL
      ORDER BY id`);
 
 const skipped = await client.query(`
-    SELECT count(*)::int AS n FROM parcels
-     WHERE geo_precision IS DISTINCT FROM 'parcel' OR geom IS NULL`);
+    SELECT count(*)::int AS n FROM parcels WHERE geom IS NULL`);
 
 /* Elevation is reference data, so it records itself as a 'reference' run and
  * shows on the same status page as the scrapers. */
