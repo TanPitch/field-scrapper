@@ -16,8 +16,7 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { esc, fdate, numDate } from '../lib/format';
-import { landTypeOf } from '../lib/landType';
+import { numDate } from '../lib/format';
 import { nextRoundPrice } from '../lib/price';
 import { getApp } from '../store/useApp';
 import { select } from '../store/actions';
@@ -77,11 +76,9 @@ function labelHtml(p: Parcel, showDate: boolean): string {
      Neither is what this slot is for, and the number a buyer cares about is the
      next round's price, not the opening one. */
   const next = nextRoundPrice(p, now);
-  const lt = landTypeOf(p.propertyType);
   const iconEl = app.showLandKindIcon
   ? `<span class="inline-flex flex-none items-center opacity-95 [&>svg]:size-[11px]">${landKindSvg(p.landKind)}</span>`
   : '';
-  const title = lt.label ?? p.propertyType ?? 'ที่ดิน';
 
   /* Next dated round; showDate is the existing toggle for whether to show it. */
   const dated = p.rounds.find((r) => r.date != null && r.date >= now)
@@ -104,7 +101,7 @@ function labelHtml(p: Parcel, showDate: boolean): string {
       <div class="whitespace-nowrap text-[11px] font-bold">-${Math.round(next.discountPct)}%</div>
     </div>` : ``;
 
-  return `<div class="flex min-w-[64px] flex-col items-center justify-center overflow-hidden rounded-[5px] shadow-[0_2px_7px_rgba(0,0,0,0.45)]" title="${esc(title)}">${top}${bottom}</div>`;
+  return `<div class="flex min-w-[64px] flex-col items-center justify-center overflow-hidden rounded-[5px] shadow-[0_2px_7px_rgba(0,0,0,0.45)]">${top}${bottom}</div>`;
 }
 
 /**
@@ -186,7 +183,7 @@ export function syncParcelLabels(parcels: Parcel[], showNextDate: boolean): void
     if (node.dataset.html !== html) {
       node.innerHTML = html;
       node.dataset.html = html;
-      node.setAttribute('data-tip', `${p.name} · ${fdate(p.announce)}`);
+      node.setAttribute('data-tip', `${p.propertyType}`);
     }
     /* Clicking the marker badge (not only the dot) selects the parcel.
      * The overlay host must stay pointer-events:none so map gestures pass

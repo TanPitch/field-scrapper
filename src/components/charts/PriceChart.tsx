@@ -279,7 +279,7 @@ export function PriceChart({ parcel: p }: { parcel: Parcel }) {
                 if (px == null) return;
                 const sc = ch.scales.x;
                 const near = evs.filter(ev => Math.abs(sc.getPixelForValue(ev.d) - px) <= 65);
-                return near.map(ev => `${ev.label} · ${fdate(ev.d)}`);
+                return near.map(ev => `${ev.label}`);// · ${fdate(ev.d)}`);
               },
             },
           },

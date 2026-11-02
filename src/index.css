@@ -403,9 +403,13 @@ body.reduce-motion .spin-keep {
   font: 600 10.5px 'Noto Sans Thai', sans-serif;
   padding: 1px 6px;
   border-radius: 99px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  border: 1px solid #ffffff50;
+  /* color-mix(in srgb, var(--accent) 40%, transparent); */
+  background: #000000;
+  color: #ffffff;
+  /* #E5484D; */
+  /* color-mix(in srgb, var(--accent) 12%, transparent); */
+  /* color: var(--accent); */
   white-space: nowrap;
   align-self: center;
 }

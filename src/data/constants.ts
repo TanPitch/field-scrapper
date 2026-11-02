@@ -69,8 +69,8 @@ export const POP_FIELDS: [PopupField, string][] = [
 /** [popup kind, label, colour source status] */
 export const POP_KINDS: [PopupKind, string, Status][] = [
   ['sale', 'กำลังขาย', 'sale'], ['sold', 'ขายแล้ว', 'sold'],
-  ['re', 'นำกลับมาขายใหม่', 'sale'], ['cancelled', 'ยกเลิกการขาย', 'cancelled'],
-  ['inactive', 'หมดอายุประกาศ', 'inactive'],
+  ['cancelled', 'ยกเลิกการขาย', 'cancelled'], ['inactive', 'หมดอายุประกาศ', 'inactive'],
+  ['re', 'นำกลับมาขายใหม่', 'sale'],
 ];
 export const LB_FIELDS: [LightboxField, string][] = [
   ['name', 'ชื่อแปลง'], ['status', 'สถานะ'], ['price', 'ราคา'], ['size', 'ขนาด'], ['deed', 'เลขโฉนด'], ['soldTs', 'วันขายออก'],

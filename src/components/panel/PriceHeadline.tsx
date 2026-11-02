@@ -4,6 +4,7 @@ import { numDate } from '../../lib/format';
 import { discountBadge, nextRoundPrice, startPriceOf } from '../../lib/price';
 import { useApp } from '../../store/useApp';
 import type { Parcel } from '../../types';
+import { useTipProps } from '../ui/Tip';
 
 /**
  * The price block, used by the detail panel and both popup kinds so the three
@@ -83,8 +84,8 @@ export function PriceHeadline({
         <div className="text-2xl font-bold text-accent">{fmt(committee ?? next.price)}</div>
         {badge && (
           <span
-            title={`รอบถัดไปลดจากราคาเปิด ${Math.round(next.discountPct)}%`}
-            className="rounded-full border border-accent/40 bg-accent-dim px-[7px] py-[1px] font-display text-[11px] font-semibold text-accent"
+            {...useTipProps(`รอบถัดไปลด ${Math.round(next.discountPct)}%`)}
+            className="flex items-center justify-center rounded-full border border-accent/40 bg-[#E5484D] px-[7px] py-[1px] font-display text-[11px] font-semibold text-white"
           >
             {badge}
           </span>
