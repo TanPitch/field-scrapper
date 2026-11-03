@@ -85,11 +85,27 @@ export function saleOrderLabels(
   let prev: number | null = null;
   rounds.forEach((r) => {
     if (hasIdx) {
-      /* The live listing's rows are one order that never splits — even when a
-         งดขาย suspension stretched past 60 days inside it. The first lists row
-         opens it; the rest join. */
+      /* Provenance split only holds while the invariant "lists rows = the
+         current listing" is true (the 2026-11-02 ingest guarantees it). The
+         October full-sweep stamped idx 1..N over the WHOLE printed schedule
+         instead — lot 10626 carries 54 lists rows from 2020 onward — so that
+         lot rendered one flat order. The rebounds: a lists row dated BEFORE
+         the listing's own publish point cannot be part of the current
+         listing (LED publishes before the first live นัด), so it joins the
+         history partition with the report rows and splits on the same two
+         date-gap rules. This is the fallback the announce dates used to run,
+         now fenced off to only the rows that claim to be the listing. The
+         current listing itself still opens once and never splits — a งดขาย
+         suspension past 60 days inside it stays one order. */
       if (r.idx != null) {
-        if (!listingOpen) { g++; listingOpen = true; }
+        if (r.date != null && announceTs != null && r.date < announceTs) {
+          if (prev != null) {
+            const gap = r.date - prev;
+            if (gap > SALE_ORDER_GAP || (gap > 0 && gap < SALE_ORDER_ADJACENT)) g++;
+          }
+        } else {
+          if (!listingOpen) { g++; listingOpen = true; }
+        }
       } else if (r.date != null) {
         /* Gap-split among the report rows only. */
         if (prev != null) {

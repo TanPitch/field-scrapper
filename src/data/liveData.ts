@@ -69,13 +69,19 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
     const led = (r.led_label ?? '').trim();
     const real = led !== '' && !PLACEHOLDER_STATUSES.has(led);
     const promote = real && PLACEHOLDER_STATUSES.has(status.trim());
-    /* LED's outcome vocabulary → the ingest's code. Only the codes other logic
-       branches on today: ขายได้ = sold, ไม่มีผู้สู้ราคา = no-bid deepens the
-       ladder (lib/price.ts). Anything else keeps the row's own code — no
-       guessing at numbers neither LED nor the ingest pin down. */
+  /* LED's outcome vocabulary → the ingest's code. Only the codes other logic
+     branches on today: ขายได้ = sold, ไม่มีผู้สู้ราคา = no-bid deepens the
+     ladder (lib/price.ts), งดขายในนัดที่เหลือ = the court pulled the sale from
+     every remaining นัด — the ingest's own code 26 (test/pricing.js), so the
+     panel's กำลังขาย does not sit on a listing LED has already called off.
+     ผบE.4642/2568 lot 10489: all six live นัด carry the report's verdict on
+     led_label while their own label is the placeholder — without 26 here the
+     chip stays กำลังขาย with a countdown to a sale that will not happen.
+     Anything else keeps the row's own code. */
     const code = promote
       ? (led.startsWith('ขายได้') ? 1
         : led.includes('ไม่มีผู้สู้ราคา') ? 3
+        : led.startsWith('งดขายในนัดที่เหลือ') ? 26
         : r.status_code ?? null)
       : r.status_code ?? null;
     return {
@@ -208,8 +214,19 @@ export const neverOnMarket = (rounds: SellRound[]): boolean => {
   return dated.length > 0 && dated.every(noSaleRound);
 };
 
+/* The report's งดขายในนัดที่เหลือ rides led_label with code 0 on the lists'
+ * own placeholder rows (ผบE.4642/2568 10489); the ingest stamps code 26 for
+ * the same verdict when it meets the row on a report table (9638). Every
+ * dated round closed that way is a listing LED has removed from the market —
+ * ยกเลิกการขาย, not กำลังขาย, before any countdown renders. */
+const listingCancelled = (rounds: SellRound[]): boolean => {
+  const dated = rounds.filter((r) => r.date != null);
+  return dated.length > 0 && dated.every((r) => r.statusCode === 26);
+};
+
 function mapStatus(raw: string | null, rounds: SellRound[]): Status {
   if (raw === 'sold' || raw === 'inactive' || raw === 'cancelled') return raw;
+  if (raw === 'sale' && listingCancelled(rounds)) return 'cancelled';
   if (raw === 'sale' && neverOnMarket(rounds)) return 'inactive';
   return 'sale';
 }

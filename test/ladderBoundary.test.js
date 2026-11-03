@@ -193,4 +193,29 @@ describe("saleOrderLabels walks on round source (idx)", () => {
     const ls = saleOrderLabels([rep(ann - 30 * DAY), rep(ann + 100 * DAY), rep(ann + 121 * DAY)], ann);
     expect(ls.map((l) => l.text)).toEqual(["A1", "1", "2"]);
   });
+
+  test("legacy full-schedule stamping: older orders ride pre-announce idx rows, the listing stays plain", () => {
+    /* What the October full sweep left behind — LED's printed schedule read
+       start to finish and stamped every นัด sequentially. 10626 kept 54; here
+       the shape that matters: two pre-announce orders far enough apart for the
+       60-day rule, then the current listing's rows at/after its publish. All
+       rows carry idx, and the numbers only restart at the listing. */
+    const ann = LIVE_1;
+    const old1 = d(2025, 12, 1), old2 = d(2026, 3, 10); // >60d apart → split
+    const ls = saleOrderLabels([
+      lst(old1), lst(old1 + 21 * DAY),        // order A…   (pre-announce)
+      lst(old2), lst(old2 + 21 * DAY),        // order B…   (pre-announce)
+      ...LIVE,                                 // the listing 1..6 (>= announce)
+    ], ann);
+    expect(ls.map((l) => l.text)).toEqual(["A1", "A2", "B1", "B2", "1", "2", "3", "4", "5", "6"]);
+    expect(ls.map((l) => l.prev)).toEqual([true, true, true, true, false, false, false, false, false, false]);
+  });
+
+  test("a lists row dated on/after the announce is the listing even when older numbered rows exist", () => {
+    /* The boundary is inclusive of the publish day and does not depend on the
+       row's idx number remaining sequential. */
+    const ann = LIVE_1;
+    const ls = saleOrderLabels([lst(ann), lst(ann + 21 * DAY), lst(ann + 42 * DAY)], ann);
+    expect(ls.map((l) => l.text)).toEqual(["1", "2", "3"]);
+  });
 });

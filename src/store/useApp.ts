@@ -211,7 +211,7 @@ export const useApp = create<AppState>(set => ({
   soldPriceHeadline: 'sold',
   hidePrevSaleRounds: false,
   roundGroupLabels: true,
-  roundsPreview: 6,
+  roundsPreview: null,
   roundsGroupBorder: true,
   showLandKindIcon: true,
   priceBath: false,

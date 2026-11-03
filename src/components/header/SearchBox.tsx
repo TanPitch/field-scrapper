@@ -119,10 +119,16 @@ const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch
     const limit = getApp().searchLimit;
     /* Case numbers carry a season and letters both above and below the slash
        (ผบ.754/2562, ผบE.4642/2568), so the match is the same substring test the
-       name/deed probes use, against LED's own `ผบ../ปี` string. */
+       name/deed probes use, against LED's own `ผบ../ปี` string. The sides are
+       compared with every whitespace removed, because "ผบ.1664 / 2562" typed
+       with the space that a human writes around the slash must meet LED's
+       unspaced `ผบ.1664/2562` — collapsing runs of spaces cannot bleed into
+       the other probes, which still compare on the exact trimmed text. */
+    const caseKey = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
+    const tl = caseKey(t);
     const match = (p: typeof ALL_PARCELS[number]): boolean =>
       p.name.toLowerCase().includes(t) || p.deed.toLowerCase().includes(t)
-      || p.province.includes(t) || p.caseNo.toLowerCase().includes(t);
+      || p.province.includes(t) || caseKey(p.caseNo).includes(tl);
     /* Parcel hits are bbox-scoped first. When none land in view, the dropdown
        offers the out-of-view matches (hiddenParcels) behind one button instead
        of silently showing "ไม่พบ" — the land may be real, just off-screen. */
@@ -234,7 +240,17 @@ const rowKb = (r: Row) => rows.indexOf(r) === kb;
         <input
           ref={input}
           value={value}
-          onChange={e => { setValue(e.target.value); setKb(-1); debounced(e.target.value); }}
+          onChange={e => {
+            const v = e.target.value;
+            setValue(v); setKb(-1);
+            /* Anything that empties the box — the ✕ button, backspace, select
+               all + delete, IME cleanup — must not leave a 400 ms window in
+               which the previous phrase could still reach the search once, and
+               must not WAIT for the debounce to decide the clear: reset the
+               surfaces the moment the text is gone. */
+            if (!v.trim()) { debounced.cancel(); runSearch('', true); }
+            else debounced(v);
+          }}
           onFocus={() => { if (value.trim()) runSearch(value, true); }}
           onKeyDown={onKey}
           placeholder="ค้นหา"
