@@ -898,6 +898,27 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
                td_lon      = COALESCE($6, td_lon),
                dol_lat     = COALESCE($7, dol_lat),
                dol_lon     = COALESCE($8, dol_lon),
+               /* A hand coordinate must reach the map the same way a
+                  resolver's does. features reads lat/lng off p.geom, and the
+                  data gate (liveData.loadParcels) only shows a row whose
+                  verdict says match — so a PATCH that wrote only td_lat/td_lon
+                  saved a row the pane happily dropped from its list while the
+                  parcel never appeared on the map. Any pair set here now
+                  stamps the same three facts every resolver write does: the
+                  verdict, the geometry, and the parcel-level precision. */
+               td_verdict  = CASE WHEN $5::double precision IS NOT NULL AND $6::double precision IS NOT NULL
+                                  THEN 'match' ELSE td_verdict END,
+               dol_verdict = CASE WHEN $7::double precision IS NOT NULL AND $8::double precision IS NOT NULL
+                                  THEN 'match' ELSE dol_verdict END,
+               geo_precision = CASE WHEN $5::double precision IS NOT NULL AND $6::double precision IS NOT NULL
+                                    OR $7::double precision IS NOT NULL AND $8::double precision IS NOT NULL
+                                    THEN 'parcel' ELSE geo_precision END,
+               geom = CASE
+                        WHEN $5::double precision IS NOT NULL AND $6::double precision IS NOT NULL
+                          THEN ST_SetSRID(ST_MakePoint($6::double precision, $5::double precision), 4326)::geography
+                        WHEN $7::double precision IS NOT NULL AND $8::double precision IS NOT NULL
+                          THEN ST_SetSRID(ST_MakePoint($8::double precision, $7::double precision), 4326)::geography
+                        ELSE geom END,
                dol_office  = COALESCE($9, dol_office),
                geo_status  = COALESCE($10, geo_status),
                geo_note    = COALESCE($11, geo_note),

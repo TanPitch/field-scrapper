@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
 import { toast } from '../../../store/useApp';
 import { btn, inp, setSec } from '../../ui/styles';
+import { useRefreshParcels } from '../../../hooks/useParcels';
 import { useTipProps } from '../../ui/Tip';
 
 /** One parcel the resolve cascade could not place, as /api/admin/coord-gaps returns it. */
@@ -153,6 +154,9 @@ export function CoordGapsPane() {
   const [pop, setPop] = useState<Gap | null>(null);
   const [popLat, setPopLat] = useState('');
   const [popLon, setPopLon] = useState('');
+  /* A saved coord or verdict has to reach the map dataset, not only this pane;
+     the hook's refresh is the same refetch the banner button does. */
+  const refreshParcels = useRefreshParcels();
   /* Full-screen error-lands editing: the pane normally lives inside the
      animated settings drawer, where position:fixed would anchor to the
      drawer's transform — the full-screen frame is portalled to <body> instead. */
@@ -196,18 +200,49 @@ export function CoordGapsPane() {
     if (!r.ok) { toast(r.error ?? 'บันทึกไม่สำเร็จ', 'warn'); return; }
     toast(mark ? `ขึ้นสถานะผิดพลาด — ${g.deed_number ?? g.id}` : `ยกเลิกผิดพลาด — ${g.deed_number ?? g.id}`);
     void load();
+    /* The features payload excludes reviewed rows, so the map's dataset must
+       drop the dot the moment the verdict lands — the download is cheap and
+       the refresh button does the same. */
+    refreshParcels();
   };
 
-  /* Save from the edit popup — same PATCH the inline editor used. */
+  /* Save from the edit popup — same PATCH the inline editor used. Coordinates
+     come back in whatever shape the clipboard held: "16.46796629,102.83515227"
+     pasted into either box, two numbers split across the boxes, or a stray
+     comma/space between them. Every separator between two decimals is a split
+     point, so both boxes' content can merge into one lat,lng pair. */
+  const parsePop = (): [number, number] | null => {
+    const nums: number[] = [];
+    for (const f of [popLat, popLon]) {
+      for (const piece of f.split(/[,\s;|]+/)) {
+        if (!piece.trim()) continue;
+        const n = Number(piece);
+        if (!Number.isFinite(n)) continue;
+        nums.push(n);
+      }
+    }
+    /* Swapped or unit-text pastes fail loudly rather than placing land in the
+       Gulf of Thailand. */
+    if (nums.length < 2) return null;
+    const [lat, lon] = nums;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    return [lat, lon];
+  };
+
   const savePop = async () => {
     if (!pop) return;
-    const lat = Number(popLat), lon = Number(popLon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { toast('กรอกพิกัดให้ถูกต้อง', 'warn'); return; }
+    const parsed = parsePop();
+    if (!parsed) { toast('กรอกพิกัดให้ถูกต้อง', 'warn'); return; }
+    const [lat, lon] = parsed;
+    /* The server writes the geography the map serves (features read
+       ST_Y(p.geom)) and stamps the verdict the data gate needs, so a hand
+       coord needs nothing else to appear. */
     const r = await api.patch(`/api/admin/coord-gaps/${pop.id}`, { td_lat: lat, td_lon: lon, td_status: 'resolved' });
     if (!r.ok) { toast(r.error ?? 'บันทึกไม่สำเร็จ', 'warn'); return; }
     toast(`บันทึกพิกัดแล้ว — ${pop.deed_number ?? pop.id}`);
     setPop(null);
     void load();
+    refreshParcels();
   };
 
   /* Edit popup opens on the row it is about, coordinates pre-filled with
@@ -265,6 +300,7 @@ export function CoordGapsPane() {
       if (r.ok) done++;
     }
     setPBusy(false);
+    if (done) refreshParcels();
     toast(`บันทึกแล้ว ${done}/${ok.length} แถว`);
     setPRows(pRows.filter((row) => !ok.includes(row)));
     void load();
@@ -509,7 +545,7 @@ export function CoordGapsPane() {
     <div data-portal className="fixed inset-0 z-[130]">
       <div className="absolute inset-0 bg-black/30" onClick={() => setPop(null)} />
       {pop && (
-        <div className="absolute left-1/2 top-1/2 w-[min(94vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line2 bg-panel p-3 shadow-2xl">
+        <div data-selectable className="absolute left-1/2 top-1/2 w-[min(94vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line2 bg-panel p-3 shadow-2xl">
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className={`text-[11px] font-medium ${GAP_KIND[gapKind(pop)].cls}`}>{GAP_KIND[gapKind(pop)].th}</div>

@@ -526,3 +526,31 @@ not retried:
   search surface is enumerated now — dropdown, panel rows, online store,
   nationwide scope flag, panel selection, plotted markers — because they all
   commit.
+
+## 10. Groups known wrong before the fix: read the stamping, not the intent (2026-11-03)
+
+- **"Lists rows = the listing" is an invariant of the ingest, not the page.**
+  The 2026 LED full sweep stamped `idx` 1..N over everything a case's printed
+  schedule showed — 54 นัด across 2020-2027 on lot 10626 — so the provenance
+  rule alone made those lots one flat order. The recovered hybrid: provenance
+  still decides the boundary class, but a lists row dated before the listing's
+  own publish point joins the report rows' history partition (same 60-day /
+  <14-day gap splits). When the daybot eventually re-keys those lots, its rows
+  already satisfy the invariant, so the hybrid degrades to the exact rule —
+  no data migration required.
+- **A percent-free rule for phrases**: when LED's report vocabulary has a
+  CODE, promote to that code, never invent a colour of status. งดขายในนัดที่เหลือ
+  is code 26 in the ingest's own labelling (test/pricing.js), so the client
+  promotion maps the phrase to 26 rather than to a special-cased string; the
+  lot-level ยกเลิกการขาย then follows from "every dated round tokenises the
+  ingest's own close code" — data-driven, no phrase list in the status logic.
+- **A hand coordinate needs three writes, not one.** The map dataset is keyed
+  on `p.geom` and gated on `td_verdict = 'match'`; the parcel must carry
+  `geo_precision='parcel'` for consumers that promise a real point. An admin
+  PATCH writing only lat/lon silently satisfied only its own pane.
+- **Coordinate text arrives human-shaped.** One field, two fields, any run of
+  comma/space/;/| between the decimals — all parse; range-guarded (|lat|<=90,
+  |lon|<=180) so a pasted paragraph cannot place land in the Gulf.
+- **Drops must close both doors.** น.ส.3ก. went out via migration 031 AND the
+  ingest skips the class (`skippedNs3k` stat) — deleting rows alone while the
+  nightly sweep keeps inserting leaves the class back overnight.

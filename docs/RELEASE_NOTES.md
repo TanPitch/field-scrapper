@@ -4,6 +4,62 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-03 (evening batch) — the price table regrouped, น.ส.3ก. dropped, hand coords reach the map
+
+- **The นัดที่ table collapsed every sale order into one flat 1..N.** The 2026
+  sweep over LED's printed schedules stamped `idx` 1..54 on lot 10626 (and
+  dozens like it — 9638/10503/10661…): the provenance algorithm from 2026-11-02
+  treated a lists row as "the current listing", and on those lots the printed
+  history arrived stamped as lists rows, so no boundary could split it. A lists
+  row dated BEFORE the listing's own publish point cannot be that listing —
+  those rows now fall back into the history partition and split on the same
+  60-day / <14-day gap rules the report rows use, while rows at/after the
+  publish still open the listing once, unsplit. 10626 now reads A-F+ order
+  letters for its 2020-2025 history and plain 1..8 for the live listing
+  (rows rounded: 48 history rows over the real re-keyed data in
+  `test/ladderBoundary.test.js`).
+- **รายงานของ LED "งดขายในนัดที่เหลือ" now closes the lot.** The report's
+  verdict rides `led_label` (code 0) on the lists' own placeholder rows
+  (ผบE.4642/2568 lot 10489: all six future นัด carry it) and the client only
+  promoted ขายได้/ไม่มีผู้สู้ราคา — so the chip stayed กำลังขาย with a
+  countdown to a sale that will never happen. The promotion now maps the
+  phrase to its own ingest code (26 — the code `test/pricing.js` already
+  labels งดขายในนัดที่เหลือ, which the same ingest writes when it meets the
+  phrase on a report table), and a listing whose every dated round carries it
+  reads ยกเลิกการขาย instead of กำลังขาย. The countdown banner and the
+  next-round price go silent with it.
+- **A hand coordinate now appears on the map.** The coord-gaps PATCH wrote
+  td_lat/td_lon only: features read lat/lng off `p.geom` and the client gate
+  wants `td_verdict = 'match'`, so a row the pane called saved stayed invisible
+  forever. The PATCH now stamps the same three facts a resolver write does —
+  verdict 'match', geometry (`ST_SetSRID(ST_MakePoint(lon, lat),4326)`), and
+  `geo_precision='parcel'` — and the pane refetches the map dataset after a
+  save or a verdict toggle, so the dot exists immediately (the บันทึก round-trip
+  was pinned at the SQL level: the features view then serves the exact
+  hand-typed coordinate).
+- **Popup lat/lng accepts pasted pairs.** "16.46796629,102.83515227" typed into
+  either box — and separators (comma/space/;/|) anywhere between the two
+  decimals — parses to lat,lng; out-of-range or garbage still refuses with the
+  กรอกพิกัด warning instead of guessing.
+- **น.ส.3ก. is out of the dataset entirely.** The 196 parked parcels (and the
+  198 lots behind them, แถม the two ขอนแก่น น.ส.3ก. deeds the resolver parked
+  earlier) are deleted (`db/migrations/031_ns3k_drop.sql`), and the LED lists
+  ingest skips the deed class before the parcel INSERT (`skippedNs3k` stat),
+  so no future sweep can re-create them. The features SQL + client mirrors that
+  filtered them out of the view remain — now redundant.
+- **Title search fuzzy on the คดี slash.** "ผบ.1664 / 2562" and any other
+  spacing around the slash now matches LED's unspaced `ผบ.1664/2562` — the
+  case probe strips every whitespace from both sides (the name/deed/province
+  probes still compare the exact trimmed text).
+- **Any empty search box clears everything immediately.** Backspace, select-all
+  + delete, or the ✕ button: the moment the text is gone the debounced search is
+  cancelled (no 400 ms window for the old phrase to fire once), every surface
+  resets (dropdown, panel list, online store + markers, nationwide-scope flag,
+  panel selection), and ค้นในทุกพื้นที่ has nothing to sit on.
+- UI from the user's own edits: the ข้อมูลตกหล่น edit popup is copy-selectable,
+  and the นัดที่ preview default is now ทั้งหมด (all rounds, group letters
+  visible) instead of the last 6.
+
 ### 2026-11-03 — reviewed-error verdict on ข้อมูลตกหล่น, clearing search really clears
 
 - **ข้อมูลตกหล่น rows can be judged, not only fixed.** Each row ends with two

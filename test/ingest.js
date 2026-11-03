@@ -313,6 +313,17 @@ async function upsertParcels(client, lot, provinceCode, dolCode, stats, ctx) {
     for (const part of deeds.parts ?? []) {
         for (const deed of part.numbers ?? []) {
             const title = titleOf(a);
+            /* น.ส.3ก. is a room or a shop on land someone else holds the โฉนด
+               to: TD keeps those on their own NS3K layer, LED gives no
+               coordinate, and the project decided (2026-11-03) the class is
+               not in the dataset at all — the old rows are dropped by
+               db/migrations/031_ns3k_drop.sql. Dropping here keeps the ingest
+               from re-creating them each pass; the deed number alone would
+               survive every filter downstream as a map-less ghost row. */
+            if (title.code === "น.ส.3ก.") {
+                stats.skippedNs3k++;
+                continue;
+            }
             const r = await client.query(
                 `INSERT INTO parcels
                    (province_code, district_dol_code, deed_number, land_title, land_title_raw,
@@ -526,7 +537,7 @@ async function upsertRounds(client, lotId, lot) {
 export async function ingest(lots, { client, imageStore = null, imageBudget = 300, runId = null } = {}) {
     const stats = {
         parcelsNew: 0, lotsNew: 0, lotsUpdated: 0, skippedNoRound: 0,
-        skippedNoDistrict: 0, skippedNoProvince: 0,
+        skippedNoDistrict: 0, skippedNoProvince: 0, skippedNs3k: 0,
         tambonResolved: 0, tambonUnresolved: 0, areaValued: 0,
         images: null, rounds: 0,
     };
