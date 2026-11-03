@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_PARCELS, PARCEL_BY_ID } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
 import { esc, debounce, fmtRai } from '../../lib/format';
-import { startPriceOf } from '../../lib/price';
 import { parcelDot } from '../../lib/parcelColor';
 import { onlineSearch, poiIcon } from '../../lib/onlineSearch';
 import { getMap } from '../../map/mapRef';
@@ -56,10 +55,24 @@ export function SearchBox() {
   /* searching also opens ผลการค้นหา in the right panel */
   const openResults = useCallback(() => showRight('results'), []);
 
-  /* ---------- run a search ---------- */
-  /* `drop` controls the title-bar dropdown only; results always go to the panel. */
-  const runSearch = useCallback((q: string, fresh: boolean, drop = true) => {
-    if (!q.trim()) { patch({ dropOpen: false, query: '', rows: [], wide: false }); setSearchSelection(null); plotSearch([]); return; }
+/* One clear-path that owns every surface: the dropdown, the right panel and
+ * the internet-hit markers. The old path left the store's online list as it
+ * was — the next render rebuilt online rows from it, re-plotted the markers
+ * and repopulated rows behind the emptied box. Clearing also aborts the
+ * in-flight online fetch, because a response landing after the clear is as
+ * stale as the text that provoked it. */
+const runSearch = useCallback((q: string, fresh: boolean, drop = true) => {
+  if (!q.trim()) {
+    seq.current++;
+    ctl.current?.abort();
+    patch({
+      dropOpen: false, query: '', rows: [], wide: false,
+      online: { status: 'done', list: [] }, onlineStale: false, lastFullBBox: null,
+    });
+    setSearchSelection(null);
+    plotSearch([]);
+    return;
+  }
     /* Each fresh run starts bbox-scoped again; the "ค้นในทุกพื้นที่" button is
        opt-in per search, and a new query must not inherit the last one's scope. */
     patch({ query: q, dropOpen: drop, wide: false });
@@ -125,8 +138,8 @@ const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch
            the exact string LED publishes (ผบ../2569), so the row and the query
            can meet mid-string. */
         const row: Row = {
-          rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: p.name,
-          sub: `${p.caseNo} · ${p.tambon} ${p.amp} ${p.province} · ${fmtRai(p.wah, p.sizeUnit)} · เปิด ${fmt(startPriceOf(p))}`,
+          rid: 'p' + p.id, kind: 'land', ll: [p.lng, p.lat], name: `${p.caseNo} · ${p.propertyType}`,
+          sub: `${p.tambon} ${p.amp} ${p.province} · ${fmtRai(p.wah, p.sizeUnit)}`,
           dot: parcelDot(p), parcelId: p.id,
         };
         if ((wide || inArea) && parcels.length < limit) parcels.push(row);
