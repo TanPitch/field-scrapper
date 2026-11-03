@@ -4,6 +4,32 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-03 — reviewed-error verdict on ข้อมูลตกหล่น, clearing search really clears
+
+- **ข้อมูลตกหล่น rows can be judged, not only fixed.** Each row ends with two
+  buttons: [edit] opens a small popup panel (gap head, resolver's note, LED's
+  district reading, deed, case, size, plus lat/lng inputs and save/cancel —
+  the inline row editor is gone), and [error] marks the parcel as **erroneous
+  data** (`parcels.reviewed_error`, migration `030_parcel_error_review.sql`).
+  A marked row disappears from the map and the bottom table immediately — the
+  features payload now selects and excludes `reviewed_error` — stays out of
+  the pane's work list, and lives behind a new `[error] {n}` filter chip that
+  lists reviewed-error rows alone (chip unselected = normal work list).
+  Pressing [un-error] on such a row un-marks it; the PATCH treats the boolean
+  as a real state (`CASE WHEN $12::bool IS NULL … ELSE $12::bool END`), so
+  false is an un-mark, never "not sent".
+- **Rows highlight on hover** (and keep a faint error tint while marked).
+- **The clear (✕) button in the title search now clears every surface.** The
+  old empty-text path patched the dropdown state only: the store's online
+  result list stayed as it was, the next render rebuilt its rows from it and
+  the internet-hit marker dots stayed on the map. Clearing now aborts the
+  in-flight fetch, empties the online list, resets the nationwide-scope flag
+  and the right-panel selection, and calls `plotSearch([])` — dropdown, right
+  panel and markers all go empty together.
+- Fullscreen ข้อมูลตกหล่น: the sticky toolbar row sat at `top-8`, leaving a
+  visible gap above it where the list scrolled by. It is `top-0` now, with
+  right padding so the fullscreen close button never sits on the controls.
+
 ### 2026-11-02 — provenance grouping, the led_label promotion, packed search rows
 
 Root-cause pass over two reported round-table bugs plus the search box, and a

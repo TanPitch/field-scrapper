@@ -499,3 +499,30 @@ Rules that hang off this split:
   `geom IS NOT NULL` — not on `geo_precision = 'parcel'`, a label only 231
   rows carry while 5,164 real TD-resolved points hold NULL there. The run is
   idempotent and disk-caches its tiles under `test/data/elevation-tiles`.
+
+## 9. The error-review verdict on gap parcels (2026-11-03)
+
+`parcels.reviewed_error` (migration 030) is what a human's judgement looks
+like in the schema — coordination gaps that a coordinate can never fix (the
+deed points at the wrong tile, wrong land, agency blind spot) are *decided*,
+not retried:
+
+- **One column writes the verdict; every consumer reads it its own way.**
+  The features payload (map + bottom table) excludes it server-side — never
+  serve a parcel the reviewer said is wrong. The coord-gaps endpoint still
+  lists it, because the admin needs to see what the verdicts were; the pane's
+  `[error]` chip is the only way in. Do NOT fold this into `geo_status` —
+  that column means *resolver progress* (unresolved/verified/mismatch), a
+  different axis from *the data itself is wrong*.
+- **Booleans need their own PATCH shape.** `COALESCE($x, col)` collapses
+  false into "no change" — exactly wrong for a toggle. The endpoint uses
+  `CASE WHEN $x::bool IS NULL THEN col ELSE $x::bool END` so an absent body
+  field keeps the value and an explicit false un-marks it.
+- **Clearing search must reset the store, not just the input state.** The
+  empty-text branch of SearchBox used to leave `online` (the store's
+  internet-result list) as it was, so the render rebuilt its rows and
+  re-plotted the marker dots (the 2026-11-02 batch's stale-fetch abort kept
+  the *response* fresh but the *cleared* surface stale). Every cleared
+  search surface is enumerated now — dropdown, panel rows, online store,
+  nationwide scope flag, panel selection, plotted markers — because they all
+  commit.

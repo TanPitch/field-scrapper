@@ -313,8 +313,8 @@ app.get("/api/parcels", async (req, res) => {
                p.td_eva_price, p.td_rawang, p.td_survey_no,
                p.td_land_no, p.td_status, p.dol_status, p.td_verdict, p.dol_verdict, p.geo_precision, p.geo_status,
                p.eva_price_min, p.eva_price_max,
-               p.elevation_m, p.elevation_uncertainty_m, p.elevation_source,
-               p.province_name, p.district_name AS district_full,
+               p.reviewed_error,
+               p.elevation_m, p.elevation_uncertainty_m, p.elevation_source,               p.province_name, p.district_name AS district_full,
                ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lng,
                l.id AS lot_id, l.case_no, l.case_year, l.order_label,
                l.asset_type, l.size_unit, l.size_rai, l.size_ngan, l.size_wa,
@@ -382,6 +382,10 @@ FROM parcels p
             this endpoint — map, table, counts — off a parcel class that has
             no sale to describe. */
            AND p.land_title NOT ILIKE '%น.ส.3%'
+           /* A parcel an admin reviewed and marked as erroneous data
+              (db/migrations/030) has no sale to map either: the gap pane's
+              [error] filter is where it lives now. */
+           AND NOT p.reviewed_error
            AND ($1::int IS NULL OR p.province_code = $1)
            AND ($2::bool IS NOT TRUE OR l.status = 'active')
            AND ($3::bigint IS NULL OR p.id = $3)
@@ -686,7 +690,7 @@ app.get("/api/admin/coord-gaps", requireAdmin, async (req, res) => { try {
                p.td_rawang, p.td_lat, p.td_lon, p.dol_lat, p.dol_lon,
                p.td_object_id, p.td_eva_price, p.dol_office, p.dol_land_type,
                p.geo_status, p.tambon_match, p.geo_note,
-               l.size_rai, l.size_ngan, l.size_wa, l.start_price, l.case_no, l.case_year,
+               p.reviewed_error,               l.size_rai, l.size_ngan, l.size_wa, l.start_price, l.case_no, l.case_year,
                d.name AS district_ref, d.td_code, d.td_province_code, d.td_match_method, d.td_note
           FROM parcels p
           LEFT JOIN districts d
@@ -896,9 +900,11 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
                dol_lon     = COALESCE($8, dol_lon),
                dol_office  = COALESCE($9, dol_office),
                geo_status  = COALESCE($10, geo_status),
-               geo_note    = COALESCE($11, geo_note)
+               geo_note    = COALESCE($11, geo_note),
+               reviewed_error = CASE WHEN $12::bool IS NULL THEN reviewed_error
+                                     ELSE $12::bool END
          WHERE id = $1
-      RETURNING id, td_status, dol_status, td_lat, td_lon, dol_lat, dol_lon, geo_note`,
+      RETURNING id, td_status, dol_status, td_lat, td_lon, dol_lat, dol_lon, geo_note, reviewed_error`,
         [id,
          req.body?.td_status ?? null,
          req.body?.dol_status ?? null,
@@ -907,6 +913,9 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
          req.body?.dol_office ?? null,
          geoStatus,
          req.body?.geo_note ?? `set by admin ${req.session?.userId ?? "?"}`,
+         /* false is a real state (un-marking); a body without the field must
+            leave the column alone — hence boolean-check, not truthiness. */
+         typeof req.body?.reviewed_error === 'boolean' ? req.body.reviewed_error : null,
         ]);
     if (!rows.length) return res.status(404).json({ error: "no such parcel" });
     res.json(rows[0]);

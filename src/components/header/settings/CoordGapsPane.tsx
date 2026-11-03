@@ -31,6 +31,10 @@ interface Gap {
   case_year: string | null;
   /** Why the resolver could not place it, in words. */
   geo_note: string | null;
+  /** Admin's reviewed verdict from the [ผิดพลาด] button — the parcel is bad
+   *  data, not missing data. Hidden from the map/table payload server-side;
+   *  shown here only under the error chip. */
+  reviewed_error: boolean | null;
 }
 
 interface Summary {
@@ -139,9 +143,16 @@ export function CoordGapsPane() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [edit, setEdit] = useState<Record<number, { lat: string; lon: string }>>({});
   const [q, setQ] = useState('');
   const [only, setOnly] = useState<GapKind | ''>('');
+  /* [error] chip: reviewed-error rows are hidden until the admin asks for
+     them — unselected shows the normal work list. */
+  const [showErr, setShowErr] = useState(false);
+  /* Small edit popup per the [แก้ไข] button: read-only context fields, two
+     coordinate inputs, save/cancel. Populated from the row it opened on. */
+  const [pop, setPop] = useState<Gap | null>(null);
+  const [popLat, setPopLat] = useState('');
+  const [popLon, setPopLon] = useState('');
   /* Full-screen error-lands editing: the pane normally lives inside the
      animated settings drawer, where position:fixed would anchor to the
      drawer's transform — the full-screen frame is portalled to <body> instead. */
@@ -177,19 +188,51 @@ export function CoordGapsPane() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const save = async (g: Gap) => {
-    const v = edit[g.id];
-    if (!v) return;
-    const lat = Number(v.lat), lon = Number(v.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { toast('กรอกพิกัดให้ถูกต้อง', 'warn'); return; }
-    const r = await api.patch(`/api/admin/coord-gaps/${g.id}`, { td_lat: lat, td_lon: lon, td_status: 'resolved' });
+  /* The [ผิดพลาด] button: one PATCH carrying the boolean. false un-marks —
+     the endpoint treats both real states, so the button is its own undo. */
+  const toggleError = async (g: Gap) => {
+    const mark = !g.reviewed_error;
+    const r = await api.patch(`/api/admin/coord-gaps/${g.id}`, { reviewed_error: mark });
     if (!r.ok) { toast(r.error ?? 'บันทึกไม่สำเร็จ', 'warn'); return; }
-    toast(`บันทึกพิกัดแล้ว — ${g.deed_number ?? g.id}`);
+    toast(mark ? `ขึ้นสถานะผิดพลาด — ${g.deed_number ?? g.id}` : `ยกเลิกผิดพลาด — ${g.deed_number ?? g.id}`);
     void load();
+  };
+
+  /* Save from the edit popup — same PATCH the inline editor used. */
+  const savePop = async () => {
+    if (!pop) return;
+    const lat = Number(popLat), lon = Number(popLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { toast('กรอกพิกัดให้ถูกต้อง', 'warn'); return; }
+    const r = await api.patch(`/api/admin/coord-gaps/${pop.id}`, { td_lat: lat, td_lon: lon, td_status: 'resolved' });
+    if (!r.ok) { toast(r.error ?? 'บันทึกไม่สำเร็จ', 'warn'); return; }
+    toast(`บันทึกพิกัดแล้ว — ${pop.deed_number ?? pop.id}`);
+    setPop(null);
+    void load();
+  };
+
+  /* Edit popup opens on the row it is about, coordinates pre-filled with
+     whatever the resolver cascade already has. */
+  const openPop = (g: Gap) => {
+    setPop(g);
+    setPopLat(g.td_lat != null ? String(g.td_lat) : '');
+    setPopLon(g.td_lon != null ? String(g.td_lon) : '');
   };
 
   const num = (v: number | null) => (v == null ? '-' : String(v));
   const size = (g: Gap) => [g.size_rai, g.size_ngan, g.size_wa].some((x) => x != null) ? `${num(g.size_rai)}-${num(g.size_ngan)}-${num(g.size_wa)}` : '-';
+
+  /* Escape closes the edit popup — before the drawer's own handler, same as
+     the fullscreen frame above. */
+  useEffect(() => {
+    if (!pop) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setPop(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [pop]);
 
   /* Paste → editable preview (no server yet): broken lines are dropped, good
      ones wait in a table the admin can still fix by hand. */
@@ -232,7 +275,13 @@ export function CoordGapsPane() {
      in the response. Paging it server-side would mean a second round trip for
      every keystroke over a list that fits in memory. */
   const needle = q.trim().toLowerCase();
+  const errCount = gaps.filter((g) => g.reviewed_error).length;
   const shown = gaps.filter((g) => {
+    /* Reviewed-error rows live behind the chip: hidden by default, shown
+       alone when the chip is on — the work list stays about rows an admin
+       can still do something with. */
+    if (showErr) return !!g.reviewed_error;
+    if (g.reviewed_error) return false;
     if (only && gapKind(g) !== only) return false;
     if (!needle) return true;
     return [g.province_name, g.district_name, g.district_ref, g.deed_number, g.land_title,
@@ -269,9 +318,9 @@ export function CoordGapsPane() {
           it. Full-bleed (-mx/px) so the sticky surface reads as the pane's own
           header bar rather than a floating card. */}
       <div className={`${big
-        ? 'sticky top-8 z-[2] -mx-3 bg-panel px-3 pb-2 pt-3'
+        ? 'sticky top-0 z-[2] -mx-3 bg-panel px-3 pb-2 pt-3'
         : 'mb-2'}`}>
-      <div className={'flex flex-wrap items-center gap-1.5'}>
+      <div className={'flex flex-wrap items-center gap-1.5 pr-10'}>
         <input
           className={`${inp} min-w-0 flex-1`}
           value={q}
@@ -365,6 +414,11 @@ export function CoordGapsPane() {
           className={`rounded-full border px-2 py-0.5 text-[10.5px] ${only === '' ? 'border-accent text-accent' : 'border-line text-dim2'}`}
           onClick={() => setOnly('')}
         >ทั้งหมด {gaps.length}</button>
+        <button
+          className={`rounded-full border px-2 py-0.5 text-[10.5px] ${showErr ? 'border-err text-err' : 'border-line text-dim2'}`}
+          {...useTipProps('ข้อมูลที่ผู้ดูแลตรวจแล้วและระบุว่าเป็นข้อมูลผิดพลาด — ถูกซ่อนจากแผนที่และตาราง')}
+          onClick={() => setShowErr(!showErr)}
+        >error {errCount}</button>
         {(Object.keys(GAP_KIND) as GapKind[]).map((k) => {
           const n = gaps.filter((g) => gapKind(g) === k).length;
           if (!n) return null;
@@ -387,17 +441,21 @@ export function CoordGapsPane() {
             <th className="py-1 pr-2 font-medium">เลขโฉนด</th>
             <th className="py-1 pr-2 font-medium">ขนาด (ตร.วา)</th>
             <th className="py-1 pr-2 font-medium">พิกัด (lat, lng)</th>
+            <th className="w-[104px]" />
           </tr>
         </thead>
         <tbody>
           {shown.map((g) => {
-            const v = edit[g.id];
             const has = g.td_lat != null || g.dol_lat != null;
             const kind = gapKind(g);
             return (
-              <tr key={g.id} className="border-b border-line/40 align-top">
+              /* markError review rows tint by the same verdict colour the row
+                 already carries; hover highlight is the row's only new
+                 affordance, so scanning 300 rows never loses the cursor. */
+              <tr key={g.id} className={`${g.reviewed_error ? 'bg-err/5' : ''} hover:bg-panel2 transition-colors border-b border-line/40 align-top`}>
                 <td className={`py-1.5 pr-2 text-[10.5px] ${GAP_KIND[kind].cls}`}>
                   {GAP_KIND[kind].th}
+                  {g.reviewed_error && <span className="ml-1 text-err">· error</span>}
                   {/* The resolver's own note ("TD has deed …") is what an admin
                       needs while hand-fixing rows, but three hundred wrapped
                       explanations make the normal pane unreadable — so the
@@ -418,27 +476,19 @@ export function CoordGapsPane() {
                   {g.case_no && <div className="text-[10px] text-dim2">{g.case_no}/{g.case_year}</div>}
                 </td>
                 <td className="py-1.5 pr-2 font-display whitespace-nowrap">{size(g)}</td>
+                <td className="py-1.5 pr-2 font-display whitespace-nowrap">
+                  {has && <span>{num(g.td_lat)}, {num(g.td_lon)}</span>}
+                  {!has && <span className="text-dim2">-</span>}
+                </td>
                 <td className="py-1.5 pr-2">
-                  {has && !v && <span className="font-display">{num(g.td_lat)}, {num(g.td_lon)}</span>}
-                  {!has && !v && <span className="text-dim2">-</span>}
-                  {v && (
-                    <span className="flex gap-1">
-                      <input className={`${inp} w-20 py-0.5`} placeholder="lat" value={v.lat}
-                        onChange={(e) => setEdit({ ...edit, [g.id]: { ...v, lat: e.target.value } })} />
-                      <input className={`${inp} w-20 py-0.5`} placeholder="lng" value={v.lon}
-                        onChange={(e) => setEdit({ ...edit, [g.id]: { ...v, lon: e.target.value } })} />
-                      <button className={btn} onClick={() => void save(g)}>บันทึก</button>
-                      <button className={btn} onClick={() => {
-                        const next = { ...edit }; delete next[g.id]; setEdit(next);
-                      }}>ยกเลิก</button>
-                    </span>
-                  )}
-                  {!v && (
-                    <button className="text-[10px] text-accent underline"
-                      onClick={() => setEdit({ ...edit, [g.id]: { lat: '', lon: '' } })}>
-                      แก้ไข
-                    </button>
-                  )}
+                  <span className="flex justify-end gap-1 whitespace-nowrap">
+                    <button className={btn} {...useTipProps('เปิดแผงแก้พิกัด — ข้อมูลที่อ้างอิงของแถวนี้พร้อมช่อง lat, lng')} onClick={() => openPop(g)}>edit</button>
+                    <button
+                      className={g.reviewed_error ? `${btn} text-err` : btn}
+                      {...useTipProps(g.reviewed_error ? 'ยกเลิกการขึ้นสถานะผิดพลาด (แถวกลับเข้ารายการปกติ)' : 'ขึ้นสถานะว่าเป็นข้อมูลผิดพลาด — ซ่อนจากแผนที่และตาราง')}
+                      onClick={() => void toggleError(g)}
+                    >{g.reviewed_error ? 'un-error' : 'error'}</button>
+                  </span>
                 </td>
               </tr>
             );
@@ -448,6 +498,42 @@ export function CoordGapsPane() {
       {!gaps.length && !busy && !err && <p className="mt-2 text-[11px] text-dim2">ไม่มีรายการที่ค้างอยู่</p>}
       {!!gaps.length && !shown.length && <p className="mt-2 text-[11px] text-dim2">ไม่ตรงกับที่ค้นหา</p>}
     </>
+  );
+
+  /* The edit popup — a small fixed card centred in the viewport, portal'd to
+   * body so no drawer transform can re-anchor it. Left side is what the
+   * reviewer needs to judge the row (gap head, resolver's note, LED district
+   * reading, deed, case, size); right side the two coordinate inputs the save
+   * writes through the same PATCH the pane has always used. */
+  const editPop = createPortal(
+    <div data-portal className="fixed inset-0 z-[130]">
+      <div className="absolute inset-0 bg-black/30" onClick={() => setPop(null)} />
+      {pop && (
+        <div className="absolute left-1/2 top-1/2 w-[min(94vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line2 bg-panel p-3 shadow-2xl">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className={`text-[11px] font-medium ${GAP_KIND[gapKind(pop)].cls}`}>{GAP_KIND[gapKind(pop)].th}</div>
+              {pop.geo_note && <div className="mt-0.5 text-[10.5px] leading-[1.45] text-dim2">{pop.geo_note}</div>}
+            </div>
+            <button className="text-dim transition hover:text-ink" onClick={() => setPop(null)}><X size={14} /></button>
+          </div>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[11px]">
+            <dt className="text-dim2">อำเภอ</dt><dd>{pop.district_name ?? pop.district_ref ?? '-'}</dd>
+            <dt className="text-dim2">จังหวัด</dt><dd>{pop.province_name ?? '-'}</dd>
+            <dt className="text-dim2">เลขโฉนด</dt><dd className="font-display">{pop.deed_number ?? 'ไม่มี'}</dd>
+            <dt className="text-dim2">คดี</dt><dd>{pop.case_no ? `${pop.case_no}/${pop.case_year}` : '-'}</dd>
+            <dt className="text-dim2">ขนาด</dt><dd className="font-display">{size(pop)}</dd>
+          </dl>
+          <div className="mt-2.5 flex items-center gap-1">
+            <input className={`${inp} w-24 py-1`} placeholder="lat" value={popLat} onChange={(e) => setPopLat(e.target.value)} />
+            <input className={`${inp} w-24 py-1`} placeholder="lng" value={popLon} onChange={(e) => setPopLon(e.target.value)} />
+            <button className={btn} onClick={() => void savePop()}>บันทึก</button>
+            <button className={btn} onClick={() => setPop(null)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+    </div>,
+    document.body,
   );
 
   if (big) {
@@ -462,11 +548,12 @@ export function CoordGapsPane() {
           onClick={() => setBig(false)}
         ><X size={15} /></button>
         {body}
+        {pop && editPop}
       </div>
     ), document.body);
   }
   /* data-selectable: the missing-data rows (deed numbers, districts, notes)
      are exactly what an admin copies elsewhere, so the pane opts out of the
      body-wide user-select:none. */
-  return <div className="px-3 pb-6" data-selectable>{body}</div>;
+  return <div className="px-3 pb-6" data-selectable>{body}{pop && editPop}</div>;
 }
