@@ -49,6 +49,9 @@ export interface SellRound {
   statusCode?: number | null;
   /** Round price from the backend; authoritative when present. */
   price?: number | null;
+  /** The round's auction_rounds id — the admin editor keys a hand price fix
+   *  on it. Optional so fixtures without it stay valid. */
+  roundId?: number | null;
   /** Discount in force for this round, in percent. */
   discountPct?: number | null;
   /** The winning bid LED's report sheet printed for this round (028). Only
@@ -98,6 +101,12 @@ export interface Parcel {
   wah: number | null;
   /** 'sqm' for a ห้องชุด, otherwise land measured in ตร.วา. */
   sizeUnit?: string | null;
+  /* LED's printed ไร่-งาน-วา raw trio. Only the computed `wah` total used to
+     ride the payload, so the admin editor could pre-fill a total but not the
+     parts an LED size edit writes back. Optional: fixtures predate them. */
+  sizeRai?: number | null;
+  sizeNgan?: number | null;
+  sizeWa?: number | null;
   price: number;
   /** Null for the same reason as `wah` — price per ตร.วา over no ตร.วา is not 0. */
   perWah: number | null;

@@ -1,11 +1,19 @@
 import { createPortal } from 'react-dom';
-import { ClipboardPaste, Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
+import { ClipboardPaste, Crosshair, Maximize2, Minimize2, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../lib/api';
-import { toast } from '../../../store/useApp';
+import { patchApp, toast } from '../../../store/useApp';
 import { btn, inp, setSec } from '../../ui/styles';
 import { useRefreshParcels } from '../../../hooks/useParcels';
 import { useTipProps } from '../../ui/Tip';
+import { getMap } from '../../../map/mapRef';
+
+/* "เลือกบนแผนที่" has to close the drawer to expose the map — and closing
+   the drawer unmounts this pane, taking every React state along. The picked
+   point therefore travels through module scope: the one-shot click handler
+   writes it here, the drawer reopens, and the mount effect turns it back
+   into popup state. */
+let mapPick: { gap: Gap; lat: number; lng: number } | null = null;
 
 /** One parcel the resolve cascade could not place, as /api/admin/coord-gaps returns it. */
 interface Gap {
@@ -154,8 +162,15 @@ export function CoordGapsPane() {
   const [pop, setPop] = useState<Gap | null>(null);
   const [popLat, setPopLat] = useState('');
   const [popLon, setPopLon] = useState('');
-  /* A saved coord or verdict has to reach the map dataset, not only this pane;
-     the hook's refresh is the same refetch the banner button does. */
+  /* Apply a point a one-shot map click delivered while this pane was
+     unmounted (mapPick is module scope precisely for that gap in time). */
+  useEffect(() => {
+    if (!mapPick) return;
+    setPop(mapPick.gap);
+    setPopLat(String(mapPick.lat));
+    setPopLon(String(mapPick.lng));
+    mapPick = null;
+  }, []);
   const refreshParcels = useRefreshParcels();
   /* Full-screen error-lands editing: the pane normally lives inside the
      animated settings drawer, where position:fixed would anchor to the
@@ -563,6 +578,23 @@ export function CoordGapsPane() {
           <div className="mt-2.5 flex items-center gap-1">
             <input className={`${inp} w-24 py-1`} placeholder="lat" value={popLat} onChange={(e) => setPopLat(e.target.value)} />
             <input className={`${inp} w-24 py-1`} placeholder="lng" value={popLon} onChange={(e) => setPopLon(e.target.value)} />
+            {/* Close the drawer to expose the map, arm ONE click; the click's
+                point lands back here through module-scope mapPick when the
+                drawer reopens.*/}
+            <button
+              {...useTipProps('ปิดหน้านี้ชั่วคราว แล้วคลิกบนแผนที่เพื่อวางพิกัด — กลับมาพร้อมพิกัดที่คลิก')}
+              className={btn}
+              onClick={() => {
+                const map = getMap();
+                if (!map) { toast('ไม่มีแผนที่ให้คลิก', 'warn'); return; }
+                map.once('click', (e) => {
+                  mapPick = { gap: pop!, lat: e.lngLat.lat, lng: e.lngLat.lng };
+                  patchApp({ settingsOpen: true, setTab: 'gaps' });
+                });
+                patchApp({ settingsOpen: false });
+                toast('คลิกบนแผนที่เพื่อวางพิกัด');
+              }}
+            ><Crosshair size={13} /> เลือกบนแผนที่</button>
             <button className={btn} onClick={() => void savePop()}>บันทึก</button>
             <button className={btn} onClick={() => setPop(null)}>ยกเลิก</button>
           </div>

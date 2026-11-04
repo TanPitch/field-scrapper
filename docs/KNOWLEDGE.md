@@ -554,3 +554,35 @@ not retried:
 - **Drops must close both doors.** น.ส.3ก. went out via migration 031 AND the
   ingest skips the class (`skippedNs3k` stat) — deleting rows alone while the
   nightly sweep keeps inserting leaves the class back overnight.
+
+## 11. The account trail makes hand fixes defensible (2026-11-04)
+
+- **Audit is the write API, not a side effect.** `PATCH /api/admin/parcel-fields/:id`
+  is the only door to editable parcel/lot/round figures, and each accepted
+  change inserts its own `parcel_edits` row (old value, new value, editor,
+  time, optional note) in the same handler. A client cannot save here without
+  producing its history line — which is why the editor's one-field-per-request
+  shape is load-bearing, not incidental.
+- **Every geometry-ish write is the same quad.** td_lat/td_lon + geom
+  (`MakePoint(lon, lat)`) + td_verdict 'match' + geo_precision 'parcel'
+  happens in coord-gaps PATCH AND in the editor's latlng save. One class of
+  "hand-placed point", one shape.
+- **The image editor stores links, never downloads.** `lot_images` accepts a
+  row with `url` set and `local_path` empty; the features COALESCE serves
+  `/img/land/<local_path>` or the raw URL. The bot's fetched files keep their
+  serving path untouched, so an admin add changes nothing for the scraper.
+- **A restore probe must capture full column values, not booleans.** The 161371
+  wrong-coord report traced to my own scratch patch: its restore wrote
+  `geom = CASE WHEN has_geom THEN geom …` — Postgres reads the *current* row
+  value there, which was already the patched one. Parcel 10203 marched 6 km
+  off its TD point and stayed there because the probe LOOKED clean
+  ("immutable geom non-null"). Capture `ST_Y/ST_X` (or full row) before you
+  touch anything you plan to give back.
+- **Self-consistency scans exist because divergence is silent.** One SQL:
+  td-match parcels where `ST_Distance(geom, MakePoint(td_lon, td_lat)) > 100`
+  — took one minute to find the drifted row ("drifted total: 0" after the
+  repair) and doubles as a cheap periodic health check.
+- **The unique deed index is an argument, not an error.** 23505 on
+  `(province_code, district_dol_code, deed_number)` means the admin is
+  editing the deed numbers of two rows of the same case; the route answers
+  with Thai text and no write, and the editor can relabel afterwards.

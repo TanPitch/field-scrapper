@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
-import { router as usersRouter, requireAdmin, SESSION_COOKIE } from "./users.js";
+import { router as usersRouter, requireUser, requireAdmin, SESSION_COOKIE } from "./users.js";
 import { mapStatus as mapLotStatus } from "./mapStatus.js";
 import { syncCaseReport } from "./ledReport.js";
 
@@ -341,6 +341,7 @@ app.get("/api/parcels", async (req, res) => {
                   included because the price ladder cannot be derived without it
                   — only code 3 deepens the discount. */
                (SELECT json_agg(json_build_object(
+                          'id', r.id,
                           'idx', r.idx,
                           'date', r.round_date,
                           'status_code', r.status_code,
@@ -356,8 +357,8 @@ app.get("/api/parcels", async (req, res) => {
                   photographs rather than placeholders. local_path is a bare
                   filename; the API serves it under /img/land/. Capped, because a
                   lot with many images would otherwise bloat every map request. */
-(SELECT json_agg(x.local_path ORDER BY x.id)
-                   FROM (SELECT id, local_path FROM lot_images
+(SELECT json_agg(COALESCE('/img/land/' || x.local_path, x.url) ORDER BY x.id)
+                   FROM (SELECT id, local_path, url FROM lot_images
                           WHERE lot_id = l.id ORDER BY id LIMIT 8) x) AS img_paths,
                /* How many lots sit behind this parcel. A condominium building
                   is one cadastral parcel sold as N separate units, so the
@@ -447,6 +448,10 @@ FROM parcels p
                  * land, so the figure is sent either way; nulling it for condo
                  * lots left the popup showing a dash for a size LED had given us. */
                 wah: sqWa(r.size_rai, r.size_ngan, r.size_wa),
+                /* The raw trio, not only the computed total: the admin editor
+                   pre-fills ไร่-งาน-วา from these (LED's printed land size),
+                   and a hand fix writes all three back. */
+                sizeRai: toNum(r.size_rai), sizeNgan: toNum(r.size_ngan), sizeWa: toNum(r.size_wa),
                 askingPrice: toNum(r.start_price), askingSource: r.start_price_src,
                 status: reportSold ? "sold" : mapped,
                 nextRound: isoDate(r.next_round_date),
@@ -941,6 +946,290 @@ app.patch("/api/admin/coord-gaps/:id", requireAdmin, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: "no such parcel" });
     res.json(rows[0]);
 });
+
+/* ===================== reports + the admin edit trail ===================== */
+
+/* Any signed-in user flags a parcel. The topic is free text on purpose — the
+ * failure modes LED produces cannot be enumerated from the client, and a
+ * dropdown that misses would silently route a report nowhere. */
+app.post("/api/parcels/:id/report", requireUser, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "bad id" });
+    const topic = String(req.body?.topic ?? "").trim().slice(0, 200);
+    const detail = String(req.body?.detail ?? "").trim().slice(0, 4000);
+    if (!topic || !detail) return res.status(400).json({ error: "topic and detail required" });
+    const { rows } = await pool.query(
+        `INSERT INTO parcel_reports (parcel_id, user_id, topic, detail)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, created_at`,
+        [id, req.userId, topic, detail]);
+    res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
+});
+
+/* The admin's queue: open reports with the parcel's identity so the pane can
+ * jump straight to it, and the reporter's name. `status` selects the bucket —
+ * the header badge only ever reads the open count. */
+app.get("/api/admin/parcel-reports", requireAdmin, async (req, res) => {
+    const status = req.query.status === 'handled' ? 'handled' : 'open';
+    const { rows } = await pool.query(`
+        SELECT r.id, r.parcel_id, r.topic, r.detail, r.status,
+               r.created_at, r.handled_at,
+               u.display_name AS reporter, u.username AS reporter_name,
+               p.deed_number, p.province_name AS province, p.district_name AS amphur,
+               (SELECT l.case_no || '/' || l.case_year FROM auction_lots l
+                 WHERE l.parcel_id = r.parcel_id LIMIT 1) AS case_no
+          FROM parcel_reports r
+          JOIN app_users u  ON u.id = r.user_id
+          JOIN parcels p    ON p.id = r.parcel_id
+         WHERE r.status = $1
+         ORDER BY r.created_at DESC
+         LIMIT 200`, [status]);
+    res.json({ reports: rows });
+});
+
+/* Mark a report done. The row is kept — handled reports stay queryable so a
+ * "what did I fix in October?" has an answer. */
+app.post("/api/admin/parcel-reports/:id/handle", requireAdmin, async (req, res) => {
+    const { rows } = await pool.query(
+        `UPDATE parcel_reports
+            SET status = 'handled', handled_by = $2, handled_at = now()
+          WHERE id = $1 AND status = 'open'
+          RETURNING id, handled_at`,
+        [Number(req.params.id), req.userId]);
+    if (!rows.length) return res.status(404).json({ error: "no open report with that id" });
+    res.json({ id: rows[0].id, handledAt: rows[0].handled_at });
+});
+
+/* The history the detail panel renders as "old -> new (date time)". One GET,
+ * newest first, editor display name joined in. */
+app.get("/api/admin/parcel-edits", requireAdmin, async (req, res) => {
+    const id = Number(req.query.parcelId);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "bad parcelId" });
+    const { rows } = await pool.query(`
+        SELECT e.id, e.field_name, e.old_value, e.new_value, e.note,
+               e.edited_at, u.display_name AS editor, u.username AS editor_name,
+               e.lot_id
+          FROM parcel_edits e
+          JOIN app_users u ON u.id = e.edited_by
+         WHERE e.parcel_id = $1
+         ORDER BY e.edited_at DESC, e.id DESC
+         LIMIT 200`, [id]);
+    res.json({ edits: rows });
+});
+
+/* One admin save = one field = one history row. The field whitelist is the
+ * whole write surface: text columns of parcels, the lot's size trio and its
+ * start price, and the hand-placed position. Anything else is a 400 — a
+ * client that wants a new editable column adds it here, where audit lives. */
+const PARCEL_TEXT_FIELDS = ['tumbol', 'district_name', 'province_name', 'deed_number'];
+
+app.patch("/api/admin/parcel-fields/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const field = String(req.body?.field ?? "");
+    const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 500) : null;
+
+    /* --- text columns ------------------------------------------------- */
+    if (PARCEL_TEXT_FIELDS.includes(field)) {
+        const value = String(req.body?.value ?? "").trim().slice(0, 200);
+        if (!value) return res.status(400).json({ error: "value must not be empty" });
+        const before = await pool.query(`SELECT ${field} AS old FROM parcels WHERE id = $1`, [id]);
+        if (!before.rows.length) return res.status(404).json({ error: "no such parcel" });
+        const old = before.rows[0].old ?? null;
+        if (String(old ?? '') === value) return res.json({ changed: false });
+        try {
+            await pool.query(`UPDATE parcels SET ${field} = $2 WHERE id = $1`, [id, value]);
+            const hist = await pool.query(
+                `INSERT INTO parcel_edits (parcel_id, field_name, old_value, new_value, note, edited_by)
+                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, edited_at`,
+                [id, field, old, value, note, req.userId]);
+            return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
+        } catch (e) {
+            /* (province_code, district_dol_code, deed_number) unique — the
+             * twin the 161371 RCA chased really exists, and the DB is the
+             * last line saying "this deed is somebody else's row". */
+            if (e.code === "23505") return res.status(409).json({ error: "เลขโฉนดนี้มีแปลงอื่นใช้อยู่แล้ว" });
+            throw e;
+        }
+    }
+
+    /* --- the lot's land size: one row, all three parts ----------------- */
+    if (field === 'size') {
+        const lotId = Number(req.body?.lotId);
+        if (!Number.isInteger(lotId) || lotId <= 0) return res.status(400).json({ error: "size needs a lotId" });
+        const num = (v) => {
+            const n = Number(v);
+            return Number.isFinite(n) && n >= 0 && n < 10000 ? n : null;
+        };
+        const rai = num(req.body?.rai), ngan = num(req.body?.ngan), wa = num(req.body?.wa);
+        if (rai == null && ngan == null && wa == null)
+            return res.status(400).json({ error: "invalid size values" });
+        const before = await pool.query(
+            `SELECT size_rai, size_ngan, size_wa FROM auction_lots WHERE id = $1 AND parcel_id = $2`,
+            [lotId, id]);
+        if (!before.rows.length) return res.status(404).json({ error: "no such lot on this parcel" });
+        const old = before.rows[0];
+        const trio = (t) => `${t.size_rai ?? 0}-${t.size_ngan ?? 0}-${Number(t.size_wa ?? 0)}`;
+        await pool.query(
+            `UPDATE auction_lots
+                SET size_rai = $3, size_ngan = $4, size_wa = $5 WHERE id = $1 AND parcel_id = $2`,
+            [lotId, id, rai, ngan, wa]);
+        const hist = await pool.query(
+            `INSERT INTO parcel_edits (parcel_id, lot_id, field_name, old_value, new_value, note, edited_by)
+             VALUES ($1, $2, 'size', $3, $4, $5, $6) RETURNING id, edited_at`,
+            [id, lotId, trio(old), `${rai ?? 0}-${ngan ?? 0}-${wa ?? 0}`, note, req.userId]);
+        return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
+    }
+
+    /* --- the lot's opening price -------------------------------------- */
+    if (field === 'start_price') {
+        const lotId = Number(req.body?.lotId);
+        const value = Number(req.body?.value);
+        if (!Number.isInteger(lotId) || lotId <= 0) return res.status(400).json({ error: "start_price needs a lotId" });
+        if (!Number.isFinite(value) || value < 0) return res.status(400).json({ error: "invalid price" });
+        const before = await pool.query(
+            `SELECT start_price::float8 AS old FROM auction_lots WHERE id = $1 AND parcel_id = $2`,
+            [lotId, id]);
+        if (!before.rows.length) return res.status(404).json({ error: "no such lot on this parcel" });
+        const old = before.rows[0].old ?? null;
+        if (old != null && Number(old) === value) return res.json({ changed: false });
+        await pool.query(
+            `UPDATE auction_lots SET start_price = $3, start_price_src = 'admin' WHERE id = $1 AND parcel_id = $2`,
+            [lotId, id, value]);
+        const hist = await pool.query(
+            `INSERT INTO parcel_edits (parcel_id, lot_id, field_name, old_value, new_value, note, edited_by)
+             VALUES ($1, $2, 'start_price', $3, $4, $5, $6) RETURNING id, edited_at`,
+            [id, lotId, old, String(value), note, req.userId]);
+        return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
+    }
+
+    /* --- hand-placed position: the same three facts the coord-gaps
+           PATCH stamps, so the marker moves and the data gate lets it
+           through (`features` reads lat/lng off p.geom). ------------------ */
+    if (field === 'latlng') {
+        const lat = Number(req.body?.lat), lng = Number(req.body?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)
+            || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+            return res.status(400).json({ error: "invalid coordinates" });
+        const before = await pool.query(
+            `SELECT td_lat::float8 AS lat, td_lon::float8 AS lon FROM parcels WHERE id = $1`, [id]);
+        if (!before.rows.length) return res.status(404).json({ error: "no such parcel" });
+        const o = before.rows[0];
+        const pair = (la, lo) => (la == null || lo == null ? null : `${la},${lo}`);
+        await pool.query(
+            `UPDATE parcels
+                SET td_lat = COALESCE($2, td_lat), td_lon = COALESCE($3, td_lon),
+                    td_verdict = 'match', geo_precision = 'parcel',
+                    geom = ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
+                    geo_note = COALESCE(NULLIF($4, ''), geo_note)
+              WHERE id = $1`,
+            [id, lat, lng, note]);
+        const hist = await pool.query(
+            `INSERT INTO parcel_edits (parcel_id, field_name, old_value, new_value, note, edited_by)
+             VALUES ($1, 'latlng', $2, $3, $4, $5) RETURNING id, edited_at`,
+            [id, pair(o.lat, o.lon), `${lat},${lng}`, note, req.userId]);
+        return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
+    }
+
+    /* --- one นัด's scheduled price: the price table's rows are LED's own,
+           and LED's site is what "LED said wrong" reports point at. -------- */
+    if (field === 'round_price') {
+        const roundId = Number(req.body?.roundId);
+        const value = req.body?.value == null ? null : Number(req.body.value);
+        if (!Number.isInteger(roundId) || roundId <= 0) return res.status(400).json({ error: "round_price needs a roundId" });
+        if (value != null && (!Number.isFinite(value) || value < 0)) return res.status(400).json({ error: "invalid price" });
+        const before = await pool.query(
+            `SELECT r.price::float8 AS old, r.round_date, l.parcel_id
+               FROM auction_rounds r JOIN auction_lots l ON l.id = r.lot_id
+              WHERE r.id = $1 AND l.parcel_id = $2`, [roundId, id]);
+        if (!before.rows.length) return res.status(404).json({ error: "no such round on this parcel" });
+        const old = before.rows[0].old ?? null;
+        if ((old ?? null) === value) return res.json({ changed: false });
+        await pool.query(
+            `UPDATE auction_rounds SET price = $2 WHERE id = $1`,
+            [roundId, value]);
+        const hist = await pool.query(
+            `INSERT INTO parcel_edits (parcel_id, field_name, old_value, new_value, note, edited_by)
+             VALUES ($1, 'round_price', $2, $3, $4, $5) RETURNING id, edited_at`,
+            [id, old, value,
+             before.rows[0].round_date
+               ? `นัดวันที่ ${new Date(before.rows[0].round_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' })}`
+               : null,
+             req.userId]);
+        return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
+    }
+
+    res.status(400).json({ error: `field not editable: ${field || "(none)"}` });
+});
+
+/* The editor's image section: every lot of this parcel with its served link
+ * (local file) or stored link (admin-added). The features payload caps at 8;
+ * the editor sees the same cap the carousel sees. */
+app.get("/api/admin/lot-images", requireAdmin, async (req, res) => {
+    const id = Number(req.query?.parcelId);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "bad parcelId" });
+    const { rows } = await pool.query(`
+        SELECT i.id, i.lot_id AS "lotId", i.kind, i.local_path AS "localPath", i.url
+          FROM lot_images i
+          JOIN auction_lots l ON l.id = i.lot_id
+         WHERE l.parcel_id = $1
+         ORDER BY i.lot_id, i.id`, [id]);
+    res.json({
+        images: rows.map((r) => ({ ...r, served: r.localPath ? `/img/land/${r.localPath}` : r.url })),
+    });
+});
+
+/* ---------- images ---------- */
+
+/* Admin adds an image by URL. The row stores the link (local_path stays
+ * empty); the features COALESCE serves it directly, no download step. The
+ * (lot_id, kind) key is one image per kind, so re-adding replaces. */
+app.post("/api/admin/lot-images", requireAdmin, async (req, res) => {
+    const lotId = Number(req.body?.lotId);
+    const parcelId = Number(req.body?.parcelId);
+    const url = String(req.body?.url ?? "").trim();
+    const kind = ['photo', 'survey', 'map'].includes(req.body?.kind) ? req.body.kind : 'photo';
+    if (!Number.isInteger(lotId) || !Number.isInteger(parcelId))
+        return res.status(400).json({ error: "lotId and parcelId required" });
+    if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: "url must be http(s)" });
+    const owner = await pool.query(
+        `SELECT id FROM auction_lots WHERE id = $1 AND parcel_id = $2`, [lotId, parcelId]);
+    if (!owner.rows.length) return res.status(404).json({ error: "no such lot on this parcel" });
+    const { rows } = await pool.query(
+        `INSERT INTO lot_images (lot_id, kind, url, fetched_at)
+         VALUES ($1, $2, $3, now())
+         ON CONFLICT (lot_id, kind) DO UPDATE SET url = EXCLUDED.url, local_path = NULL
+         RETURNING id`,
+        [lotId, kind, url.slice(0, 2000)]);
+    await pool.query(
+        `INSERT INTO parcel_edits (parcel_id, lot_id, field_name, old_value, new_value, note, edited_by)
+         VALUES ($1, $2, 'image_added', NULL, $3, $4, $5)`,
+        [parcelId, lotId, url, `ชนิด: ${kind}`, req.userId]);
+    res.status(201).json({ id: rows[0].id });
+});
+
+/* Admin removes one. The history row keeps the link so "what was here" still
+ * has an answer after the row is gone. */
+app.delete("/api/admin/lot-images/:imageId", requireAdmin, async (req, res) => {
+    const imageId = Number(req.params.imageId);
+    const parcelId = Number(req.query?.parcelId);
+    if (!Number.isInteger(imageId) || !Number.isInteger(parcelId))
+        return res.status(400).json({ error: "imageId and parcelId required" });
+    const { rows } = await pool.query(
+        `SELECT i.id, i.local_path, i.url, i.lot_id FROM lot_images i
+           JOIN auction_lots l ON l.id = i.lot_id
+          WHERE i.id = $1 AND l.parcel_id = $2`, [imageId, parcelId]);
+    if (!rows.length) return res.status(404).json({ error: "no such image" });
+    await pool.query(
+        `DELETE FROM lot_images i USING auction_lots l
+          WHERE i.lot_id = l.id AND i.id = $1 AND l.parcel_id = $2`,
+        [imageId, parcelId]);
+    await pool.query(
+        `INSERT INTO parcel_edits (parcel_id, lot_id, field_name, old_value, new_value, note, edited_by)
+         VALUES ($1, $2, 'image_removed', $3, NULL, NULL, $4)`,
+        [parcelId, rows[0].lot_id, rows[0].local_path ?? rows[0].url, req.userId]);
+    res.json({ ok: true });
+});
+
 
 /* 404 for unknown API routes, rather than Express's HTML default. Registered
  * before listen(): the previous version sat after app.listen(), which worked

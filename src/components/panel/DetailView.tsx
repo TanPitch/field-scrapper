@@ -18,6 +18,7 @@ import { LandKindIcon } from '../ui/LandKindIcon';
 import { pickBtn, pillCls } from '../ui/styles';
 import { Select } from '../ui/Select';
 import { PriceHeadline } from './PriceHeadline';
+import { AdminEditor, ReportButton } from './ParcelReport';
 import { DetRows, DetSub, DetTop, VPad } from './shared';
 import { orderRows } from '../../lib/detailRows';
 
@@ -164,6 +165,7 @@ const STATUS_HEADS = [
   'งดขายไม่มีผู้สู้ราคา',
   'งดขาย(ส่ง)ประกาศมิชอบ',
   'งดขาย (ส่ง)ประกาศมิชอบ',
+  'งดขายส่งประกาศมิชอบ',
   'งดขาย (ป.วิ.อ.แพ่ง มาตรา 309)',
   'งดขาย(ป.วิ.อ.แพ่ง มาตรา 309)',
   'โจทก์แถลงงดขาย',
@@ -172,7 +174,7 @@ const STATUS_HEADS = [
   'งดขาย',
 ];
 
-function splitStatus(s: string): { head: string; rest: string } {
+export function splitStatus(s: string): { head: string; rest: string } {
   const t = s.trim();
   for (const ph of STATUS_HEADS) {
     if (t.startsWith(ph)) return { head: ph, rest: t.slice(ph.length).trim() };
@@ -569,6 +571,8 @@ export function DetailView() {
           <Crosshair size={12} /> ซูม
         </button>
 
+        <ReportButton p={p} />
+
         {units.length > 1 && (
           <span
             {...useTipProps(`มีอีก ${units.length} ที่ซ้อนกัน`)}
@@ -722,13 +726,8 @@ export function DetailView() {
                the มาตรา qualifier rides the hover tip instead of pushing the
                line to overflow. */
 
-            const parseStatus = (input: string) => {
-              const match = ["ยังไม่มีการเปิดประมูล", "งดขายไม่มีผู้สู้ราคา", "งดขายส่งประกาศมิชอบ", "งดขายในนัดที่เหลือ", "โจทก์แถลงงดขาย", "ถอนการยึด", "ขายได้", "งดขาย"].find(k => input.startsWith(k));
-              return match ? { part1: match, part2: input.replace(match, "").trim() } : { part1: input, part2: "" };
-            };
             const shown_pre = isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status;
             const shown = shown_pre;
-            const shown_tip = parseStatus(shown_pre).part2;
             const st = splitStatus(shown);
             /* LED prints a group sale's verdict on the tables of only SOME of
                the siblings (ผบ.754/2562's งดขายไม่มีผู้สู้ราคา sits on 24653's
@@ -773,10 +772,9 @@ export function DetailView() {
                       so it clips with its ellipsis instead. */}
                   <span
                     className="block whitespace-nowrap overflow-hidden text-ellipsis"
-                    {...((st.rest || sibTip || shown_tip) ? useTipProps(st.rest || sibTip || shown_tip!) : {})}
-
+                    {...((st.rest || sibTip) ? useTipProps(sibTip ?? st.rest!) : {})}
                   >
-                    {shown}
+                    {st.head || shown}
                   </span>
                   {/* The report sheet's own word for this round, below the
                       lists label. Only shown when it adds something: same word
@@ -807,7 +805,12 @@ export function DetailView() {
         <div className="h-[170px]"><PriceChart parcel={p} /></div>
         <RangeSlider parcel={p} />
       </div>
-      
+
+      {/* The admin's write surface: fields, prices, images, position, history.
+          Non-admins see nothing here; their path into the same complaints is
+          the report button on the chip row. */}
+      <AdminEditor p={p} />
+
     </VPad>
     </div>
   );

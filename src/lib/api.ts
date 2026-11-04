@@ -109,6 +109,7 @@ export function makeWriter(delayMs = 400) {
 /* ------------------------------------------------------------------ shape */
 
 export interface ApiRound {
+  id: number;
   idx: number;
   date: string | null;
   status_code: number | null;
@@ -156,6 +157,11 @@ export interface ApiParcelProps {
   sizeUnit: string | null;
   /** Square wa. Null for condo lots, which are in ตร.ม. */
   wah: number | null;
+  /* LED's printed ไร่-งาน-วา raw trio — what the admin editor pre-fills the
+     size fix from. Absent on older servers; the editor then starts empty. */
+  sizeRai?: number | null;
+  sizeNgan?: number | null;
+  sizeWa?: number | null;
   askingPrice: number | null;
   askingSource: string | null;
   /** The LED cascade's opening price — the "smart price". */

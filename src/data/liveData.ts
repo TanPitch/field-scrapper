@@ -101,6 +101,9 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
       ledLabel: r.led_label ?? null,
       /* Ingest provenance — lists slot number vs report row (null). */
       idx: r.idx ?? null,
+      /* The round's own row id — the admin editor writes a price fix against
+         it; null on fixtures that predate the field. */
+      roundId: (r.id as number | null) ?? null,
     };
   });
 }
@@ -329,6 +332,9 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     status,
     wah: size,
     sizeUnit: p.sizeUnit ?? 'wa',
+    sizeRai: (p.sizeRai as number | null) ?? null,
+    sizeNgan: (p.sizeNgan as number | null) ?? null,
+    sizeWa: (p.sizeWa as number | null) ?? null,
     price,
     perWah: land != null ? Math.round(price / land) : null,
     lng: f.geometry?.coordinates?.[0] ?? 0,

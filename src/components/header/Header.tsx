@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, AlertTriangle, PanelRight, PenTool, Search, Settings2, X, type LucideIcon } from 'lucide-react';
+import { Info, LogOut, Map as MapIcon, Server, User, Users, Menu, Grid2x2, Palette, PanelLeft, AlertTriangle, PanelRight, PenTool, Search, Settings2, X, Flag, type LucideIcon } from 'lucide-react';
 import { useTipProps } from '../ui/Tip';
 import { useRef } from 'react';
 import { setLeft, setRight } from '../../store/actions';
@@ -17,6 +17,7 @@ import { SearchApiPane } from './settings/SearchApiPane';
 import { ServerPane } from './settings/ServerPane';
 import { UserPane } from './settings/UserPane';
 import { UserManagePane } from './settings/UserManagePane';
+import { ReportsPane, useOpenReports } from './settings/ReportsPane';
 
 const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
   { id: 'user', label: 'ผู้ใช้', Icon: User },
@@ -27,6 +28,7 @@ const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
   { id: 'search', label: 'ค้นหา & API', Icon: Search },
   { id: 'server', label: 'เซิร์ฟเวอร์', Icon: Server },
   { id: 'gaps', label: 'ข้อมูลตกหล่น', Icon: AlertTriangle },
+  { id: 'reports', label: 'รายงานข้อมูล', Icon: Flag },
   { id: 'users', label: 'จัดการผู้ใช้', Icon: Users },
   { id: 'about', label: 'เกี่ยวกับ', Icon: Info },
 ];
@@ -37,7 +39,7 @@ const TABS: { id: SetTab; label: string; Icon: LucideIcon }[] = [
  *  A code typed into the app is not access control: it ships in the bundle and
  *  anyone can read it out of the JavaScript. Role is the only thing here that is
  *  actually enforced somewhere else. */
-const ADMIN_ONLY: SetTab[] = ['users', 'gaps'];
+const ADMIN_ONLY: SetTab[] = ['users', 'gaps', 'reports'];
 
 /* Search index for the settings. Filtering the tab list alone would not be much
    use: nine tabs hold a couple of hundred controls, so the jump worth having is
@@ -53,6 +55,7 @@ const SETTING_INDEX: { terms: string[]; tab: SetTab }[] = [
   { tab: 'server', terms: ['เซิร์ฟเวอร์', 'server', 'ฐานข้อมูล', 'database', 'cron', 'pipeline', 'สถานะ', 'log', 'migrate'] },
   { tab: 'user', terms: ['ผู้ใช้', 'user', 'บัญชี', 'รหัสผ่าน', '2fa', 'otp', 'avatar', 'สลับผู้ใช้', 'อีเมล'] },
   { tab: 'users', terms: ['จัดการผู้ใช้', 'เพิ่มผู้ใช้', 'สิทธิ์', 'role', 'admin'] },
+  { tab: 'reports', terms: ['รายงาน', 'รายงานข้อมูล', 'report', 'แจ้ง', 'แจ้งข้อมูลผิด'] },
   { tab: 'about', terms: ['เกี่ยวกับ', 'about', 'เวอร์ชัน', 'version', 'อัปเดต', 'changelog'] },
 ];
 
@@ -61,6 +64,9 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const glassLevel = useApp(s => s.glassLevel);
   const role = useApp(s => s.role);
   const isAdmin = role === 'admin';
+  /* The open-report count rides the same poll the badge uses; showing it as a
+     dot on the tab ends the "did anything arrive?" guesswork. */
+  const reports = useOpenReports();
   const [q, setQ] = useState('');
   /* Empty query shows everything. Otherwise a tab survives if its own label
      matches, or if any indexed term matches. */
@@ -123,9 +129,14 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
             <div key={id}>
               <button
                 onClick={() => { patchApp({ setTab: id }); setQ(''); }}
-                className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-[9px] text-left text-xs font-medium ${tab === id ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'}`}
+                className={`relative flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-[9px] text-left text-xs font-medium ${tab === id ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'}`}
               >
                 <Icon size={15} className="flex-none" /><span>{label}</span>
+                {id === 'reports' && reports.count > 0 && (
+                  <span {...useTipProps(`${reports.count} รายงานรอจัดการ`)} className="absolute right-2 rounded-full bg-[#E5484D] px-1.5 py-[1px] font-display text-[9.5px] leading-none text-white">
+                    {reports.count}
+                  </span>
+                )}
               </button>
               {/* Under a search, show the individual settings that matched, not
                   just the tab. Hitting one jumps to the tab and clears the box —
@@ -172,6 +183,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           {tab === 'draw' && <DrawSettingsPane />}
           {tab === 'server' && <ServerPane />}
       {tab === 'gaps' && <CoordGapsPane />}
+      {tab === 'reports' && <ReportsPane />}
           {tab === 'user' && <UserPane />}
           {tab === 'users' && <UserManagePane />}
           {tab === 'about' && <AboutPane />}
@@ -186,6 +198,11 @@ export function Header({ small }: { small: boolean }) {
   const leftOpen = useApp(s => s.leftOpen);
   const rightOpen = useApp(s => s.rightOpen);
   const settingsOpen = useApp(s => s.settingsOpen);
+  const signedIn = useApp(s => s.signedIn);
+  const isAdmin = useApp(s => s.role === 'admin');
+  /* The badge polls only while an admin is signed in; the bell is its
+     one-click "what got reported". */
+  const reports = useOpenReports();
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const close = () => patchApp({ settingsOpen: false });
@@ -208,6 +225,17 @@ export function Header({ small }: { small: boolean }) {
         <button className={`${iconBtn} ${leftOpen ? 'text-accent' : ''}`} {...useTipProps('ซ่อน/แสดงแถบเครื่องมือ')} onClick={() => setLeft(!leftOpen)}><PanelLeft size={17} /></button>
         <button className={`${iconBtn} ${rightOpen ? 'text-accent' : ''}`} {...useTipProps('ซ่อน/แสดงแผงรายละเอียด')} onClick={() => setRight(!rightOpen)}><PanelRight size={17} /></button>
         {!small && <div className="mx-1.5 h-5 w-px bg-line2" />}
+        {signedIn && isAdmin && (
+          <button
+            className={`${iconBtn} relative ${reports.count > 0 ? 'text-[#E5484D]' : ''}`}
+            {...useTipProps(reports.count > 0 ? `มีรายงานรอจัดการ ${reports.count} รายการ` : 'รายงานข้อมูลจากผู้ใช้')}
+            onClick={() => patchApp({ settingsOpen: true, setTab: 'reports' })}
+          ><Flag size={17} />
+            {reports.count > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid min-w-[15px] place-items-center rounded-full bg-[#E5484D] px-1 font-display text-[9px] leading-[15px] text-white">{reports.count}</span>
+            )}
+          </button>
+        )}
         <button ref={btnRef} className={`${iconBtn} ${settingsOpen ? 'text-accent' : ''}`} {...useTipProps('ตั้งค่าทั่วไป')} onClick={() => patchApp({ settingsOpen: !settingsOpen })}><Settings2 size={17} /></button>
       </div>
       </div>

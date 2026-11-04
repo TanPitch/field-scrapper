@@ -4,6 +4,50 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-04 — รายงาน→ผู้ดูแล flow with a full edit trail; the last two data RCAs
+
+- **จุดรายงานถึงแอดมิน (ReportButton).** Every signed-in user sees รายงาน on a
+  parcel's chip row: pick a topic chip (พิกัด/ขนาด/ราคา/โฉนด/ท้องที่/อื่น ๆ)
+  and type the detail. It lands in `parcel_reports`.
+- **แอดมินเห็นแจ้งเตือนทันที.** A red-count bell sits in the header (and a dot
+  on the new รายงานข้อมูล settings tab), polling open reports every 30 s
+  while signed in as admin. The pane lists open/handled reports; เปิดแปลง
+  selects the parcel through the app's own path, จัดการแล้ว closes it.
+- **แอดมินแก้ได้ทุกจุดที่ LED พิมพ์ผิด — พร้อมประวัติ.** The detail panel gains
+  a แก้ไขข้อมูล (แอดมิน) section: ตำบล/อำเภอ/จังหวัด, เลขที่โฉนด (the DB's
+  unique deed key blocks a twin — 23505 → "มีแปลงอื่นใช้อยู่แล้ว" — the same
+  shape the 161371 RCA chased), ขนาด ไร่-งาน-วา, ราคาเริ่มประมูล,
+  ราคาตามตารางนัด per round, รูป (delete / add by URL — external links are
+  stored, no download step), and the position (type lat,lng or วางบนแผนที่ →
+  click once on the map). Every save writes ONE field and ONE history row;
+  the pane renders them exactly as asked: `land size : 0-1-16 -> 0-1-61
+  (03/11/26 11:34) · admin`. A hand position stamps the same three facts the
+  coord-gaps PATCH does (td pair + geometry + verdict 'match'), so the dot
+  moves and the data gate lets it through.
+- **ข้อมูลตกหล่น: กดเลือกบนแผนที่.** The coord-gap popup gains a button that
+  closes the drawer, arms exactly one map-click, and comes back with the
+  clicked coordinate in the lat/lng boxes — บันทึก then walks the same hand
+  quad. The pick travels through module scope because closing the drawer
+  unmounts the pane.
+- **ผบE.4642/2568 518 — cell vs tip RCA.** The cell rendered LED's whole
+  report phrase (`งดขายในนัดที่เหลือ แจ้งโจทก์ตรวจสอบสภาพทรัพย์`, carried on
+  the lists rows' led_label) and clipped it arbitrarily. The cell now shows
+  the canonical head (LED's own list wording) and whichever reason LED
+  appended rides the hover tip; a second inline splitter — with a phrase list
+  that had drifted from the first one — was deleted in favour of the one
+  `splitStatus`. Pinned across every distinct status wording the DB carries.
+- **ผบ.754/2562 161371 — wrong coord RCA.** Not a same-deed twin: the deed's
+  row is unique. Parcel 10203's `geom` sat 6,012 m from its own TD-resolved
+  td_lat/td_lon — the ONLY row in the DB where a td-verdict-match parcel
+  disagreed with itself, and it was my own PATCH probe from the previous
+  batch that left it (the probe's restore captured only `geom IS NOT NULL`,
+  so the `CASE WHEN … geom END` kept the patched value). Repaired along the
+  data-provable resolver rule — `td_verdict='match' ⇒ geom = MakePoint
+  (td_lon, td_lat)` — and the drift scan now returns 0 rows. LED's own
+  printed figure (16.41368126,102.83346891) sits 2 m from it; if the user
+  wants LED's exact decimals on the map, the new admin editor does it with a
+  history attribution.
+
 ### 2026-11-03 (evening batch) — the price table regrouped, น.ส.3ก. dropped, hand coords reach the map
 
 - **The นัดที่ table collapsed every sale order into one flat 1..N.** The 2026
