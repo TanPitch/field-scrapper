@@ -119,6 +119,8 @@ export interface AppState {
   overlaySel: OverlayId;
   setTab: SetTab;
   rightOpen: boolean;
+  /** Admin editor — the small panel beside the right detail panel. */
+  editOpen: boolean;
   leftOpen: boolean;
   settingsOpen: boolean;
   selectedId: number | null;
@@ -150,6 +152,10 @@ export interface AppState {
   floodProbe: boolean;
 
   /* ----- map ----- */
+  /** True while the admin editor is armed for a map click to place a
+   *  coordinate; the map's own click handling (select / deselect) stands down
+   *  so the placing click does not clear the selection or hide the panel. */
+  coordPick: boolean;
   mapReady: boolean;
   bounds: BBox | null;
   zoom: number;
@@ -194,6 +200,7 @@ export interface AppState {
 }
 
 export const useApp = create<AppState>(set => ({
+
   popupMode: 'active',
   labelOverlap: false,
   labelSold: true,
@@ -252,6 +259,7 @@ export const useApp = create<AppState>(set => ({
   overlaySel: 'flood',
   setTab: 'map',
   rightOpen: false,
+  editOpen: false,
   leftOpen: true,
   settingsOpen: false,
   selectedId: null,
@@ -277,6 +285,7 @@ export const useApp = create<AppState>(set => ({
   floodV: 1,
   floodProbe: false,
 
+  coordPick: false,
   mapReady: false,
   bounds: null,
   zoom: 12.35,

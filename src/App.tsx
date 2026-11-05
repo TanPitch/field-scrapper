@@ -8,16 +8,18 @@ import { BottomPanel } from './components/table/BottomPanel';
 import { TipProvider } from './components/ui/Tip';
 import { Splash } from './components/auth/Splash';
 import { Toasts } from './components/map/Toasts';
-import { HEADER_H, LEFT_W, RIGHT_W } from './data/constants';
+import { EDIT_W, HEADER_H, LEFT_W, RIGHT_W } from './data/constants';
 import { ParcelsProvider } from './hooks/useParcels';
 import { useSettingsSync } from './hooks/useSettingsSync';
 import { patchApp, useApp } from './store/useApp';
 import { setLeft } from './store/actions';
+import { EditPanel } from './components/panel/EditPanel';
 
 export default function App() {
   const small = useSmall();
   const leftOpen = useApp(s => s.leftOpen);
   const rightOpen = useApp(s => s.rightOpen);
+  const editOpen = useApp(s => s.editOpen);
   const layoutMode = useApp(s => s.layoutMode);
   const landOn = useApp(s => s.landOn);
   const bottomH = useApp(s => s.bottomH);
@@ -60,14 +62,14 @@ export default function App() {
     ? { gridTemplateColumns: '0 minmax(0,1fr)', gridTemplateRows: `${HEADER_H}px minmax(0,1fr)`, gridTemplateAreas: '"hd hd" "mp mp"' }
     : layoutMode === 'floating'
       ? {
-          gridTemplateColumns: `minmax(0,1fr) ${rightOpen ? RIGHT_W : 0}px`,
+          gridTemplateColumns: `minmax(0,1fr) ${editOpen ? EDIT_W : 0}px ${rightOpen ? RIGHT_W : 0}px`,
           gridTemplateRows: `${HEADER_H}px minmax(0,1fr) ${landOn ? bottomH : 0}px`,
-          gridTemplateAreas: '"hd hd" "mp rp" "bp bp"',
+          gridTemplateAreas: '"hd hd hd" "mp ep rp" "bp bp bp"',
         }
       : {
-          gridTemplateColumns: `${leftOpen ? LEFT_W : 0}px minmax(0,1fr) ${rightOpen ? RIGHT_W : 0}px`,
+          gridTemplateColumns: `${leftOpen ? LEFT_W : 0}px minmax(0,1fr) ${editOpen ? EDIT_W : 0}px ${rightOpen ? RIGHT_W : 0}px`,
           gridTemplateRows: `${HEADER_H}px minmax(0,1fr) ${landOn ? bottomH : 0}px`,
-          gridTemplateAreas: '"hd hd hd" "rail mp rp" "rail bp bp"',
+          gridTemplateAreas: '"hd hd hd hd" "rail mp ep rp" "rail bp bp bp"',
         };
 
   const signedIn = useApp(s => s.signedIn);
@@ -86,6 +88,7 @@ export default function App() {
         <Header small={small} />
           <Rail small={small} floating={layoutMode === 'floating'} />
           <MapView />
+          <EditPanel small={small} />
           <RightPanel small={small} />
           <BottomPanel small={small} />
         </div>

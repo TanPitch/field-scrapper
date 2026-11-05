@@ -83,6 +83,9 @@ export function useMapEvents(map: maplibregl.Map | null, { onHideLoader, onPoint
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
       const s = getApp();
+      /* The admin editor has armed a single click to place a coordinate — that
+         click must not also select / deselect land. */
+      if (s.coordPick) return;
       if (s.drawMode === 'draw') { drawClick(e); return; }
       if (s.drawMode === 'area') { areaClick(e); return; }
       if (s.editingDraw != null) { editClick(e); return; }

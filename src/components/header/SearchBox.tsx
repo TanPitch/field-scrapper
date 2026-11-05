@@ -165,7 +165,7 @@ const closeDrop = useCallback(() => { seq.current++; ctl.current?.abort(); patch
      their own markers on the map — plotting them again would stack a duplicate
      on top of each one. */
 useEffect(() => {
-  plotSearch(rows.filter(r => r.kind === 'place').map(r => ({ id: r.rid, kind: r.kind, ll: r.ll, ic: poiIcon(r.place?.cat) })));
+  plotSearch(rows.filter(r => r.kind === 'place').map(r => ({ id: r.rid, kind: r.kind, ll: r.ll, ic: poiIcon(r.place?.cat), name: r.name, sub: r.sub })));
   patch({ rows: rows.map(toStoreRow) });
 }, [rows, patch]);
 

@@ -20,6 +20,9 @@ export const ROW_H = 36;
 export const HEADER_H = 56;
 export const LEFT_W = 76;
 export const RIGHT_W = 400;
+
+/** Admin edit panel — the small column next to the right detail panel. */
+export const EDIT_W = 300;
 export const RES_CAP = 100;
 export const MIN_BH = 170;
 export const PIN_W = 34;

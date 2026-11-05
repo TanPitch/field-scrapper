@@ -13,8 +13,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Crosshair, Flag, Plus, Save, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { parseCoordPair } from '../../lib/coord';
-import { toast, useApp } from '../../store/useApp';
-import { btn, detSub, inp } from '../ui/styles';
+import { toast, useApp, patchApp } from '../../store/useApp';
+import { btn, inp } from '../ui/styles';
 import { useTipProps } from '../ui/Tip';
 import { getMap } from '../../map/mapRef';
 import { useRefreshParcels } from '../../hooks/useParcels';
@@ -122,8 +122,11 @@ const FIELD_LABEL: Record<string, string> = {
 };
 
 /* Start prices are money: the input shows what LED printed (with commas), the
-   save strips the display separators before sending a plain number. */
+   save strips the display separators before sending a plain number. Typing
+   formats live — digits only, commas re-inserted between every group. */
 const money = (v: number): string => v.toLocaleString('en-US');
+const commas = (typed: string): string =>
+  typed.replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 const thDT = (s: string): string => {
   const d = new Date(s);
@@ -159,6 +162,8 @@ export function AdminEditor({ p }: { p: Parcel }) {
   const [trios, setTrios] = useState<Trio[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [placing, setPlacing] = useState(false);
+  /* Full-size view of an editor thumbnail — one overlay, click anywhere closes. */
+  const [viewImg, setViewImg] = useState<string | null>(null);
   const disarm = useRef<(() => void) | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -216,7 +221,10 @@ export function AdminEditor({ p }: { p: Parcel }) {
 
   /* One-shot map placement: fly there, arm a single click — the click's pair
      lands in the single coord box; the ref keeps the unmount cleanup able to
-     disarm it if the user wanders off first. */
+     disarm it if the user wanders off first. While armed, `coordPick` stands
+     the map's own click handling down: without it, the same click that placed
+     the pin also counted as a map click that deselected the parcel and closed
+     the panel that was running the edit. */
   const placeOnMap = () => {
     const map = getMap();
     if (!map) { toast('ไม่มีแผนที่ให้คลิก', 'warn'); return; }
@@ -224,9 +232,11 @@ export function AdminEditor({ p }: { p: Parcel }) {
     const canvas = map.getCanvas();
     canvas.style.cursor = 'crosshair';
     setPlacing(true);
+    patchApp({ coordPick: true });
     const onClick = (e: { lngLat: { lat: number; lng: number } }) => {
       canvas.style.cursor = '';
       setPlacing(false);
+      patchApp({ coordPick: false });
       disarm.current = null;
       setCoord(`${e.lngLat.lat.toFixed(8)}, ${e.lngLat.lng.toFixed(8)}`);
       toast('ได้พิกัดจากการคลิก — ตรวจแล้วกด พิกัด เพื่อบันทึก');
@@ -236,6 +246,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
       map.off('click', onClick);
       canvas.style.cursor = '';
       setPlacing(false);
+      patchApp({ coordPick: false });
     };
   };
 
@@ -282,9 +293,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
     saveField({ field: 'round_price', roundId, value }, 'บันทึกราคานัดแล้ว');
 
   return (
-    <div className="mt-3 rounded-[10px] border border-line2 bg-panel2/40 p-2.5" data-selectable>
-      <div className={`${detSub} !mt-0`}>แก้ไขข้อมูล (แอดมิน)</div>
-
+    <div data-selectable className="mt-1">
       {/* ที่ตั้ง — a searchable dropdown per level (native datalist: typing
           filters, clicking picks, free typing adds a name). Options come from
           the DB's own trio list, narrowed by what is already set above. */}
@@ -328,7 +337,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
         {/* LED's pre-discount figure, comma-separated as printed. Starts the
             ladder from the lot row, never from the discounted headline. */}
-        <input className={`${inp} flex-1`} value={price} onChange={e => setPrice(e.target.value)}
+        <input className={`${inp} flex-1`} value={price} onChange={e => setPrice(commas(e.target.value))}
           placeholder="ราคาเริ่มประมูล (เลขหลักพัน)" inputMode="numeric"
           {...useTipProps('ราคาเริ่มประมูลของนัดแรก — ไม่ใช่ราคาที่ลดแล้ว')} />
         <button className={btn} onClick={async () => {
@@ -379,8 +388,10 @@ export function AdminEditor({ p }: { p: Parcel }) {
               {rowList.map((im, i) => (
                 <div key={im.id} className="mt-1 flex items-center gap-1.5 text-[10.5px] text-dim2">
                   {/* The served value doubles as the preview; onError tells the
-                      truth about a dead link instead of a blank square. */}
-                  <img src={im.served} alt="" className="size-9 flex-none rounded-[6px] border border-line2 bg-panel2 object-cover"
+                      truth about a dead link instead of a blank square. Click
+                      opens the full image on an overlay. */}
+                  <img src={im.served} alt="" className="size-9 flex-none cursor-zoom-in rounded-[6px] border border-line2 bg-panel2 object-cover hover:border-accent"
+                    onClick={() => setViewImg(im.served)}
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />
                   <span className="min-w-0 flex-1 truncate text-dim">{im.served}</span>
                   {rowList.length > 1 && (
@@ -484,6 +495,12 @@ export function AdminEditor({ p }: { p: Parcel }) {
           <div className="mt-1 text-[10px] text-dim2">แถวราคานัดเก่าบางรายการไม่มีข้อมูลอ้างนัด — ย้อนไม่ได้</div>
         )}
       </div>
+
+      {viewImg && (
+        <div className="fixed inset-0 z-[150] grid cursor-zoom-out place-items-center bg-black/85 backdrop-blur-sm" onClick={() => setViewImg(null)}>
+          <img src={viewImg} alt="รูปขยาย" className="max-h-[90vh] max-w-[92vw] rounded-[10px]" />
+        </div>
+      )}
     </div>
   );
 }
@@ -500,7 +517,7 @@ function RoundPriceRow({ i, r, onSave }: {
       <span className="w-[64px] flex-none text-dim2">
         {r.date != null ? new Date(r.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'ไม่มีวันที่'}
       </span>
-      <input className={`${inp} w-[100px]`} value={v} onChange={e => setV(e.target.value)} inputMode="numeric" placeholder="—" />
+      <input className={`${inp} w-[100px]`} value={v} onChange={e => setV(commas(e.target.value))} inputMode="numeric" placeholder="—" />
       <button className={btn} onClick={async () => {
         const t = v.trim();
         const num = t === '' ? null : Number(t.replace(/[^\d.]/g, ''));

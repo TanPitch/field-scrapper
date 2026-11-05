@@ -1,4 +1,4 @@
-import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye } from 'lucide-react';
+import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye, Wrench } from 'lucide-react';
 import { getMap } from '../../map/mapRef';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
@@ -18,7 +18,7 @@ import { LandKindIcon } from '../ui/LandKindIcon';
 import { pickBtn, pillCls } from '../ui/styles';
 import { Select } from '../ui/Select';
 import { PriceHeadline } from './PriceHeadline';
-import { AdminEditor, ReportButton } from './ParcelReport';
+import { ReportButton } from './ParcelReport';
 import { DetRows, DetSub, DetTop, VPad } from './shared';
 import { orderRows } from '../../lib/detailRows';
 
@@ -320,6 +320,8 @@ export function DetailView() {
   const groupIds = useApp(s => s.groupIds);
   const roundsPreview = useApp(s => s.roundsPreview);
   const roundsGroupBorder = useApp(s => s.roundsGroupBorder);
+  const isAdmin = useApp(s => s.role === 'admin');
+  const editOpen = useApp(s => s.editOpen);
   /* Which unit of a condominium building this panel is showing.
      null means "whatever the map picked", which is the representative unit, so
      opening a dot shows the same unit the user clicked rather than whichever
@@ -573,6 +575,21 @@ export function DetailView() {
           </button>
 
           <ReportButton p={p} />
+
+          {/* Admin editor opens in its own small panel next to this one (EditPanel,
+              grid area `ep`) — it follows this selection, so no extra state. */}
+          {isAdmin && (
+            <button
+              type="button"
+              {...useTipProps('แก้ไขข้อมูล (แอดมิน)')}
+              onClick={() => patchApp({ editOpen: !useApp.getState().editOpen })}
+              className={`inline-flex items-center gap-1 rounded border p-1 text-[10px] font-medium ${
+                editOpen ? 'border-accent bg-accent-dim text-accent' : 'border-line2 bg-panel2 text-dim hover:border-line3 hover:text-ink'
+              }`}
+            >
+              <Wrench size={12} />
+            </button>
+          )}
         </div>
 
         {units.length > 1 && (
@@ -807,11 +824,6 @@ export function DetailView() {
         <div className="h-[170px]"><PriceChart parcel={p} /></div>
         <RangeSlider parcel={p} />
       </div>
-
-      {/* The admin's write surface: fields, prices, images, position, history.
-          Non-admins see nothing here; their path into the same complaints is
-          the report button on the chip row. */}
-      <AdminEditor p={p} />
 
     </VPad>
     </div>

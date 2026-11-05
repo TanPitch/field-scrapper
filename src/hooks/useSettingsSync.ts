@@ -172,7 +172,10 @@ async function loadPrefs(): Promise<void> {
   if (!r.ok || !r.data?.prefs) return;
   const patch: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(r.data.prefs)) {
-    if (!(k in SYNCED_PREFS)) continue;
+    /* `k in SYNCED_PREFS` tested array INDICES, not values — `'gkey' in []`
+       is false for every named key, so the server's restore dropped every
+       preference and nothing the settings pane had saved ever came back. */
+    if (!(SYNCED_PREFS as readonly string[]).includes(k)) continue;
     /* pinnedIds went out as an array (Sets are not JSON). */
     patch[k] = k === 'pinnedIds' && Array.isArray(v)
       ? new Set<number>(v as number[])

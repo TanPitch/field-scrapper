@@ -11,6 +11,7 @@ import { select, showRight } from '../store/actions';
 import { getApp, patchApp, effectiveAccent } from '../store/useApp';
 import type { BBox, CctvPin, LngLat, MarkerSize, SearchHit, SensorPin, TransportPin } from '../types';
 import { fc, getMap, hasLayer, ptF, setSourceData, setVisibility } from './mapRef';
+import { esc } from '../lib/format';
 
 /* ---------- bbox helpers ---------- */
 export const inBbox = (ll: LngLat, bb: BBox | null): boolean =>
@@ -350,8 +351,13 @@ export function initPinLayers(): void {
   });
   map.on('click', 'fs-flood-pin', e => { const f = e.features?.[0]; if (f) openSensor(String(f.properties?.id)); });
   map.on('click', 'fs-transport-pin', e => { const f = e.features?.[0]; if (f) openTransport(String(f.properties?.id)); });
-  map.on('click', 'fs-search-ic', e => { const f = e.features?.[0]; if (f && onSearchPick) onSearchPick(String(f.properties?.id)); });
-  (['fs-cctv-pin', 'fs-flood-pin', 'fs-transport-pin'] as const).forEach(ly => {
+  map.on('click', 'fs-search-ic', e => {
+    const f = e.features?.[0];
+    if (!f) return;
+    openSearchPopup(String(f.properties?.id));
+    if (onSearchPick) onSearchPick(String(f.properties?.id));
+  });
+  (['fs-cctv-pin', 'fs-flood-pin', 'fs-transport-pin', 'fs-search-ic'] as const).forEach(ly => {
     map.on('mouseenter', ly, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', ly, () => { map.getCanvas().style.cursor = ''; });
   });
@@ -437,19 +443,36 @@ function searchIconSize(): ExpressionSpecification {
 }
 
 /** last plotted positions, so a selection ring can be placed without a re-plot */
-const searchPts = new Map<string, { ll: LngLat; ic: string }>();
+const searchPts = new Map<string, { ll: LngLat; ic: string; name: string; sub: string }>();
 let searchSelId: string | null = null;
+let searchPopup: maplibregl.Popup | null = null;
 
 /** Internet hits only — local results keep their own markers. */
-export function plotSearch(items: { id: string; kind: string; ll: LngLat; ic?: string }[]): void {
+export function plotSearch(items: { id: string; kind: string; ll: LngLat; ic?: string; name?: string; sub?: string }[]): void {
   searchPts.clear();
+  searchPopup?.remove(); searchPopup = null;
   items.forEach(it => {
-    searchPts.set(it.id, { ll: it.ll, ic: it.ic ?? '' });
+    searchPts.set(it.id, { ll: it.ll, ic: it.ic ?? '', name: it.name ?? '', sub: it.sub ?? '' });
     ensurePoiImage(it.ic || 'map-pin');
   });
   if (searchSelId && !searchPts.has(searchSelId)) searchSelId = null;
   setSourceData('fs-search-src', fc(items.map(it => ptF(it.ll, { id: it.id, ic: it.ic ?? '', sel: it.id === searchSelId }))));
   syncSearchSelectionRing();
+}
+
+/** The click-to-place-point popup: name + where the hit came from, nothing more. */
+function openSearchPopup(rid: string): void {
+  const map = getMap();
+  const hit = searchPts.get(rid);
+  if (!map || !hit) return;
+  searchPopup?.remove();
+  searchPopup = new maplibregl.Popup({ closeButton: true, offset: 12, maxWidth: '250px' })
+    .setLngLat(hit.ll)
+    .setHTML(`<div class="pop-box pop-box--compact" data-selectable>
+      <b class="block text-[11px] leading-[1.4]">${esc(hit.name)}</b>
+      ${hit.sub ? `<span class="pop-name">${esc(hit.sub)}</span>` : ''}
+    </div>`)
+    .addTo(map);
 }
 
 /** Rings the chosen internet hit. Pass null (or `clearSearchSelection`) to clear. */
