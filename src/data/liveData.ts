@@ -1,9 +1,8 @@
 /* liveData.ts — real parcels from the API, mapped onto the app's Parcel shape.
  *
- * The app was written against seeded fixtures in mockData.ts. Those are still
- * here and still used, but only as a fallback: when the API is reachable the
- * app shows what the scrapers actually collected, which is the only way to test
- * that the frontend and backend agree.
+ * The seeded fixture set (mockData.ts) was removed: an unconnected server is an
+ * empty map plus the banner's honest reason, never invented land that pretends
+ * to be real. 2026-11-04.
  *
  * Why this file exists rather than a hook in a component: seven modules read
  * ALL_PARCELS / PARCEL_BY_ID synchronously, including non-React code (the popup
@@ -11,10 +10,6 @@
  * large refactor for no gain. Instead the collection is published as module-level
  * live bindings and React is told to recompute through a version counter in the
  * store — see useParcelData().
- *
- * The fallback is deliberate and visible, never silent: if the API is down the
- * user gets fixtures AND a banner saying so, because a screen full of invented
- * parcels that looks real is worse than an honest empty state.
  */
 import { api, type ApiParcelProps, type ApiRound } from '../lib/api';
 import { landKindOf } from '../components/ui/LandKindIcon';
@@ -22,10 +17,13 @@ import { groupUnitsByParcel, representativeUnit, type CondoUnitOrder } from '../
 import type { HistPoint, Parcel, PriceEvent, SellRound, Status } from '../types';
 import { inkOn } from './constants';
 import { effectiveAccent } from '../store/useApp';
-import { FALLBACK_PARCELS } from './mockData';
 
-/** Where the data currently on screen came from. Surfaced in the UI. */
-export type DataSourceKind = 'api' | 'fixtures';
+/** Where the data currently on screen came from. Surfaced in the UI —
+ * 'loading' while the first fetch is in flight, 'error' when it failed.
+ * There is no fixture kind any more: the seeded mockup set was removed, so
+ * an unconnected server means an empty map with the banner explaining why,
+ * never invented land pretending to be real. */
+export type DataSourceKind = 'loading' | 'api' | 'error';
 
 interface Feature {
   type: 'Feature';
@@ -102,7 +100,7 @@ function mapRounds(rows: RoundRow[]): SellRound[] {
       /* Ingest provenance — lists slot number vs report row (null). */
       idx: r.idx ?? null,
       /* The round's own row id — the admin editor writes a price fix against
-         it; null on fixtures that predate the field. */
+         it; null when the payload came from an older server. */
       roundId: (r.id as number | null) ?? null,
     };
   });
@@ -211,10 +209,12 @@ export const noSaleRound = (r: SellRound): boolean => r.status.trim() === 'ง�
  * Nothing is being auctioned, so กำลังขาย would advertise a next date for land
  * that is not going to market. That dead end is หมดอายุประกาศ - the
  * announcement expired with no bidders - never ยกเลิกการขาย, which is kept for
- * the server's own close_reason (court lifted the attachment). */
+ * the server's own close_reason (court lifted the attachment). The listing's
+ * own rows decide (listingRounds): last cycle's no-sale report rows must not
+ * vote a fresh listing down. */
 export const neverOnMarket = (rounds: SellRound[]): boolean => {
-  const dated = rounds.filter((r) => r.date != null);
-  return dated.length > 0 && dated.every(noSaleRound);
+  const listing = listingRounds(rounds);
+  return listing.length > 0 && listing.every(noSaleRound);
 };
 
 /* The report's งดขายในนัดที่เหลือ rides led_label with code 0 on the lists'
@@ -222,10 +222,25 @@ export const neverOnMarket = (rounds: SellRound[]): boolean => {
  * the same verdict when it meets the row on a report table (9638). Every
  * dated round closed that way is a listing LED has removed from the market —
  * ยกเลิกการขาย, not กำลังขาย, before any countdown renders. */
-const listingCancelled = (rounds: SellRound[]): boolean => {
+/* The listing's own rows vote on the listing's status; the report-history rows
+ * before the current cycle do not. The ingest marks the boundary itself:
+ * lists-row slots of the sale order still on the page carry `idx` (1..N), while
+ * rows born from the report sheet (ผบ.29/2567's six 2025 งดขายไม่มีผู้สู้ราคา
+ * rounds) ride idx null. 32581: every นัด of the CURRENT listing closed on the
+ * report's งดขายในนัดที่เหลือ (code 26 after the placeholder promotion), so the
+ * chip is ยกเลิกการขาย — but all-dated.every() also counted the 2025 code-10
+ * history and kept the chip กำลังขาย. Listing rows only. A lot with no
+ * idx-marked rows at all (a listing that exists only as report rows, the
+ * 9638-of-2025 shape) IS all history, so the fallback keeps the whole dated set
+ * and batch-2's behaviour survives. */
+const listingRounds = (rounds: SellRound[]): SellRound[] => {
   const dated = rounds.filter((r) => r.date != null);
-  return dated.length > 0 && dated.every((r) => r.statusCode === 26);
+  const listed = dated.filter((r) => r.idx != null);
+  return listed.length ? listed : dated;
 };
+
+export const listingCancelled = (rounds: SellRound[]): boolean =>
+  listingRounds(rounds).length > 0 && listingRounds(rounds).every((r) => r.statusCode === 26);
 
 function mapStatus(raw: string | null, rounds: SellRound[]): Status {
   if (raw === 'sold' || raw === 'inactive' || raw === 'cancelled') return raw;
@@ -337,6 +352,10 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
     sizeWa: (p.sizeWa as number | null) ?? null,
     price,
     perWah: land != null ? Math.round(price / land) : null,
+    /* The lot's own opening price (auction_lots.start_price) — the figure an
+       admin edit must start from, before any ladder discount. p.price above is
+       the sale-or-last-rung headline and was the wrong seed for the editor. */
+    startPrice: p.startPrice ?? null,
     lng: f.geometry?.coordinates?.[0] ?? 0,
     lat: f.geometry?.coordinates?.[1] ?? 0,
     name: [p.assetType, p.tambon, p.landTitle].filter(Boolean).join(' ') || `แปลง ${p.id}`,
@@ -366,10 +385,12 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
        already failed a relist round — those statuses come later and win. */
     resell: status === 'sale' && sold != null,
     imgs: p.imageCount ?? 0,
-    /* Real photographs, resolved against the API's static mount. An empty
-       array means nothing has been fetched yet — which the carousel renders as
-       its no-image state rather than as a broken picture. */
-    images: (p.images ?? []).map((n) => `/img/land/${n}`),
+    /* Served URLs, already final on the server: '/img/land/<file>' for the
+       bot's downloads, the stored link for admin-added rows. Prepending the
+       mount here again double-prefixed paths into 404s — the alt-text state
+       the carousel shows instead of a picture. The server is the one place
+       that knows which shape a row is. */
+    images: p.images ?? [],
     lastTs: now,
     saleByText: '',
     dataSource: 'กรมบังคับคดี',
@@ -447,11 +468,11 @@ export function featureToParcel(f: Feature, now: number): Parcel | null {
  * A getter would also work, but in-place mutation means every existing call site
  * stays correct with no change and no new invariant to remember.
  */
-export const ALL_PARCELS: Parcel[] = FALLBACK_PARCELS.slice();
-export const PARCEL_BY_ID: Map<number, Parcel> = new Map(FALLBACK_PARCELS.map((p) => [p.id, p]));
+export const ALL_PARCELS: Parcel[] = [];
+export const PARCEL_BY_ID: Map<number, Parcel> = new Map();
 export const getDataOrigin = (): DataSourceKind => origin;
 
-let origin: DataSourceKind = 'fixtures';
+let origin: DataSourceKind = 'loading';
 
 /* Which unit of a multi-unit parcel stands in for the building wherever a parcel
  * is looked up by id - the popup, the detail panel, the selected row.
@@ -493,9 +514,10 @@ function publish(rows: Parcel[], kind: DataSourceKind) {
 }
 
 /**
- * Fetch real parcels. Resolves even on failure — it falls back to the fixtures
- * and says so, because an unhandled rejection here would leave the app with no
- * data at all rather than obviously-approximate data.
+ * Fetch real parcels. There is no fixture fallback any more: a failed fetch
+ * publishes an empty collection with kind 'error', and the banner (not fake
+ * land) tells the user why the map is empty. Resolving rather than throwing
+ * keeps the refresh flow simple.
  */
 export async function loadParcels(provinceCode?: number): Promise<{
   kind: DataSourceKind; count: number; error: string | null;
@@ -506,8 +528,8 @@ export async function loadParcels(provinceCode?: number): Promise<{
   const r = await api.get<{ features: Feature[] }>(`/api/parcels${q}`);
 
   if (!r.ok || !r.data?.features) {
-    publish(FALLBACK_PARCELS, 'fixtures');
-    return { kind: 'fixtures', count: FALLBACK_PARCELS.length, error: r.error };
+    publish([], 'error');
+    return { kind: 'error', count: 0, error: r.error ?? null };
   }
 
   const now = Date.now();

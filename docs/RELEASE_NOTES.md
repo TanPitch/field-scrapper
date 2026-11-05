@@ -4,6 +4,61 @@ All notable changes to Field Scrapper. Dates are ISO.
 
 ## Unreleased
 
+### 2026-11-05 — ข้อมูลตัวอย่างถูกลบ, editor ครบเครื่อง, RCA รูป + สถานะ
+
+- **The seeded mockups are gone.** `src/data/mockData.ts` is deleted. With the
+  server absent the app is honestly empty: a กำลังโหลด banner while the first
+  fetch runs, a first-load toast saying what came back, and an error state that
+  names `bun server/index.js` — never a stand-in parcel pretending to be real.
+  `DataSourceKind` is now `'loading' | 'api' | 'error'`, and the ladder test's
+  popup corpus reads four real DB parcels instead of fixtures.
+- **ผบE.4642/2568 518 / ผบE.4688/2567 11737 / ผบ.29/2567 32581 — ภาพโชว์ alt
+  text เพราะ double prefix.** DB probe first: all three carry working image
+  rows, and the features payload already serves final URLs
+  (`COALESCE('/img/land/' || local_path, url)` — admin-added links included).
+  `featureToParcel` then prepended `/img/land/` again, so the browser asked for
+  `/img/land//img/land/…` and the carousel fell into its alt-text state. The
+  client prepend is deleted; the server stays the single owner of serving
+  shape.
+- **ผบ.29/2567 32581 — the chip read กำลังขาย on a listing LED already pulled.**
+  Every dated นัด of its current listing carries the report's
+  งดขายในนัดที่เหลือ (ingest code 26), but six 2025 report-history rounds
+  (code 10, `idx null`) sat underneath and `every()` counted them too. The
+  boundary is in the data, not a case id: a round stamped `idx` 1..N belongs to
+  the listing still on the page; report-sheet rows ride `idx null` and cannot
+  vote on it. `listingRounds()` scopes both `listingCancelled` and
+  `neverOnMarket`; a lot with no idx-marked rows (9638-of-2025, a listing that
+  exists only as report rows) falls back to all dated rows so batch-2
+  behaviour survives.
+- **แอดมินเห็นตัวเลือกที่ตั้งค้นได้.** The editor's ตำบล/อำเภอ/จังหวัด inputs
+  are searchable — options come from the parcels table itself
+  (`GET /api/admin/place-dict` = the distinct trio list, 409 rows today), and
+  a new name typed into a parcel joins the dict by existing; no second table
+  to keep in sync.
+- **ราคาเริ่มมาจาก lot จริง.** The price field seeds `auction_lots.start_price`
+  (LED's pre-discount figure) — not the headline `p.price`, which can already
+  carry a discount rung — comma-displayed, commas stripped on save.
+- **พิกัดช่องเดียว.** One lat,lng box on the admin editor with the วาง
+  on-map click, parsed by `src/lib/coord.ts` — the same helper ข้อมูลตกหล่น
+  uses, Thailand-box guarded.
+- **รูปทำได้ครบใน editor.** Thumbnails (the served link is the preview),
+  delete, add-by-URL, and direct file upload — `POST /api/admin/lot-images
+  /upload?lotId=…&parcelId=…` takes the file as the raw octet-stream body
+  (`express.raw`, sha-named into IMAGE_ROOT, no multipart dependency) — and
+  ordering, `PATCH /api/admin/lot-images/order` with `{ parcelId, order:
+  [ids…] }`, one `image_order` history row.
+- **Migration 033** adds `parcel_edits.ref_id` (round_price history can key
+  its round) and `lot_images.sort_no`, and replaces `UNIQUE (lot_id, kind)`
+  with `UNIQUE (lot_id, url)` — two historical twin rows (lots 7776, 7553;
+  same url + same file, ids 3665/3220) were deduped so the index could build.
+  `test/ingest.js` re-keys its image upsert to `(lot_id, url)` with it.
+- **ปุ่มกลับค่าในประวัติ.** Every scalar history row gets กลับค่า: the client
+  rebuilds the same PATCH from `old_value` (size and start_price need the
+  row's `lot_id`, round_price uses `ref_id`), and the revert writes its own
+  audit row. A deleted image restores by re-adding the link stored in the
+  row; shapes with nothing to restore (image_added, ref-less round prices)
+  carry no button.
+
 ### 2026-11-04 — รายงาน→ผู้ดูแล flow with a full edit trail; the last two data RCAs
 
 - **จุดรายงานถึงแอดมิน (ReportButton).** Every signed-in user sees รายงาน on a

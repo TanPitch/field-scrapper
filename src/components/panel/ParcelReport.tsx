@@ -10,8 +10,9 @@
  * coord-gaps path already established, and can be placed by clicking the map.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Crosshair, Flag, Plus, Save, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Crosshair, Flag, Plus, Save, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { api } from '../../lib/api';
+import { parseCoordPair } from '../../lib/coord';
 import { toast, useApp } from '../../store/useApp';
 import { btn, detSub, inp } from '../ui/styles';
 import { useTipProps } from '../ui/Tip';
@@ -32,11 +33,11 @@ export function ReportButton({ p }: { p: Parcel }) {
     <>
       <button
         type="button"
-        {...useTipProps('แจ้งว่าข้อมูลจาก LED ผิด — แอดมินจะตรวจสอบ')}
+        {...useTipProps('แจ้งข้อมูลผิด')}
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+        className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
       >
-        <Flag size={12} /> รายงาน
+        <Flag size={12} />
       </button>
       {open && <ReportModal p={p} onClose={() => setOpen(false)} />}
     </>
@@ -102,19 +103,27 @@ function ReportModal({ p, onClose }: { p: Parcel; onClose: () => void }) {
 
 interface EditRow {
   id: number; field_name: string; old_value: string | null; new_value: string | null;
-  note: string | null; edited_at: string; editor: string | null; editor_name: string | null;
+  note: string | null; ref_id: number | null; lot_id: number | null; edited_at: string;
+  editor: string | null; editor_name: string | null;
 }
 
 interface ImageRow {
-  id: number; lotId: number; kind: string; localPath: string | null; url: string | null; served: string;
+  id: number; lotId: number; kind: string; localPath: string | null; url: string | null;
+  served: string; sortNo: number | null;
 }
+
+interface Trio { tumbol: string; district_name: string; province_name: string }
 
 const FIELD_LABEL: Record<string, string> = {
   tumbol: 'ตำบล', district_name: 'อำเภอ', province_name: 'จังหวัด',
   deed_number: 'เลขที่โฉนด', size: 'land size', start_price: 'ราคาเริ่มประมูล',
   latlng: 'พิกัด', round_price: 'ราคานัดขาย',
-  image_added: 'เพิ่มรูป', image_removed: 'ลบรูป',
+  image_added: 'เพิ่มรูป', image_removed: 'ลบรูป', image_order: 'เรียงรูป',
 };
+
+/* Start prices are money: the input shows what LED printed (with commas), the
+   save strips the display separators before sending a plain number. */
+const money = (v: number): string => v.toLocaleString('en-US');
 
 const thDT = (s: string): string => {
   const d = new Date(s);
@@ -141,23 +150,28 @@ export function AdminEditor({ p }: { p: Parcel }) {
   const [deed, setDeed] = useState('');
   const [size, setSize] = useState('');
   const [price, setPrice] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
+  /* One coordinate text box, like ข้อมูลตกหล่น's own: "16.41, 102.83" or two
+     space-split decimals — the paste-safe reading is one helper for the app. */
+  const [coord, setCoord] = useState('');
   const [edits, setEdits] = useState<EditRow[] | null>(null);
   const [imgs, setImgs] = useState<ImageRow[] | null>(null);
   const [imgUrl, setImgUrl] = useState('');
+  const [trios, setTrios] = useState<Trio[] | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [placing, setPlacing] = useState(false);
   const disarm = useRef<(() => void) | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   /* Field state seeds from the parcel once per parcel — a background refetch
-     of the same values must not wipe whatever is half-typed. */
+     of the same values must not wipe whatever is half-typed. The price seed is
+     the lot's start price (LED's pre-discount figure), not the headline the
+     panel shows — that one can already carry a discount rung. */
   useEffect(() => {
     setAddr({ tumbol: p.tambon ?? '', district_name: p.amp ?? '', province_name: p.province ?? '' });
     setDeed(p.deedNo ?? '');
     setSize(p.sizeUnit === 'sqm' ? '' : `${p.sizeRai ?? 0}-${p.sizeNgan ?? 0}-${p.sizeWa ?? 0}`);
-    setPrice(p.price != null ? String(p.price) : '');
-    setLat(p.lat ? p.lat.toFixed(8) : '');
-    setLng(p.lng ? p.lng.toFixed(8) : '');
+    setPrice(p.startPrice != null ? money(p.startPrice) : '');
+    setCoord(p.lat != null && p.lng != null ? `${p.lat.toFixed(8)}, ${p.lng.toFixed(8)}` : '');
     setEdits(null); setImgs(null);
   }, [p.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -171,6 +185,14 @@ export function AdminEditor({ p }: { p: Parcel }) {
     const r = await api.get<{ images: ImageRow[] }>(`/api/admin/lot-images?parcelId=${p.id}`);
     if (r.ok) setImgs(r.data?.images ?? []);
   };
+  /* The searchable dropdown's options: every ตำบล the DB has ever carried,
+     grouped by its อำเภอ/จังหวัด. Writing a new value to a parcel adds it to
+     the dict by being in the table — nothing else to sync. */
+  useEffect(() => {
+    void api.get<{ trios: Trio[] }>('/api/admin/place-dict').then((r) => {
+      if (r.ok) setTrios(r.data?.trios ?? []);
+    });
+  }, [p.id]);
   useEffect(() => {
     void loadHistory();
     void loadImages();
@@ -192,9 +214,9 @@ export function AdminEditor({ p }: { p: Parcel }) {
     return true;
   };
 
-  /* One-shot map placement: fly there, arm a single click — the next click on
-     the map is the new position, and the ref keeps the unmount cleanup able
-     to disarm it if the user wanders off first. */
+  /* One-shot map placement: fly there, arm a single click — the click's pair
+     lands in the single coord box; the ref keeps the unmount cleanup able to
+     disarm it if the user wanders off first. */
   const placeOnMap = () => {
     const map = getMap();
     if (!map) { toast('ไม่มีแผนที่ให้คลิก', 'warn'); return; }
@@ -206,8 +228,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
       canvas.style.cursor = '';
       setPlacing(false);
       disarm.current = null;
-      setLat(e.lngLat.lat.toFixed(8));
-      setLng(e.lngLat.lng.toFixed(8));
+      setCoord(`${e.lngLat.lat.toFixed(8)}, ${e.lngLat.lng.toFixed(8)}`);
       toast('ได้พิกัดจากการคลิก — ตรวจแล้วกด พิกัด เพื่อบันทึก');
     };
     map.once('click', onClick);
@@ -218,6 +239,45 @@ export function AdminEditor({ p }: { p: Parcel }) {
     };
   };
 
+  /* History carries enough to undo every scalar field: the same PATCH that
+     wrote the change writes the revert, so an admin mistake is auditable both
+     ways. Image rows revert only through add/delete — no hidden state. */
+  const revertRequest = (e: EditRow): null | Record<string, unknown> | { restoreImage: string } => {
+    const v = e.old_value;
+    switch (e.field_name) {
+      case 'tumbol': case 'district_name': case 'province_name': case 'deed_number':
+        return v == null || v === '' ? null : { field: e.field_name, value: v };
+      case 'size': {
+        const t = v ? parseTrio(v) : null;
+        return t ? { field: 'size', lotId: e.lot_id, rai: t[0], ngan: t[1], wa: t[2] } : null;
+      }
+      case 'start_price': {
+        const n = v == null ? null : Number(v);
+        return n != null && Number.isFinite(n) ? { field: 'start_price', lotId: e.lot_id, value: n } : null;
+      }
+      case 'latlng': {
+        const c = v ? parseCoordPair(v) : null;
+        return c ? { field: 'latlng', lat: c[0], lng: c[1] } : null;
+      }
+      case 'round_price': {
+        if (e.ref_id == null) return null;
+        const num = v === '' ? null : Number(v);
+        return num == null || !Number.isFinite(num) ? null : { field: 'round_price', roundId: e.ref_id, value: num };
+      }
+      /* A removed image restores straight back: its link survived in the row. */
+      case 'image_removed':
+        return v ? { restoreImage: /^https?:\/\//i.test(v) ? v : `/img/land/${v}` } : null;
+      default:
+        return null;
+    }
+  };
+
+  const saveImageOrder = async (ids: number[]) => {
+    const r = await api.patch('/api/admin/lot-images/order', { parcelId: p.id, order: ids });
+    if (r.ok) { void refreshParcel(p.id); refreshParcels(); await loadImages(); await loadHistory(); }
+    else toast(r.error ?? 'เรียงรูปไม่สำเร็จ', 'warn');
+  };
+
   const saveRoundPrice = (roundId: number, value: number | null): Promise<boolean> =>
     saveField({ field: 'round_price', roundId, value }, 'บันทึกราคานัดแล้ว');
 
@@ -225,10 +285,18 @@ export function AdminEditor({ p }: { p: Parcel }) {
     <div className="mt-3 rounded-[10px] border border-line2 bg-panel2/40 p-2.5" data-selectable>
       <div className={`${detSub} !mt-0`}>แก้ไขข้อมูล (แอดมิน)</div>
 
+      {/* ที่ตั้ง — a searchable dropdown per level (native datalist: typing
+          filters, clicking picks, free typing adds a name). Options come from
+          the DB's own trio list, narrowed by what is already set above. */}
+      <datalist id="pd-prov">{[...new Set((trios ?? []).map(t => t.province_name))].filter(Boolean).map(n => <option key={n} value={n} />)}</datalist>
+      <datalist id="pd-amp">{(trios ?? []).filter(t => !addr.province_name.trim() || t.province_name === addr.province_name.trim()).map((t, i) => <option key={t.district_name + i} value={t.district_name} />)}</datalist>
+      <datalist id="pd-tab">{(trios ?? []).filter(t =>
+        (!addr.province_name.trim() || t.province_name === addr.province_name.trim())
+        && (!addr.district_name.trim() || t.district_name === addr.district_name.trim())).map((t, i) => <option key={t.tumbol + i} value={t.tumbol} />)}</datalist>
       <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
-        <input className={`${inp} w-[110px]`} value={addr.tumbol} onChange={e => setAddr({ ...addr, tumbol: e.target.value })} placeholder="ตำบล" />
-        <input className={`${inp} w-[110px]`} value={addr.district_name} onChange={e => setAddr({ ...addr, district_name: e.target.value })} placeholder="อำเภอ" />
-        <input className={`${inp} w-[120px]`} value={addr.province_name} onChange={e => setAddr({ ...addr, province_name: e.target.value })} placeholder="จังหวัด" />
+        <input className={`${inp} flex-1`} list="pd-tab" value={addr.tumbol} onChange={e => setAddr({ ...addr, tumbol: e.target.value })} placeholder="ตำบล — พิมพ์เพื่อค้น/เพิ่มใหม่" />
+        <input className={`${inp} flex-1`} list="pd-amp" value={addr.district_name} onChange={e => setAddr({ ...addr, district_name: e.target.value })} placeholder="อำเภอ — พิมพ์เพื่อค้น/เพิ่มใหม่" />
+        <input className={`${inp} flex-1`} list="pd-prov" value={addr.province_name} onChange={e => setAddr({ ...addr, province_name: e.target.value })} placeholder="จังหวัด — พิมพ์เพื่อค้น/เพิ่มใหม่" />
         <button className={btn} onClick={async () => {
           let any = false;
           for (const f of ['tumbol', 'district_name', 'province_name'] as const) {
@@ -243,38 +311,45 @@ export function AdminEditor({ p }: { p: Parcel }) {
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-        <input className={`${inp} w-[140px]`} value={deed} onChange={e => setDeed(e.target.value)} placeholder="เลขที่โฉนด" />
+        <input className={`${inp} flex-1`} value={deed} onChange={e => setDeed(e.target.value)} placeholder="เลขที่โฉนด" />
         <button className={btn} onClick={async () => {
           if (!deed.trim()) return;
           if (deed.trim() === (p.deedNo ?? '')) { toast('ไม่มีการเปลี่ยนแปลง'); return; }
           await saveField({ field: 'deed_number', value: deed.trim() }, 'บันทึกเลขโฉนดแล้ว');
         }}><Save size={13} /> โฉนด</button>
 
-        <input className={`${inp} w-[110px]`} value={size} onChange={e => setSize(e.target.value)} placeholder="0-1-61" {...useTipProps('ไร่-งาน-วา')} />
+        <input className={`${inp} flex-1`} value={size} onChange={e => setSize(e.target.value)} placeholder="0-1-61" {...useTipProps('ไร่-งาน-วา')} />
         <button className={btn} onClick={async () => {
           const t = parseTrio(size);
           if (!t) { toast('รูปแบบ: ไร่-งาน-วา เช่น 0-1-61', 'warn'); return; }
           await saveField({ field: 'size', lotId: p.lotId, rai: t[0], ngan: t[1], wa: t[2] }, 'บันทึกขนาดแล้ว');
         }}><Save size={13} /> ขนาด</button>
-
-        <input className={`${inp} w-[110px]`} value={price} onChange={e => setPrice(e.target.value)} placeholder="ราคา" inputMode="numeric" />
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+        {/* LED's pre-discount figure, comma-separated as printed. Starts the
+            ladder from the lot row, never from the discounted headline. */}
+        <input className={`${inp} flex-1`} value={price} onChange={e => setPrice(e.target.value)}
+          placeholder="ราคาเริ่มประมูล (เลขหลักพัน)" inputMode="numeric"
+          {...useTipProps('ราคาเริ่มประมูลของนัดแรก — ไม่ใช่ราคาที่ลดแล้ว')} />
         <button className={btn} onClick={async () => {
-          const v = Number(price.replace(/[^\d.]/g, ''));
+          const v = Number(price.replace(/[,\s]/g, ''));
           if (!Number.isFinite(v) || v < 0) { toast('ราคาไม่ถูกต้อง', 'warn'); return; }
-          await saveField({ field: 'start_price', lotId: p.lotId, value: v }, 'บันทึกราคาแล้ว');
+          await saveField({ field: 'start_price', lotId: p.lotId, value: v }, 'บันทึกราคาเริ่มประมูลแล้ว');
         }}><Save size={13} /> ราคา</button>
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-        <input className={`${inp} w-[150px]`} value={lat} onChange={e => setLat(e.target.value)} placeholder="lat" inputMode="decimal" />
-        <input className={`${inp} w-[150px]`} value={lng} onChange={e => setLng(e.target.value)} placeholder="lng" inputMode="decimal" />
+        <input className={`${inp} flex-1`} value={coord} onChange={e => setCoord(e.target.value)}
+          placeholder="lat, lng เช่น 16.41366435, 102.83346709" inputMode="decimal"
+          {...useTipProps('พิมพ์พิกัดรวมช่องเดียว หรือกด วาง แล้วคลิกบนแผนที่')} />
         <button className={`${btn} ${placing ? 'border-accent text-accent' : ''}`} onClick={placeOnMap}>
-          <Crosshair size={13} /> {placing ? 'คลิกบนแผนที่…' : 'วางบนแผนที่'}
+          <Crosshair size={13} /> {placing ? 'คลิก…' : 'วาง'}
         </button>
         <button className={btn} onClick={async () => {
-          const la = Number(lat), lo = Number(lng);
-          if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) { toast('พิกัดไม่ถูกต้อง', 'warn'); return; }
-          await saveField({ field: 'latlng', lat: la, lng: lo }, 'ย้ายจุดแล้ว');
+          const c = parseCoordPair(coord);
+          if (!c) { toast('พิกัดไม่ถูกต้อง — ต้องฝั่ง lat, lng ในประเทศไทย', 'warn'); return; }
+          setCoord(`${c[0]}, ${c[1]}`);
+          await saveField({ field: 'latlng', lat: c[0], lng: c[1] }, 'ย้ายจุดแล้ว');
         }}><Save size={13} /> พิกัด</button>
       </div>
 
@@ -288,50 +363,126 @@ export function AdminEditor({ p }: { p: Parcel }) {
         </div>
       )}
 
-      {/* Images: every lot row of the parcel — a downloaded file shows its
-          served path, an admin-added one its stored URL. */}
+      {/* Images: thumbnails in the order the carousel serves them, one group
+          per lot. Delete, re-upload (sha-named file into the image root), and
+          reorder — each writes its history row. */}
       <div className="mt-2">
         <div className="text-[10.5px] font-semibold uppercase tracking-[.1em] text-dim">รูปประกอบ</div>
-        {(imgs ?? []).map(im => (
-          <div key={im.id} className="mt-1 flex items-center gap-1.5 text-[10.5px] text-dim2">
-            <span className="truncate">{im.served}</span>
-            <button
-              {...useTipProps('ลบรูปนี้ (บันทึกในประวัติ)')}
-              className="ml-auto grid size-[22px] place-items-center rounded border border-line2 text-dim2 hover:border-[#E5484D] hover:text-[#FF8B7D]"
-              onClick={async () => {
-                const r = await api.del(`/api/admin/lot-images/${im.id}?parcelId=${p.id}`);
-                if (r.ok) { toast('ลบรูปแล้ว'); refreshParcels(); await loadImages(); }
-                else toast(r.error ?? 'ลบไม่สำเร็จ', 'warn');
-              }}
-            ><Trash2 size={12} /></button>
-          </div>
-        ))}
+        {imgs === null && <div className="mt-1 text-[10.5px] text-dim2">กำลังโหลด…</div>}
         {imgs != null && imgs.length === 0 && <div className="mt-1 text-[10.5px] text-dim2">ไม่มีรูป</div>}
+        {[...new Set((imgs ?? []).map(im => im.lotId))].map(lotId => {
+          const rowList = (imgs ?? []).filter(im => im.lotId === lotId);
+          const ids = rowList.map(im => im.id);
+          return (
+            <div key={lotId} className="mt-1.5">
+              <div className="text-[10px] text-dim2">lot {lotId} {rowList.length > 1 ? `(ลำดับกำหนดเอง)` : ''}</div>
+              {rowList.map((im, i) => (
+                <div key={im.id} className="mt-1 flex items-center gap-1.5 text-[10.5px] text-dim2">
+                  {/* The served value doubles as the preview; onError tells the
+                      truth about a dead link instead of a blank square. */}
+                  <img src={im.served} alt="" className="size-9 flex-none rounded-[6px] border border-line2 bg-panel2 object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} />
+                  <span className="min-w-0 flex-1 truncate text-dim">{im.served}</span>
+                  {rowList.length > 1 && (
+                    <span className="flex-none">
+                      <button {...useTipProps('เลื่อนขึ้น')} disabled={i === 0 || uploading}
+                        className="grid size-[22px] cursor-pointer place-items-center rounded border border-line2 text-dim2 hover:text-ink disabled:cursor-default disabled:opacity-30"
+                        onClick={() => { const swap = [...ids]; [swap[i - 1], swap[i]] = [swap[i], swap[i - 1]]; void saveImageOrder(swap); }}
+                      ><ChevronUp size={12} /></button>
+                      <button {...useTipProps('เลื่อนลง')} disabled={i === rowList.length - 1 || uploading}
+                        className="grid size-[22px] cursor-pointer place-items-center rounded border border-line2 text-dim2 hover:text-ink disabled:cursor-default disabled:opacity-30"
+                        onClick={() => { const swap = [...ids]; [swap[i], swap[i + 1]] = [swap[i + 1], swap[i]]; void saveImageOrder(swap); }}
+                      ><ChevronDown size={12} /></button>
+                    </span>
+                  )}
+                  <button
+                    {...useTipProps('ลบรูปนี้ (บันทึกในประวัติ)')}
+                    className="grid size-[22px] flex-none place-items-center rounded border border-line2 text-dim2 hover:border-[#E5484D] hover:text-[#FF8B7D]"
+                    onClick={async () => {
+                      const r = await api.del(`/api/admin/lot-images/${im.id}?parcelId=${p.id}`);
+                      if (r.ok) { toast('ลบรูปแล้ว'); void refreshParcel(p.id); refreshParcels(); await loadImages(); await loadHistory(); }
+                      else toast(r.error ?? 'ลบไม่สำเร็จ', 'warn');
+                    }}
+                  ><Trash2 size={12} /></button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
         <div className="mt-1.5 flex items-center gap-1.5">
-          <input className={`${inp} min-w-0 flex-1`} value={imgUrl} onChange={e => setImgUrl(e.target.value)} placeholder="https://… (URL รูปเพิ่ม)" />
+          <input className={`${inp} flex-1`} value={imgUrl} onChange={e => setImgUrl(e.target.value)} placeholder="https://… (เพิ่มด้วย URL)" />
           <button className={btn} onClick={async () => {
             if (!/^https?:\/\//i.test(imgUrl.trim())) { toast('URL ไม่ถูกต้อง', 'warn'); return; }
             const r = await api.post('/api/admin/lot-images', { lotId: p.lotId, parcelId: p.id, url: imgUrl.trim(), kind: 'photo' });
-            if (r.ok) { toast('เพิ่มรูปแล้ว'); setImgUrl(''); refreshParcels(); await loadImages(); }
+            if (r.ok) { toast('เพิ่มรูปแล้ว'); setImgUrl(''); void refreshParcel(p.id); refreshParcels(); await loadImages(); await loadHistory(); }
             else toast(r.error ?? 'เพิ่มไม่สำเร็จ', 'warn');
           }}><Plus size={13} /> เพิ่ม</button>
+          {/* Upload goes through raw octet-stream — the file is the body, the
+              ids ride the query, no multipart parser anywhere. */}
+          <button className={btn} disabled={uploading}
+            onClick={() => fileRef.current?.click()}>
+            {uploading ? <Upload size={13} className="animate-pulse" /> : <Upload size={13} />} อัปโหลด
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f || !p.lotId) return;
+            if (!f.type.startsWith('image/')) { toast('ไฟล์ต้องเป็นรูปภาพ', 'warn'); return; }
+            if (f.size > 20 * 1024 * 1024) { toast('ไฟล์ใหญ่กว่า 20MB', 'warn'); return; }
+            setUploading(true);
+            try {
+              const r = await fetch(`/api/admin/lot-images/upload?lotId=${p.lotId}&parcelId=${p.id}`,
+                { method: 'POST', headers: { 'Content-Type': f.type }, body: f });
+              const j = await r.json().catch(() => ({}));
+              if (!r.ok) toast(j.error ?? 'อัปโหลดไม่สำเร็จ', 'warn');
+              else toast('อัปโหลดแล้ว');
+            } catch { toast('อัปโหลดไม่สำเร็จ', 'warn'); }
+            setUploading(false);
+            void refreshParcel(p.id); refreshParcels();
+            await loadImages(); await loadHistory();
+          }} />
         </div>
       </div>
 
-      {/* History — the single accountable record of every admin write. */}
+      {/* History — the single accountable record of every admin write, and the
+          undo surface: the same PATCH that made the change can take the old
+          value back, and writes its own row doing so. */}
       <div className="mt-2.5">
         <div className="text-[10.5px] font-semibold uppercase tracking-[.1em] text-dim">ประวัติการแก้ไข</div>
         {edits === null && <div className="mt-1 text-[10.5px] text-dim2">กำลังโหลด…</div>}
         {edits != null && edits.length === 0 && <div className="mt-1 text-[10.5px] text-dim2">ยังไม่มีการแก้ไข</div>}
-        {edits != null && edits.map(e => (
-          <div key={e.id} className="mt-1 leading-[1.6] text-[10.5px] text-dim2">
-            {FIELD_LABEL[e.field_name] ?? e.field_name}{e.note ? ` [${e.note}]` : ''}
-            {' : '}<span className="text-dim">{e.old_value ?? '—'}</span>
-            {' → '}<span className="text-ink">{e.new_value ?? '—'}</span>
-            {' ('}{thDT(e.edited_at)}{')'}
-            {e.editor ? ` · ${e.editor}` : ''}
-          </div>
-        ))}
+        {edits != null && edits.map(e => {
+          const req = revertRequest(e);
+          return (
+            <div key={e.id} className="mt-1 flex items-center gap-1.5 leading-[1.6] text-[10.5px] text-dim2">
+              <span className="min-w-0 flex-1">
+                {FIELD_LABEL[e.field_name] ?? e.field_name}{e.note ? ` [${e.note}]` : ''}
+                {' : '}<span className="text-dim">{e.old_value ?? '—'}</span>
+                {' → '}<span className="text-ink">{e.new_value ?? '—'}</span>
+                {' ('}{thDT(e.edited_at)}{')'}
+                {e.editor ? ` · ${e.editor}` : ''}
+              </span>
+              {req && (
+                <button
+                  {...useTipProps('กลับค่าก่อนแก้ไข (เขียนประวัติใหม่ให้ด้วย)')}
+                  className="grid size-[22px] flex-none place-items-center rounded border border-line2 text-dim2 hover:border-accent hover:text-accent"
+                  onClick={async () => {
+                    if ('restoreImage' in req) {
+                      const r = await api.post('/api/admin/lot-images', { lotId: e.lot_id, parcelId: p.id, url: req.restoreImage, kind: 'photo' });
+                      if (r.ok) { toast('กู้รูปกลับแล้ว'); void refreshParcel(p.id); refreshParcels(); await loadImages(); await loadHistory(); }
+                      else toast(r.error ?? 'กู้รูปไม่สำเร็จ', 'warn');
+                      return;
+                    }
+                    await saveField(req as Record<string, unknown>, 'กลับค่าก่อนหน้าแล้ว');
+                  }}
+                ><Undo2 size={12} /></button>
+              )}
+            </div>
+          );
+        })}
+        {edits != null && edits.some(x => x.field_name === 'round_price' && x.ref_id == null) && (
+          <div className="mt-1 text-[10px] text-dim2">แถวราคานัดเก่าบางรายการไม่มีข้อมูลอ้างนัด — ย้อนไม่ได้</div>
+        )}
       </div>
     </div>
   );

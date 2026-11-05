@@ -1,5 +1,9 @@
 # Working notes for this repo
 
+**Session start: read `docs/PROGRESS.md` first.** It is the project's live
+ledger — main goal, the test values that must pass, module status, next work,
+and the batch log. Update its numbers when you finish work, then commit.
+
 ## Branch policy
 
 **Push to `dev`. Do not push to `main`.**
@@ -49,7 +53,7 @@ After any structural edit:
 ```bash
 bun run typecheck   # must be 0
 bun run build       # must be 0
-cd test && bun test # 47 pass
+cd test && bun test # 151 pass
 ```
 
 `tsc` passing is not proof an edit landed correctly — a duplicated JSX block
@@ -70,7 +74,8 @@ being called done.
 
 ## Docs layout
 
-`docs/` holds `RELEASE_NOTES.md`, `BOT-PLAN.md` and `KNOWLEDGE.md`. `ROADMAP.md`,
+`docs/` holds `PROGRESS.md` (read first, always), `RELEASE_NOTES.md`,
+`BOT-PLAN.md` and `KNOWLEDGE.md`. `ROADMAP.md`,
 `README.md` and this file stay at the root. `AUDIT.md` is untracked user work —
 never sweep it into a commit.
 

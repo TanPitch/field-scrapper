@@ -122,10 +122,49 @@ if (mismatches.length) {
  * ---------------------------------------------------------------------- */
 const { priceHtmlFull, priceHtmlCompact, openPriceHtml } = await import("../src/lib/priceHtml.ts");
 const { nextRoundPrice: frontendNext } = await import("../src/lib/price.ts");
-/* FALLBACK_PARCELS, not the live collection: this block asserts behaviour over
-   the seeded fixtures, and pulling in data/liveData would also create a cycle
-   (liveData -> mockData) when `bun test` loads this file alongside the others. */
-const { FALLBACK_PARCELS: ALL_PARCELS } = await import("../src/data/mockData.ts");
+
+/* Real lots, Parcel-shaped, straight off the DB. The seeded fixture corpus this
+   block used to read is gone with the mockup data (liveData no longer ships a
+   fallback dataset), so the popup checks run on what the servers actually
+   hold — one parcel of each close state, each with its own rounds. */
+const statusShapes = [
+    ["sold", "l.close_reason IS NOT NULL AND l.close_code = 1"],
+    ["inactive", "l.close_reason IS NOT NULL AND l.close_code <> 1"],
+    ["sale", "l.close_reason IS NULL AND EXISTS (SELECT 1 FROM auction_rounds r2 WHERE r2.lot_id = l.id AND r2.discount_pct > 0)"],
+    ["sale", "l.close_reason IS NULL AND NOT EXISTS (SELECT 1 FROM auction_rounds r2 WHERE r2.lot_id = l.id AND r2.discount_pct > 0)"],
+];
+const popParcels = [];
+for (const [status, cond] of statusShapes) {
+    const { rows } = await client.query(`
+        SELECT l.id, l.start_price, l.published_date,
+               (SELECT json_agg(json_build_object(
+                           'date', r.round_date, 'status_code', r.status_code,
+                           'price', r.price, 'discount_pct', r.discount_pct,
+                           'sold_price', r.sold_price)
+                           ORDER BY r.round_date NULLS LAST, r.id)
+                   FROM auction_rounds r WHERE r.lot_id = l.id) AS rounds
+          FROM auction_lots l
+         WHERE l.start_price IS NOT NULL AND l.start_price > 0 AND ${cond}
+         ORDER BY l.id DESC LIMIT 1`);
+    for (const row of rows) {
+        const announce = Date.now();
+        const start = Number(row.start_price);
+        const hist = [];
+        for (const r of row.rounds ?? []) {
+            if (r.price != null) hist.push({ d: r.date ? new Date(r.date).getTime() : announce, v: Number(r.price) });
+        }
+        hist.unshift({ d: announce, v: start });
+        popParcels.push({
+            id: row.id, status, price: hist[hist.length - 1].v, hist, announce,
+            rounds: (row.rounds ?? []).map((r) => ({
+                date: r.date ? new Date(r.date).getTime() : null,
+                status: "", statusCode: r.status_code, price: r.price != null ? Number(r.price) : null,
+                discountPct: r.discount_pct, soldPrice: r.sold_price != null ? Number(r.sold_price) : null,
+            })),
+        });
+    }
+}
+const ALL_PARCELS = popParcels;
 
 let popChecked = 0;
 const popProblems = [];
@@ -174,7 +213,7 @@ for (const p of ALL_PARCELS) {
   popChecked++;
 }
 
-console.log(`\npopup markup checked on ${popChecked} fixture parcels`);
+console.log(`\npopup markup checked on ${popChecked} DB parcels`);
 if (popProblems.length) {
   console.error(`${popProblems.length} POPUP PROBLEM(S):`);
   for (const m of popProblems.slice(0, 15)) console.error(`  ${m}`);

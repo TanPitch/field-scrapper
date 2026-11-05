@@ -1,15 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { computeRows, dataPass, emptyReason, type RowInputs, type RowSets } from '../lib/visibility';
 import { ALL_PARCELS, loadParcels, PARCEL_BY_ID, subscribeParcels, getDataOrigin, type DataSourceKind } from '../data/liveData';
 import { framePoints, getMap } from '../map/mapRef';
 import { deselect } from '../store/actions';
-import { useApp } from '../store/useApp';
+import { toast, useApp } from '../store/useApp';
 
 export interface ParcelsValue extends RowSets {
   emptyWhy: string;
   /** Where the rows on screen came from, so the UI can say so out loud. */
   origin: DataSourceKind;
-  /** Non-null when the API could not be reached and fixtures are standing in. */
+  /** Non-null when the API could not be reached — the map is empty because of
+   *  this, not because there is no land (fixtures no longer stand in). */
   loadError: string | null;
   loading: boolean;
 }
@@ -20,11 +21,10 @@ const ParcelsContext = createContext<ParcelsValue | null>(null);
  * Single source of truth for "which parcels are visible / in the table".
  * Replaces the old imperative applyVisible() pipeline: it is a pure memo over store state.
  *
- * This is also where the real data arrives. fetchParcels() replaces the seeded
- * fixtures with what the scrapers collected, and `version` is what forces the
- * memo to recompute afterwards — without it the first (fixture) computation would
- * be cached and the real rows would never appear, which is exactly the bug that
- * made the app look empty.
+ * This is also where the real data arrives. The seeded mockups are gone —
+ * loadParcels() is the only source on screen, and `version` is what forces the
+ * memo to recompute afterwards. The map shows a loading state instead of any
+ * stand-in rows.
  */
 export function ParcelsProvider({ children, provinceCode }: { children: ReactNode; provinceCode?: number }) {
   const filters = useApp(s => s.filters);
@@ -43,6 +43,7 @@ export function ParcelsProvider({ children, provinceCode }: { children: ReactNod
   const [origin, setOrigin] = useState<DataSourceKind>(getDataOrigin);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useRef(true);
 
   useEffect(() => subscribeParcels(() => setVersion((v) => v + 1)), []);
 
@@ -70,6 +71,15 @@ export function ParcelsProvider({ children, provinceCode }: { children: ReactNod
       setOrigin(r.kind);
       setLoadError(r.error);
       setLoading(false);
+      /* The popup alert the user asked for at boot: one toast that says the
+         fetch is over and what it brought, only on the first load of this
+         provider — the save-refresh path toasts nothing. */
+      if (firstLoad.current) {
+        firstLoad.current = false;
+        toast(r.kind === 'error'
+          ? 'โหลดข้อมูลจากเซิร์ฟเวอร์ไม่สำเร็จ — แผนที่จะว่างจนกว่าจะต่อได้'
+          : `โหลดข้อมูลแล้ว ${r.count} แปลง` + (r.hidden ? ` (ซ่อน ${r.hidden} แปลงที่ยังไม่จับคู่พิกัด)` : ''), r.kind === 'error' ? 'warn' : 'ok');
+      }
 
       /* Frame whatever just arrived.
        *

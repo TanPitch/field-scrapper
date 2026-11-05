@@ -555,23 +555,25 @@ export function DetailView() {
           </span>
         )}
 
-        {/* Zoom straight back onto the parcel from wherever the user has panned
-            the map while reading the panel. Centered on the parcel's own
-            coordinate — a subdistrict-fallback dot now, but that is the dot the
-            map draws for it. */}
-        <button
-          type="button"
-          {...useTipProps('ซูมแผนที่ไปยังแปลงนี้')}
-          onClick={() => {
-            const map = getMap();
-            if (map && p.lat && p.lng) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
-          }}
-          className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 px-[8px] py-0.5 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
-        >
-          <Crosshair size={12} /> ซูม
-        </button>
+        <div className="ml-auto flex gap-1">
+          {/* Zoom straight back onto the parcel from wherever the user has panned
+              the map while reading the panel. Centered on the parcel's own
+              coordinate — a subdistrict-fallback dot now, but that is the dot the
+              map draws for it. */}
+          <button
+            type="button"
+            {...useTipProps('ซูมแผนที่ไปยังแปลงนี้')}
+            onClick={() => {
+              const map = getMap();
+              if (map && p.lat && p.lng) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
+            }}
+            className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+          >
+            <Crosshair size={12} />
+          </button>
 
-        <ReportButton p={p} />
+          <ReportButton p={p} />
+        </div>
 
         {units.length > 1 && (
           <span

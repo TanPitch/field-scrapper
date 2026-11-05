@@ -39,8 +39,8 @@ export interface PriceEvent { idx: number; label: string; color: string; ink: st
  * is "not yet scheduled", not "scheduled with no date shown", and the UI omits
  * those entirely rather than printing a blank row.
  *
- * `statusCode` is LED's raw code. It is optional so existing fixtures keep
- * working, but the price ladder cannot be computed without it: only code 3
+ * `statusCode` is LED's raw code. It is optional, but the price ladder cannot
+ * be computed without it: only code 3
  * (งดขายไม่มีผู้สู้ราคา) deepens the discount. See lib/price.ts.
  */
 export interface SellRound {
@@ -50,7 +50,7 @@ export interface SellRound {
   /** Round price from the backend; authoritative when present. */
   price?: number | null;
   /** The round's auction_rounds id — the admin editor keys a hand price fix
-   *  on it. Optional so fixtures without it stay valid. */
+   *  on it. Optional because rows served by older servers lack it. */
   roundId?: number | null;
   /** Discount in force for this round, in percent. */
   discountPct?: number | null;
@@ -103,10 +103,15 @@ export interface Parcel {
   sizeUnit?: string | null;
   /* LED's printed ไร่-งาน-วา raw trio. Only the computed `wah` total used to
      ride the payload, so the admin editor could pre-fill a total but not the
-     parts an LED size edit writes back. Optional: fixtures predate them. */
+     parts an LED size edit writes back. Optional because old payloads omit
+     them. */
   sizeRai?: number | null;
   sizeNgan?: number | null;
   sizeWa?: number | null;
+  /** The lot's opening price (auction_lots.start_price) — LED's pre-discount
+     figure, the one an admin edit seeds from. p.price is the headline and can
+     be a discounted rung. Undefined on servers predating the field. */
+  startPrice?: number | null;
   price: number;
   /** Null for the same reason as `wah` — price per ตร.วา over no ตร.วา is not 0. */
   perWah: number | null;
@@ -135,10 +140,9 @@ export interface Parcel {
   tdVerdict?: string | null;
   dolVerdict?: string | null;
   /**
-   * Stored image paths, served by the API at /img/land/<name>.
-   *
-   * Undefined means the dataset has not supplied paths (the seeded fixtures do
-   * not have any); an empty array means the lot genuinely has none. The
+   * The images the server already resolved: '/img/land/<name>' for downloaded
+   * files, the stored link for admin-added rows. Undefined means the dataset
+   * has not supplied any; an empty array means the lot genuinely has none. The
    * carousel treats those differently, so one is not silently rendered as the
    * other.
    */
@@ -180,7 +184,8 @@ export interface Parcel {
 
   /* ---------- provenance-aware enrichment ----------
      Populated from the backend. Every one of these is optional because the
-     frontend also runs against fixtures that predate the enrichment, and a
+     frontend also runs against older servers and test stubs that predate the
+     enrichment, and a
      missing value must render as "unknown", never as a fabricated zero. */
   geoPrecision?: GeoPrecision | null;
   /** กรมธนารักย์ exact assessment for this parcel. */

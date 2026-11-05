@@ -3,26 +3,30 @@ import { useParcels, useRefreshParcels } from '../../hooks/useParcels';
 import { useTipProps } from '../ui/Tip';
 
 /**
- * Says out loud which dataset is on screen.
- *
- * This exists because the app can show either real scraped parcels or seeded
- * fixtures, and the two are indistinguishable without it. A user looking for
- * Khon Kaen land who cannot find any deserves to be told "the API is not
- * answering, these are samples" rather than concluding the scraper is broken —
- * or worse, believing the samples are real.
- *
- * Shown when there IS a problem. Once live data arrives it disappears, because a
- * permanent green banner is noise.
+ * Says out loud which dataset is on screen, and says it honestly while the
+ * first fetch is in flight. The seeded mockup set was removed, so while the
+ * server has not answered the map is empty — this banner is what keeps that
+ * from reading as "no land exists". An error stays until a reload succeeds.
  */
 export function DataSourceBanner() {
   const { origin, loadError, loading } = useParcels();
   const count = useParcels().vis.length;
   const refresh = useRefreshParcels();
 
+  /* Loading: the spinner line replaces the data bar. Saying "กำลังโหลด" here
+     is the popup alert the user asked for without a modal blocking the map. */
+  if (loading && origin === 'loading') {
+    return (
+      <div className="flex items-center gap-2 border-b border-line bg-panel px-3 py-1.5 text-[11px] text-dim">
+        <RefreshCw size={11} className="animate-spin" />
+        กำลังโหลดข้อมูลแปลงจากเซิร์ฟเวอร์…
+      </div>
+    );
+  }
+
   /* Loaded successfully: a slim confirmation rather than nothing. When the map
-     "works with fixtures but not with real data", the first question is always
-     "which set am I looking at, and how big is it" — and that was previously
-     unanswerable from the UI. */
+     "works at home but not elsewhere", the first question is always
+     "which set am I looking at, and how big is it". */
   if (origin === 'api' && !loadError) {
     return (
       <div className="flex items-center gap-2 border-b border-line bg-panel px-3 py-1 text-[10.5px] text-dim2">
@@ -41,25 +45,15 @@ export function DataSourceBanner() {
     );
   }
 
-  if (loading && origin === 'fixtures') {
-    return (
-      <div className="flex items-center gap-2 border-b border-line bg-panel px-3 py-1.5 text-[11px] text-dim">
-        <RefreshCw size={11} className="animate-spin" />
-        กำลังโหลดข้อมูลจริงจากเซิร์ฟเวอร์…
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex items-center gap-2 border-b border-[#7A5B1F] bg-[#241C0C] px-3 py-1.5 text-[11px] text-[#FFD93D]"
-      {...useTipProps(loadError ?? 'fallback')}
+      {...useTipProps(loadError ?? undefined)}
     >
       <AlertTriangle size={12} className="flex-none" />
       <span className="min-w-0 flex-1 truncate">
-        <b>กำลังแสดงข้อมูลตัวอย่าง</b>
-        {loadError ? ` ไม่ได้เชื่อมต่อเซิร์ฟเวอร์: ${loadError}` : ''}
-        <span className="ml-1 text-[#FFD93D]/80">— ข้อมูลจริงจะโหลดเมื่อรัน <b className="font-display">bun server/index.js</b></span>
+        <b>โหลดข้อมูลไม่ได้</b>{loadError ? ` — ${loadError}` : ' — เซิร์ฟเวอร์ยังไม่ตอบกลับ'}
+        <span className="ml-1 text-[#FFD93D]/80">แผนที่จะว่างจนกว่าข้อมูลจริงมาถึง เริ่มเซิร์ฟเวอร์ด้วย <b className="font-display">bun server/index.js</b></span>
       </span>
       <span className="flex-none">
         <button
@@ -76,14 +70,14 @@ export function DataSourceBanner() {
 /** Compact positive confirmation, for the settings pane. Real data, and how much. */
 export function DataSourceBadge() {
   const { origin, loading } = useParcels();
-  if (loading && origin === 'fixtures') return <span className="text-dim2">กำลังตรวจสอบ…</span>;
+  if (loading && origin === 'loading') return <span className="text-dim2">กำลังโหลด…</span>;
   return origin === 'api' ? (
     <span className="inline-flex items-center gap-1 text-[#6BD07C]">
       <Database size={11} />ข้อมูลจริงจากเซิร์ฟเวอร์
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 text-[#FFD93D]">
-      <AlertTriangle size={11} />ข้อมูลตัวอย่าง (ต่อเซิร์ฟเวอร์ไม่ได้)
+      <AlertTriangle size={11} />โหลดข้อมูลไม่ได้ (ต่อเซิร์ฟเวอร์ไม่ได้)
     </span>
   );
 }

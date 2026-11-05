@@ -318,7 +318,7 @@ src/
   types/index.ts            shared interfaces
   data/
     constants.ts            labels, defaults, column defs, basemaps
-    mockData.ts             seeded parcels (the app still reads these, not the API)
+    mockData.ts is gone — liveData.ts is the only parcel source
     thaiGeo.ts              province/district/subdistrict lookups
   lib/
     api.ts                    the only place the frontend talks to the server
@@ -369,8 +369,10 @@ test/                       scrapers, enrichment, and their tests
 - Tooltips come from tippy.js via one delegated instance bound to `document.body`.
   Attach one with `useTipProps('…')` or `useClipTip('…')`. Both are hook-free, so
   they are safe inside `.map()`.
-- `src/data/mockData.ts` now exports `FALLBACK_PARCELS`. Import `ALL_PARCELS` and
-  `PARCEL_BY_ID` from `src/data/liveData.ts`, which is the live collection.
+- The seeded mockup dataset was removed. Import `ALL_PARCELS` and
+  `PARCEL_BY_ID` from `src/data/liveData.ts`, which is the live collection —
+  it starts empty and fills from `/api/parcels`; an unreachable server is an
+  honest empty map with the banner explaining it.
 - The splash hero (`public/splash-hero.jpg`) is an Unsplash photograph whose
   licence requires the credit line on the splash. Keep it if you replace the
   image.

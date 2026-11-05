@@ -586,3 +586,36 @@ not retried:
   `(province_code, district_dol_code, deed_number)` means the admin is
   editing the deed numbers of two rows of the same case; the route answers
   with Thai text and no write, and the editor can relabel afterwards.
+
+## 12. Image serving, the idx boundary, and the editor's new keys (2026-11-05)
+
+- **The server owns image serving shape; the client must not prepend again.**
+  The features payload returns each image as
+  `COALESCE('/img/land/' || local_path, url)` — a final URL, already the
+  right shape for bot-fetched files AND admin-added links. The client used to
+  prepend `/img/land/` a second time → `/img/land//img/land/…` → 404 → the
+  carousel showing alt text instead of pictures (518, 11737, 32581). Rule:
+  whatever the payload's `images` array holds IS what `<img src>` reads.
+- **idx is the listing boundary.** The ingest stamps the sale-order slots it
+  is still holding with `idx` 1..N; rows born of a report sheet ride
+  `idx null` even when dated and status-coded. Current-listing questions
+  (โดนยกเลิก? ไม่เคยออกตลาดจริง?) count only idx-marked rows — 32581's six
+  2025 report rows (code 10) used to out-vote its present listing's own code
+  26 งดขาย. A lot with NO idx-marked rows is a listing that exists only as
+  report rows (9638-of-2025): the fallback uses all dated rows, which is why
+  batch-2's `neverOnMarket` still holds there.
+- **(lot_id, url) is the image key now.** The bot's one-photo-one-survey
+  shape died with the editor's multi-image rows. Uploaded files are
+  sha-named with `url` null — Postgres treats NULLs as distinct, so N
+  uploads never collide; re-fetching the same external link updates in
+  place. Sort order rides `sort_no NULLS LAST, id` wherever images are
+  listed.
+- **The place dict IS the parcel table.**
+  `SELECT DISTINCT tumbol, district_name, province_name FROM parcels` — a
+  typed-in name enters the dict the moment its parcel is saved. No second
+  table, nothing to sync, self-healing.
+- **Revert is the same handler with the opposite value.** The history row
+  must carry enough (old_value, lot_id for lot-scoped fields, ref_id for
+  round_price) for the client to rebuild the PATCH; the revert inserts its
+  own audit line. Shapes with nothing restore-able get no button — the
+  missing button is the contract, not an error.

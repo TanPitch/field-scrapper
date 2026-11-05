@@ -698,7 +698,7 @@ export async function ingest(lots, { client, imageStore = null, imageBudget = 30
                 await client.query(
                     `INSERT INTO lot_images (lot_id, kind, url, local_path)
                      VALUES ($1,$2,$3,$4)
-                     ON CONFLICT (lot_id, kind) DO UPDATE SET local_path = EXCLUDED.local_path`,
+                     ON CONFLICT (lot_id, url) DO UPDATE SET local_path = EXCLUDED.local_path`,
                     [l.lotId, im.kind, url, imageStore.localPathFor(url)],
                 );
             }

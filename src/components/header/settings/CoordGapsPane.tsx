@@ -7,6 +7,7 @@ import { btn, inp, setSec } from '../../ui/styles';
 import { useRefreshParcels } from '../../../hooks/useParcels';
 import { useTipProps } from '../../ui/Tip';
 import { getMap } from '../../../map/mapRef';
+import { parseCoordPair } from '../../../lib/coord';
 
 /* "เลือกบนแผนที่" has to close the drawer to expose the map — and closing
    the drawer unmounts this pane, taking every React state along. The picked
@@ -224,25 +225,9 @@ export function CoordGapsPane() {
   /* Save from the edit popup — same PATCH the inline editor used. Coordinates
      come back in whatever shape the clipboard held: "16.46796629,102.83515227"
      pasted into either box, two numbers split across the boxes, or a stray
-     comma/space between them. Every separator between two decimals is a split
-     point, so both boxes' content can merge into one lat,lng pair. */
-  const parsePop = (): [number, number] | null => {
-    const nums: number[] = [];
-    for (const f of [popLat, popLon]) {
-      for (const piece of f.split(/[,\s;|]+/)) {
-        if (!piece.trim()) continue;
-        const n = Number(piece);
-        if (!Number.isFinite(n)) continue;
-        nums.push(n);
-      }
-    }
-    /* Swapped or unit-text pastes fail loudly rather than placing land in the
-       Gulf of Thailand. */
-    if (nums.length < 2) return null;
-    const [lat, lon] = nums;
-    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-    return [lat, lon];
-  };
+     comma/space between them. lib/coord.ts owns that reading for every
+     coord input in the app. */
+  const parsePop = (): [number, number] | null => parseCoordPair(popLat, popLon);
 
   const savePop = async () => {
     if (!pop) return;

@@ -14,6 +14,7 @@ import express from "express";
 import cors from "cors";
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -357,9 +358,9 @@ app.get("/api/parcels", async (req, res) => {
                   photographs rather than placeholders. local_path is a bare
                   filename; the API serves it under /img/land/. Capped, because a
                   lot with many images would otherwise bloat every map request. */
-(SELECT json_agg(COALESCE('/img/land/' || x.local_path, x.url) ORDER BY x.id)
-                   FROM (SELECT id, local_path, url FROM lot_images
-                          WHERE lot_id = l.id ORDER BY id LIMIT 8) x) AS img_paths,
+(SELECT json_agg(COALESCE('/img/land/' || x.local_path, x.url) ORDER BY x.sort_no NULLS LAST, x.id)
+                   FROM (SELECT local_path, url, sort_no, id FROM lot_images
+                          WHERE lot_id = l.id ORDER BY sort_no NULLS LAST, id LIMIT 8) x) AS img_paths,
                /* How many lots sit behind this parcel. A condominium building
                   is one cadastral parcel sold as N separate units, so the
                   answer is the unit count and the marker needs to say so -
@@ -1007,7 +1008,7 @@ app.get("/api/admin/parcel-edits", requireAdmin, async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "bad parcelId" });
     const { rows } = await pool.query(`
         SELECT e.id, e.field_name, e.old_value, e.new_value, e.note,
-               e.edited_at, u.display_name AS editor, u.username AS editor_name,
+               e.ref_id, e.edited_at, u.display_name AS editor, u.username AS editor_name,
                e.lot_id
           FROM parcel_edits e
           JOIN app_users u ON u.id = e.edited_by
@@ -1148,17 +1149,30 @@ app.patch("/api/admin/parcel-fields/:id", requireAdmin, async (req, res) => {
             `UPDATE auction_rounds SET price = $2 WHERE id = $1`,
             [roundId, value]);
         const hist = await pool.query(
-            `INSERT INTO parcel_edits (parcel_id, field_name, old_value, new_value, note, edited_by)
-             VALUES ($1, 'round_price', $2, $3, $4, $5) RETURNING id, edited_at`,
+            `INSERT INTO parcel_edits (parcel_id, field_name, old_value, new_value, note, ref_id, edited_by)
+             VALUES ($1, 'round_price', $2, $3, $4, $5, $6) RETURNING id, edited_at`,
             [id, old, value,
              before.rows[0].round_date
                ? `นัดวันที่ ${new Date(before.rows[0].round_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' })}`
                : null,
-             req.userId]);
+             roundId, req.userId]);
         return res.json({ changed: true, id: hist.rows[0].id, editedAt: hist.rows[0].edited_at });
     }
 
     res.status(400).json({ error: `field not editable: ${field || "(none)"}` });
+});
+
+/* The place dict is the parcel table itself: every ตำบล ใน อำเภอ ใน จังหวัด
+ * a parcel row has ever carried, including whatever an admin has typed into
+ * one. A save adds a value by writing it to a parcel — no second table to
+ * keep in sync. */
+app.get("/api/admin/place-dict", requireAdmin, async (_req, res) => {
+    const { rows } = await pool.query(`
+        SELECT DISTINCT tumbol, district_name, province_name
+          FROM parcels
+         WHERE tumbol IS NOT NULL AND district_name IS NOT NULL AND province_name IS NOT NULL
+         ORDER BY 3, 2, 1`);
+    res.json({ trios: rows });
 });
 
 /* The editor's image section: every lot of this parcel with its served link
@@ -1168,11 +1182,12 @@ app.get("/api/admin/lot-images", requireAdmin, async (req, res) => {
     const id = Number(req.query?.parcelId);
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "bad parcelId" });
     const { rows } = await pool.query(`
-        SELECT i.id, i.lot_id AS "lotId", i.kind, i.local_path AS "localPath", i.url
+        SELECT i.id, i.lot_id AS "lotId", i.kind, i.local_path AS "localPath", i.url,
+               i.sort_no AS "sortNo"
           FROM lot_images i
           JOIN auction_lots l ON l.id = i.lot_id
          WHERE l.parcel_id = $1
-         ORDER BY i.lot_id, i.id`, [id]);
+         ORDER BY i.lot_id, i.sort_no NULLS LAST, i.id`, [id]);
     res.json({
         images: rows.map((r) => ({ ...r, served: r.localPath ? `/img/land/${r.localPath}` : r.url })),
     });
@@ -1182,7 +1197,8 @@ app.get("/api/admin/lot-images", requireAdmin, async (req, res) => {
 
 /* Admin adds an image by URL. The row stores the link (local_path stays
  * empty); the features COALESCE serves it directly, no download step. The
- * (lot_id, kind) key is one image per kind, so re-adding replaces. */
+ * (lot_id, url) key is replace-by-link, so re-adding the same link updates
+ * instead of duplicating. */
 app.post("/api/admin/lot-images", requireAdmin, async (req, res) => {
     const lotId = Number(req.body?.lotId);
     const parcelId = Number(req.body?.parcelId);
@@ -1195,9 +1211,11 @@ app.post("/api/admin/lot-images", requireAdmin, async (req, res) => {
         `SELECT id FROM auction_lots WHERE id = $1 AND parcel_id = $2`, [lotId, parcelId]);
     if (!owner.rows.length) return res.status(404).json({ error: "no such lot on this parcel" });
     const { rows } = await pool.query(
-        `INSERT INTO lot_images (lot_id, kind, url, fetched_at)
-         VALUES ($1, $2, $3, now())
-         ON CONFLICT (lot_id, kind) DO UPDATE SET url = EXCLUDED.url, local_path = NULL
+        `INSERT INTO lot_images (lot_id, kind, url, sort_no, fetched_at)
+         VALUES ($1, $2, $3, (SELECT COALESCE(max(sort_no), -1) + 1
+                                FROM lot_images WHERE lot_id = $1), now())
+         ON CONFLICT (lot_id, url) DO UPDATE SET kind = EXCLUDED.kind, local_path = NULL,
+                                                sort_no = EXCLUDED.sort_no
          RETURNING id`,
         [lotId, kind, url.slice(0, 2000)]);
     await pool.query(
@@ -1205,6 +1223,62 @@ app.post("/api/admin/lot-images", requireAdmin, async (req, res) => {
          VALUES ($1, $2, 'image_added', NULL, $3, $4, $5)`,
         [parcelId, lotId, url, `ชนิด: ${kind}`, req.userId]);
     res.status(201).json({ id: rows[0].id });
+});
+
+/* Admin uploads an image file. Express parses the BODY here, so the identity
+ * parameters ride the query string and the file arrives as the raw octet
+ * stream — no multipart parser, no new dependency. Stored under the sha the
+ * bot uses, so a re-upload of the same file dedupes itself. */
+app.post("/api/admin/lot-images/upload", requireAdmin,
+    express.raw({ type: () => true, limit: "20mb" }),
+    async (req, res) => {
+        const lotId = Number(req.query?.lotId);
+        const parcelId = Number(req.query?.parcelId);
+        if (!Number.isInteger(lotId) || !Number.isInteger(parcelId))
+            return res.status(400).json({ error: "lotId and parcelId required" });
+        const buffer = Buffer.isBuffer(req.body) ? req.body : null;
+        if (!buffer || !buffer.length) return res.status(400).json({ error: "empty upload" });
+        const mime = String(req.headers["content-type"] ?? "");
+        const ext = mime.startsWith("image/png") ? ".png" : mime.startsWith("image/webp") ? ".webp"
+            : mime.startsWith("image/gif") ? ".gif" : mime.startsWith("image/jpeg") ? ".jpg" : "";
+        if (!ext) return res.status(400).json({ error: `unsupported type: ${mime || "(none)"}` });
+        const owner = await pool.query(
+            `SELECT id FROM auction_lots WHERE id = $1 AND parcel_id = $2`, [lotId, parcelId]);
+        if (!owner.rows.length) return res.status(404).json({ error: "no such lot on this parcel" });
+        const sha = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 24);
+        const name = `${sha}${ext}`;
+        fs.writeFileSync(path.join(IMAGE_ROOT, name), buffer);
+        const { rows } = await pool.query(
+            `INSERT INTO lot_images (lot_id, kind, local_path, content_sha, bytes, sort_no, fetched_at)
+             VALUES ($1, 'photo', $2, $3, $4,
+                     (SELECT COALESCE(max(sort_no), -1) + 1
+                        FROM lot_images WHERE lot_id = $1), now())
+             RETURNING id`,
+            [lotId, name, sha, buffer.length]);
+        return res.status(201).json({ id: rows[0].id, served: `/img/land/${name}` });
+    });
+
+/* One save lives in history even for a reorder: the pane sends the lot's full
+ * image id list as it should read after the move, and the server stamps it. */
+app.patch("/api/admin/lot-images/order", requireAdmin, async (req, res) => {
+    const parcelId = Number(req.body?.parcelId);
+    const ids = Array.isArray(req.body?.order) ? req.body.order.map(Number).filter(Number.isInteger) : [];
+    if (!Number.isInteger(parcelId) || !ids.length)
+        return res.status(400).json({ error: "parcelId and order required" });
+    let lotId = null;
+    for (let i = 0; i < ids.length; i++) {
+        const o = await pool.query(
+            `UPDATE lot_images i SET sort_no = $3
+               FROM auction_lots l
+              WHERE i.id = $1 AND i.lot_id = l.id AND l.parcel_id = $2
+              RETURNING i.lot_id`, [ids[i], parcelId, i]);
+        if (o.rows.length) lotId = o.rows[0].lot_id;
+    }
+    await pool.query(
+        `INSERT INTO parcel_edits (parcel_id, lot_id, field_name, old_value, new_value, note, edited_by)
+         VALUES ($1, $2, 'image_order', NULL, $3, 'เรียงลำดับรูป', $4)`,
+        [parcelId, lotId, `${ids.length} ลำดับ`, req.userId]);
+    res.json({ ok: true });
 });
 
 /* Admin removes one. The history row keeps the link so "what was here" still
