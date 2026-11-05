@@ -34,3 +34,12 @@ test/NUL
 test/research/dol_api_bundle/
 test/research/led_api_bundle/
 test/research/led_to_td/
+test/research/led_auction_api/
+
+# probe scripts: session temp, run, delete (AGENTS.md convention)
+test/tmp_*.js
+test/probe*.js
+
+# hand RCA output / local audit notes — never publish
+AUDIT.md
+rca*_out*.txt
