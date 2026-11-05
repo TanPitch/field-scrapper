@@ -1,0 +1,20 @@
+﻿await import("node:module").then(() => {});
+import { writeFileSync } from "node:fs";
+const tis = (s) => Buffer.from([...s].map((ch) => {
+  const c = ch.codePointAt(0);
+  if (c >= 0x0e01 && c <= 0x0e3a) return c - 0x0e01 + 0xa1;
+  if (c >= 0x0e3f && c <= 0x0e5b) return c - 0x0e3f + 0xdf;
+  return c < 128 ? c : 0x3f;
+}));
+const pct = (b) => (/[\w.~-]/.test(String.fromCharCode(b)) && b < 128 ? String.fromCharCode(b) : "%" + b.toString(16).toUpperCase().padStart(2, "0"));
+const enc = (s) => [...tis(s)].map(pct).join("");
+const body = Buffer.from(Object.entries({ ALAW_SUIT_NO: "ผบ.2737", ALAW_SUIT_YEAR: "2562", person1: "", startdate: "", Action: " ค้นหา " }).map(([k, v]) => `${enc(k)}=${enc(v)}`).join("&"));
+const menu = await fetch("https://asset.led.go.th/report_new/reportm.asp", { headers: { "User-Agent": "Mozilla/5.0 Chrome/124.0" } });
+const cs = menu.headers.getSetCookie?.() ?? [];
+await menu.arrayBuffer();
+await new Promise((r) => setTimeout(r, 1500));
+const res = await fetch("https://asset.led.go.th/report_new/reports.asp", { method: "POST", headers: { "User-Agent": "Mozilla/5.0 Chrome/124.0", "Content-Type": "application/x-www-form-urlencoded", Cookie: cs.map((c) => c.split(";")[0]).join("; "), Referer: "https://asset.led.go.th/report_new/reports.asp" }, body });
+const buf = Buffer.from(await res.arrayBuffer());
+const txt = /utf-8/.test(buf.subarray(0, 4096).toString("latin1").toLowerCase()) ? new TextDecoder("utf-8").decode(buf) : new TextDecoder("windows-874").decode(buf);
+writeFileSync(new URL("./probe_case3_ผบ2737.html", import.meta.url), txt);
+console.log("HTTP", res.status, "bytes", txt.length);

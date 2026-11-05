@@ -1,0 +1,395 @@
+# Office code enumeration is defined first so YAML anchors resolve in order.
+# Codes are integrator-defined (the site publishes Thai labels only).
+x-office-codes: &office_codes
+  - KRABI
+  - BKK-BANK-1
+  - BKK-BANK-2
+  - BKK-BANK-3
+  - BKK-BANK-4
+  - BKK-BANK-5
+  - BKK-BANK-6
+  - BKK-REHAB
+  - KANCHANABURI
+  - KANCHANABURI-THONGPHAPHUM
+  - KALASIN
+  - KAMPHAENGPHET
+  - KHONKAEN
+  - KHONKAEN-CHUMPHAE
+  - KHONKAEN-PHON
+  - CHANTHABURI
+  - CHACHOENGSAO
+  - CHONBURI
+  - CHONBURI-PATTAYA
+  - CHAINAT
+  - CHAIYAPHUM
+  - CHAIYAPHUM-PHUKHIEO
+  - CHUMPHON
+  - CHUMPHON-LANGSUAN
+  - CHIANGRAI
+  - CHIANGRAI-THOENG
+  - CHIANGMAI
+  - CHIANGMAI-FANG
+  - CHIANGMAI-HOT
+  - TRANG
+  - TRAT
+  - TAK
+  - TAK-MAESOT
+  - NAKHONNAYOK
+  - NAKHONPATHOM
+  - NAKHONPHANOM
+  - NAKHONRATCHASIMA
+  - NAKHONRATCHASIMA-BUAYAI
+  - NAKHONRATCHASIMA-PHIMAI
+  - NAKHONRATCHASIMA-SIKHIU
+  - NAKHONSITHAMMARAT
+  - NAKHONSITHAMMARAT-THUNGSONG
+  - NAKHONSITHAMMARAT-PAKPHANANG
+  - NAKHONSAWAN
+  - NONTHABURI
+  - NARATHIWAT
+  - NAN
+  - BUENGKAN
+  - BURIRAM
+  - BURIRAM-NANGRONG
+  - PATHUMTHANI
+  - PATHUMTHANI-THANYABURI
+  - PRACHUAPKHIRIKHAN
+  - PRACHUAPKHIRIKHAN-HUAHIN
+  - PRACHINBURI
+  - PRACHINBURI-KABINBURI
+  - PATTANI
+  - PHRAE
+  - AYUTTHAYA
+  - PHAYAO
+  - PHAYAO-CHIANGKHAM
+  - PHANGNGA
+  - PHANGNGA-TAKUAPA
+  - PHATTHALUNG
+  - PHICHIT
+  - PHITSANULOK
+  - PHETCHABURI
+  - PHETCHABUN
+  - PHETCHABUN-WICHIANBURI
+  - PHETCHABUN-LOMSAK
+  - BKK-CIVIL-1
+  - BKK-CIVIL-2
+  - BKK-CIVIL-3
+  - BKK-CIVIL-4
+  - BKK-CIVIL-5
+  - BKK-CIVIL-6
+  - BKK-CIVIL-7
+  - PHUKET
+  - MAHASARAKHAM
+  - MUKDAHAN
+  - MAEHONGSON
+  - MAEHONGSON-MAESARIANG
+  - YASOTHON
+  - YALA
+  - YALA-BETONG
+  - ROIET
+  - RANONG
+  - RAYONG
+  - RATCHABURI
+  - LOPBURI
+  - LOPBURI-CHAIBADAN
+  - LAMPANG
+  - LAMPHUN
+  - LOEI
+  - SISAKET
+  - SISAKET-KANTHRALAK
+  - SAKONNAKHON
+  - SAKONNAKHON-SAWANGDANIN
+  - SONGKHLA
+  - SONGKHLA-NATHAWI
+  - SATUN
+  - SAMUTPRAKAN
+  - SAMUTSONGKHRAM
+  - SAMUTSAKHON
+  - SARABURI
+  - SINGBURI
+  - SUKHOTHAI
+  - SUKHOTHAI-SAWANKHALOK
+  - SUPHANBURI
+  - SURATTHANI
+  - SURATTHANI-KOHSAMUI
+  - SURATTHANI-CHAIYA
+  - SURATTHANI-VIANGSRA
+  - SURIN
+  - SURIN-RATTANABURI
+  - NONGKHAI
+  - NOONGBUALAMPHU
+  - ANGTHONG
+  - AMNATCHAROEN
+  - UDONTHANI
+  - UTTARADIT
+  - UTHAITHANI
+  - UBONRATCHATHANI
+  - UBONRATCHATHANI-DECHUDOM
+
+openapi: 3.0.3
+info:
+  title: LED Auction Results API (facade)
+  version: 1.0.0
+  description: >
+    OpenAPI facade for the Legal Execution Department (กรมบังคับคดี, LED)
+    auction results service at asset.led.go.th.
+
+    IMPORTANT - this is NOT an official LED API. The department does not
+    publish a REST/JSON interface for this service; the pages under /report/
+    are a classic ASP web application returning server-rendered HTML. This
+    specification models the legacy pages as a contract so that integrator
+    teams share one verifiable source of truth. Responses of the legacy
+    operations are text/html and must be parsed (see the report, Chapter 6);
+    the parsed-record operation describes what YOUR facade can expose once
+    the parser is verified.
+
+    Verification convention: every operation carries x-verification with
+    either "verified-page" (the page was reached and rendered) or
+    "inferred-contract" (parameter names pending the DevTools procedure,
+    report Section 3.3). Update x-verification and x-verified-on after each
+    verification session.
+
+    Legal: data on asset.led.go.th is declared by LED to be its property;
+    unauthorised use, reproduction, or adaptation is prohibited by the site
+    notice. Personal names of case parties fall under the Thai PDPA
+    (B.E. 2562). See the report, Chapter 8, before deploying anything.
+  contact:
+    name: Legal Execution Department (site administration)
+    email: itsupport@led.mail.go.th
+    url: https://asset.led.go.th/report/reports.asp
+  license:
+    name: Proprietary - LED site notice applies
+    url: https://asset.led.go.th/report/reports.asp
+servers:
+  - url: https://asset.led.go.th
+    description: LED auction services host
+tags:
+  - name: report-search
+    description: Auction sale results, per case (reports.asp family)
+  - name: report-browse
+    description: Auction sale results, by office and sale date
+  - name: catalogue-context
+    description: Companion asset catalogue (out of scope, for reference)
+  - name: parsed-facade
+    description: Structured records your own facade exposes after parsing
+paths:
+  /report/reports.asp:
+    get:
+      tags: [report-search]
+      summary: Per-case auction results search form (E1)
+      operationId: getCaseSearchForm
+      x-verification: verified-page
+      x-verified-on: "2026-10"
+      x-verify-procedure: report Section 3.3
+      description: >
+        HTML form. Visible fields: red case number (หมายเลขคดีแดง),
+        Buddhist-Era year dropdown (ปี พ.ศ.), plaintiff (โจทก์), sale date
+        (วันที่ขาย). Page-declared validation: case number AND year are
+        required together; plaintiff requires sale date or case number
+        alongside.
+      responses:
+        "200":
+          description: Search form (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+        "5XX":
+          description: Origin slowness / timeouts observed - retry with backoff
+  /report/report_result.asp:
+    post:
+      tags: [report-search]
+      summary: Per-case search submission (E2, INFERRED handler name)
+      operationId: searchByCase
+      x-verification: inferred-contract
+      x-verified-on: null
+      x-verify-procedure: report Section 3.3 (DevTools capture required)
+      description: >
+        PLACEHOLDER path and field names. Classic ASP applications either
+        post back to reports.asp or forward to a sibling results page;
+        capture the real target and names in DevTools before production.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/CaseSearchRequest"
+      responses:
+        "200":
+          description: Results page (HTML) or zero-result table - both valid
+          content:
+            text/html:
+              schema:
+                type: string
+  /report/report.asp:
+    get:
+      tags: [report-browse]
+      summary: Office-and-date results browser form (E3)
+      operationId: getOfficeDateForm
+      x-verification: verified-page
+      x-verified-on: "2026-10"
+      description: >
+        HTML form. Visible fields: enforcement office dropdown
+        (สำนักงานบังคับคดี/กอง, 100+ entries) and sale date (วันที่ขาย).
+        Submit button label: ดูผลการขาย.
+      responses:
+        "200":
+          description: Browse form (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+  /report_new/report.asp:
+    get:
+      tags: [report-browse]
+      summary: Newer office-and-date browser form (E4)
+      operationId: getOfficeDateFormNew
+      x-verification: verified-page
+      x-verified-on: "2026-10"
+      description: >
+        Newer template of E3 with the same office enumeration. LED
+        provincial offices already cite this path in their auction
+        announcements; prefer it for new integrations after verification.
+      responses:
+        "200":
+          description: Browse form (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+  /newbidreg/:
+    get:
+      tags: [catalogue-context]
+      summary: Auction asset catalogue (E5, out of scope)
+      operationId: getCatalogue
+      x-verification: verified-page
+      x-verified-on: "2026-10"
+      description: >
+        Searchable catalogue of assets advertised for auction. Its search
+        form prompts for a confirmation code (รหัสยืนยัน, captcha) - do not
+        attempt automated use against it.
+      responses:
+        "200":
+          description: Catalogue page (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+  /newbidreg/asset_open.asp:
+    get:
+      tags: [catalogue-context]
+      summary: Asset detail page pattern (E6, out of scope)
+      operationId: getAssetDetail
+      x-verification: verified-page
+      x-verified-on: "2026-10"
+      description: >
+        Detail page for one advertised asset; its URL pattern is cited
+        publicly by asset-management sites and provincial offices. Exact
+        query parameter name to be captured.
+      responses:
+        "200":
+          description: Asset detail page (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+  /facade/v1/auction-results:
+    get:
+      tags: [parsed-facade]
+      summary: Structured auction results (YOUR facade, post-verification)
+      operationId: listAuctionResults
+      description: >
+        Recommended structured endpoint for your own service layer once the
+        parser is verified. Returns AuctionResultRecord objects parsed from
+        the legacy pages. Implement with the guardrails of report Chapter 6.
+      parameters:
+        - name: case_no
+          in: query
+          schema:
+            type: string
+            example: "ย.1151/2545"
+        - name: year_be
+          in: query
+          schema:
+            type: integer
+            example: 2568
+        - name: office_code
+          in: query
+          schema:
+            type: string
+            enum: *office_codes
+        - name: sale_date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sale_date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Parsed auction result records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuctionResultRecord"
+components:
+  schemas:
+    CaseSearchRequest:
+      type: object
+      required: [case_no, year_be]
+      properties:
+        case_no:
+          type: string
+          description: Red case number; keep the original Thai prefix
+          example: "ย.1151/2545"
+        year_be:
+          type: integer
+          description: Buddhist Era year of the sale (CE = BE - 543)
+          example: 2568
+        plaintiff:
+          type: string
+          description: Optional; requires sale_date or case_no alongside
+        sale_date:
+          type: string
+          description: Optional; display format dd/mm/yyyy BE (verify)
+    AuctionResultRecord:
+      type: object
+      description: >
+        Expected shape - confirm columns during verification (report
+        Table 5.3).
+      properties:
+        case_no:
+          type: string
+          example: "ย.1151/2545"
+        office:
+          type: string
+        office_code:
+          type: string
+          enum: *office_codes
+        sale_date:
+          type: string
+          format: date
+        sale_round:
+          type: integer
+        asset_desc:
+          type: string
+        start_price:
+          type: number
+          description: THB
+        appraised_price:
+          type: number
+          description: THB; may be absent
+        outcome:
+          type: string
+          enum: [sold, not_sold, withdrawn, postponed, unknown]
+        bidder:
+          type: string
+          description: Personal data - PDPA constraints apply (report Chapter 8)
+        final_price:
+          type: number
+          description: THB when sold

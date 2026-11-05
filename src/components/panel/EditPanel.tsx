@@ -20,10 +20,11 @@ export function EditPanel({ small }: { small: boolean }) {
     <aside
       className={`fs-panel z-30 overflow-hidden border-l border-line bg-panel [grid-area:ep] transition-all duration-300 ease-panel ${
         small
-          ? `fixed bottom-0 right-0 top-[var(--header-h)] z-[48] w-[min(92vw,380px)] border-line2 shadow-[-16px_0_40px_rgba(0,0,0,.5)] transition-transform ${open ? 'translate-x-0' : 'translate-x-[105%]'}`
+          ? `fixed bottom-0 right-0 top-[var(--header-h)] z-[48] max-w-[60px] border-line2 shadow-[-16px_0_40px_rgba(0,0,0,.5)] transition-transform ${open ? 'translate-x-0' : 'translate-x-[105%]'}`
           : open ? '' : 'hidden'
       }`}
     >
+      {/* w-[min(92vw,380px)] */}
       <div className="flex h-full w-[300px] max-w-full flex-col">
         <div className="flex flex-none items-center gap-2 border-b border-line px-3.5 py-1.5">
           <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-semibold">แก้ไขข้อมูล (แอดมิน)</span>

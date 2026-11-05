@@ -1,4 +1,4 @@
-import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye, Wrench } from 'lucide-react';
+import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye, Wrench, MoreHorizontal } from 'lucide-react';
 import { getMap } from '../../map/mapRef';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
@@ -355,6 +355,8 @@ export function DetailView() {
   useEffect(() => subscribeParcels(() => setRev(v => v + 1)), []);
   useEffect(() => { if (id != null) void refreshParcel(id); }, [id]);
 
+  const [morebuttonsOpen, setMoreButtonsOpen] = useState(false);
+
   if (!p) {
     return (
       <div className="px-6 py-11 text-center text-[12.5px] leading-[1.8] text-dim">
@@ -557,38 +559,54 @@ export function DetailView() {
           </span>
         )}
 
-        <div className="ml-auto flex gap-1">
-          {/* Zoom straight back onto the parcel from wherever the user has panned
-              the map while reading the panel. Centered on the parcel's own
-              coordinate — a subdistrict-fallback dot now, but that is the dot the
-              map draws for it. */}
+        <div className="ml-auto relative inline-block">
           <button
-            type="button"
-            {...useTipProps('ซูมแผนที่ไปยังแปลงนี้')}
-            onClick={() => {
-              const map = getMap();
-              if (map && p.lat && p.lng) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
-            }}
-            className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+            className="ml-auto inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+            {...useTipProps('ซูม · รายงาน')}
+            onClick={e => { e.stopPropagation(); setMoreButtonsOpen(v => !v); }}
           >
-            <Crosshair size={12} />
+            <MoreHorizontal size={13} />
           </button>
 
-          <ReportButton p={p} />
-
-          {/* Admin editor opens in its own small panel next to this one (EditPanel,
-              grid area `ep`) — it follows this selection, so no extra state. */}
-          {isAdmin && (
-            <button
-              type="button"
-              {...useTipProps('แก้ไขข้อมูล (แอดมิน)')}
-              onClick={() => patchApp({ editOpen: !useApp.getState().editOpen })}
-              className={`inline-flex items-center gap-1 rounded border p-1 text-[10px] font-medium ${
-                editOpen ? 'border-accent bg-accent-dim text-accent' : 'border-line2 bg-panel2 text-dim hover:border-line3 hover:text-ink'
-              }`}
+          {morebuttonsOpen && (
+            <div
+              className="absolute right-0 top-full z-[99] mt-0.5 flex gap-0.5 rounded-[7px] border border-line2 bg-panel p-1 shadow-panel"
+              onClick={e => e.stopPropagation()}
             >
-              <Wrench size={12} />
-            </button>
+
+              {/* Zoom straight back onto the parcel from wherever the user has panned
+                  the map while reading the panel. Centered on the parcel's own
+                  coordinate — a subdistrict-fallback dot now, but that is the dot the
+                  map draws for it. */}
+              <button
+                type="button"
+                {...useTipProps('ซูมแผนที่ไปยังแปลงนี้')}
+                onClick={() => {
+                  const map = getMap();
+                  if (map && p.lat && p.lng) map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, duration: 850 });
+                }}
+                className="grid size-[26px] place-items-center rounded-[5px] text-dim hover:bg-panel2 hover:text-ink"
+              >
+                <Crosshair size={12} />
+              </button>
+
+              <ReportButton p={p} />
+
+              {/* Admin editor opens in its own small panel next to this one (EditPanel,
+                  grid area `ep`) — it follows this selection, so no extra state. */}
+              {isAdmin && (
+                <button
+                type="button"
+                {...useTipProps('แก้ไขข้อมูล (แอดมิน)')}
+                onClick={() => patchApp({ editOpen: !useApp.getState().editOpen })}
+                className={`grid size-[26px] place-items-center rounded-[5px] ${
+                  editOpen ? 'bg-accent-dim text-accent' : 'text-dim hover:bg-panel2 hover:text-ink'
+                }`}
+                >
+                  <Wrench size={12} />
+                </button>
+              )}
+            </div>
           )}
         </div>
 

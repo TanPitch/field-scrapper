@@ -35,7 +35,7 @@ export function ReportButton({ p }: { p: Parcel }) {
         type="button"
         {...useTipProps('แจ้งข้อมูลผิด')}
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
+        className="grid size-[26px] place-items-center rounded-[5px] text-dim hover:bg-panel2 hover:text-ink"
       >
         <Flag size={12} />
       </button>
@@ -297,16 +297,19 @@ export function AdminEditor({ p }: { p: Parcel }) {
       {/* ที่ตั้ง — a searchable dropdown per level (native datalist: typing
           filters, clicking picks, free typing adds a name). Options come from
           the DB's own trio list, narrowed by what is already set above. */}
-      <datalist id="pd-prov">{[...new Set((trios ?? []).map(t => t.province_name))].filter(Boolean).map(n => <option key={n} value={n} />)}</datalist>
-      <datalist id="pd-amp">{(trios ?? []).filter(t => !addr.province_name.trim() || t.province_name === addr.province_name.trim()).map((t, i) => <option key={t.district_name + i} value={t.district_name} />)}</datalist>
-      <datalist id="pd-tab">{(trios ?? []).filter(t =>
-        (!addr.province_name.trim() || t.province_name === addr.province_name.trim())
-        && (!addr.district_name.trim() || t.district_name === addr.district_name.trim())).map((t, i) => <option key={t.tumbol + i} value={t.tumbol} />)}</datalist>
       <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
+        <datalist id="pd-amp">{(trios ?? []).filter(t => !addr.province_name.trim() || t.province_name === addr.province_name.trim()).map((t, i) => <option key={t.district_name + i} value={t.district_name} />)}</datalist>
+        <datalist id="pd-tab">{(trios ?? []).filter(t =>
+          (!addr.province_name.trim() || t.province_name === addr.province_name.trim())
+          && (!addr.district_name.trim() || t.district_name === addr.district_name.trim())).map((t, i) => <option key={t.tumbol + i} value={t.tumbol} />)}</datalist>
         <input className={`${inp} flex-1`} list="pd-tab" value={addr.tumbol} onChange={e => setAddr({ ...addr, tumbol: e.target.value })} placeholder="ตำบล — พิมพ์เพื่อค้น/เพิ่มใหม่" />
         <input className={`${inp} flex-1`} list="pd-amp" value={addr.district_name} onChange={e => setAddr({ ...addr, district_name: e.target.value })} placeholder="อำเภอ — พิมพ์เพื่อค้น/เพิ่มใหม่" />
+      </div>
+
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+        <datalist id="pd-prov">{[...new Set((trios ?? []).map(t => t.province_name))].filter(Boolean).map(n => <option key={n} value={n} />)}</datalist>
         <input className={`${inp} flex-1`} list="pd-prov" value={addr.province_name} onChange={e => setAddr({ ...addr, province_name: e.target.value })} placeholder="จังหวัด — พิมพ์เพื่อค้น/เพิ่มใหม่" />
-        <button className={btn} onClick={async () => {
+        <button className={`${btn} w-[70px]`} onClick={async () => {
           let any = false;
           for (const f of ['tumbol', 'district_name', 'province_name'] as const) {
             const cur = f === 'tumbol' ? p.tambon : f === 'district_name' ? p.amp : p.province;
@@ -321,14 +324,16 @@ export function AdminEditor({ p }: { p: Parcel }) {
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
         <input className={`${inp} flex-1`} value={deed} onChange={e => setDeed(e.target.value)} placeholder="เลขที่โฉนด" />
-        <button className={btn} onClick={async () => {
+        <button className={`${btn} w-[70px]`} onClick={async () => {
           if (!deed.trim()) return;
           if (deed.trim() === (p.deedNo ?? '')) { toast('ไม่มีการเปลี่ยนแปลง'); return; }
           await saveField({ field: 'deed_number', value: deed.trim() }, 'บันทึกเลขโฉนดแล้ว');
         }}><Save size={13} /> โฉนด</button>
+      </div>
 
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
         <input className={`${inp} flex-1`} value={size} onChange={e => setSize(e.target.value)} placeholder="0-1-61" {...useTipProps('ไร่-งาน-วา')} />
-        <button className={btn} onClick={async () => {
+        <button className={`${btn} w-[70px]`} onClick={async () => {
           const t = parseTrio(size);
           if (!t) { toast('รูปแบบ: ไร่-งาน-วา เช่น 0-1-61', 'warn'); return; }
           await saveField({ field: 'size', lotId: p.lotId, rai: t[0], ngan: t[1], wa: t[2] }, 'บันทึกขนาดแล้ว');
@@ -340,7 +345,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
         <input className={`${inp} flex-1`} value={price} onChange={e => setPrice(commas(e.target.value))}
           placeholder="ราคาเริ่มประมูล (เลขหลักพัน)" inputMode="numeric"
           {...useTipProps('ราคาเริ่มประมูลของนัดแรก — ไม่ใช่ราคาที่ลดแล้ว')} />
-        <button className={btn} onClick={async () => {
+        <button className={`${btn} w-[70px]`} onClick={async () => {
           const v = Number(price.replace(/[,\s]/g, ''));
           if (!Number.isFinite(v) || v < 0) { toast('ราคาไม่ถูกต้อง', 'warn'); return; }
           await saveField({ field: 'start_price', lotId: p.lotId, value: v }, 'บันทึกราคาเริ่มประมูลแล้ว');
@@ -354,7 +359,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
         <button className={`${btn} ${placing ? 'border-accent text-accent' : ''}`} onClick={placeOnMap}>
           <Crosshair size={13} /> {placing ? 'คลิก…' : 'วาง'}
         </button>
-        <button className={btn} onClick={async () => {
+        <button className={`${btn} w-[70px]`} onClick={async () => {
           const c = parseCoordPair(coord);
           if (!c) { toast('พิกัดไม่ถูกต้อง — ต้องฝั่ง lat, lng ในประเทศไทย', 'warn'); return; }
           setCoord(`${c[0]}, ${c[1]}`);
@@ -366,6 +371,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
           the history names the date it belonged to. */}
       {p.rounds.some(r => r.roundId != null) && (
         <div className="mt-1.5 text-[11px]">
+          <span className="text-dim2">ราคาตามตารางนัด (เว้นว่าง = ล้างค่า)</span>
           {p.rounds.filter(r => r.roundId != null).map((r, i) => (
             <RoundPriceRow key={r.roundId} i={i} r={r} onSave={saveRoundPrice} />
           ))}
@@ -513,18 +519,17 @@ function RoundPriceRow({ i, r, onSave }: {
   const [v, setV] = useState(r.price != null ? String(r.price) : '');
   if (r.roundId == null) return null;
   return (
-    <div className="mt-1 flex items-center gap-1.5">
+    <div className="mt-1 flex items-center gap-1.5 hover:bg-panel2">
       <span className="w-[64px] flex-none text-dim2">
         {r.date != null ? new Date(r.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'ไม่มีวันที่'}
       </span>
-      <input className={`${inp} w-[100px]`} value={v} onChange={e => setV(commas(e.target.value))} inputMode="numeric" placeholder="—" />
+      <input className={`${inp} flex-1`} value={v} onChange={e => setV(commas(e.target.value))} inputMode="numeric" placeholder="—" />
       <button className={btn} onClick={async () => {
         const t = v.trim();
         const num = t === '' ? null : Number(t.replace(/[^\d.]/g, ''));
         if (t !== '' && (!Number.isFinite(num) || (num as number) < 0)) { toast('ราคาไม่ถูกต้อง', 'warn'); return; }
         await onSave(r.roundId as number, num as number | null);
       }}><Save size={12} /></button>
-      {i === 0 && <span className="text-dim2">ราคาตามตารางนัด (เว้นว่าง = ล้างค่า)</span>}
     </div>
   );
 }

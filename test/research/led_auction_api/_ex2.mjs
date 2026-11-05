@@ -1,0 +1,11 @@
+﻿import { readFileSync } from "node:fs";
+import { parseRows, beIso } from "./extract_rows.mjs";
+const rows = parseRows(readFileSync(new URL("./probe_case3_ผบ2545_2562.html", import.meta.url), "utf8"));
+console.log("total", rows.length);
+const courts = {};
+for (const r of rows) courts[r[1]] = (courts[r[1]] ?? 0) + 1;
+console.log("courts:", JSON.stringify(courts));
+const want = ["2345", "2346", "628"];
+const kk = rows.filter((r) => r[1].includes("ขอนแก่น") || want.some((d) => r[3] === d));
+console.log("kk/deed rows:", kk.length);
+for (const r of kk.slice(0, 15)) console.log(`  ${beIso(r[0])} | ${r[1]} | deed=${r[3]} | ประเมิน=${r[6]} | ผล=${r[7]} | ขายได้=${r[8]}`);
