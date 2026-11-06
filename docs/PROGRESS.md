@@ -12,8 +12,8 @@
 | หลักฐาน | คำสั่ง | ผลที่ต้องได้ | ค่าล่าสุด 2026-11-06 |
 |---|---|---|---|
 | โครงสร้าง | `bun run typecheck` | 0 error | ✓ 0 |
-| build | `bun run build` | 0 error | ✓ 0 (1,764 modules, bundle 4,262 kB) |
-| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 169 pass / 0 fail (4.7 วิ; รันชุดเดียววนซ้ำเคย 3-9 fail = NAS DB หลุด/timeout ไม่ใช่โค้ด, รันซ้ำให้เขียวก่อน commit) |
+| build | `bun run build` | 0 error | ✓ 0 (1,764 modules, bundle 4,263 kB) |
+| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 169 pass / 0 fail (รันชุดเดียววนซ้ำเคย 3-9 fail = NAS DB หลุด/timeout ไม่ใช่โค้ด, รันซ้ำให้เขียวก่อน commit) |
 | ladder เทียบ BE/FE | priceLadder.agreement | mismatch ยอมได้ = lot 9556 เท่านั้น | ✓ 117 rows เฉพาะ 9556 (daybot drift — เป็น RCA แยกต่างหาก) |
 | ผ่านจอ | ผู้ใช้เปิดหน้า + ลองฟีเจอร์จริง | ตามรายการท้ายไฟล์นี้ | รอผู้ใช้ |
 
@@ -40,15 +40,22 @@
 
 ## 3. งานถัดไป (เรียงตามที่ควรทำ)
 
-1. **รันแอปบน Docker** — pack พร้อมแล้ว 23 ต.ค. (`server/Dockerfile` + `docker/portainer-stack.yml`); อัปโหลดรูปจะย้ายไปเก็บ IMAGE_ROOT บน NAS ด้วย
-2. **RCA lot 9556 daybot drift** — ราคาที่ daybot เขียนไว้ (1077180) ไม่ตรง ladder คำนวณ (754026) ทุก round นับจาก 10; แยกต่างหาก ไม่ถือข้อบกพร่องของ commit อื่น
-3. **แตก chunk 4.25 MB** — ปรับ `manualChunks` เมื่องานหลักเสร็จ
-4. **cron ขั้น 3 — ServerPanel แสดงงาน bot**: scrape_runs (กำลังรัน/ล้มเหลว/สำเร็จ), dol_quota_ledger, จังหวัดสุดท้ายที่เก็บต่อรหัส — ข้อมูลมีแล้วที่ `/api/status` เดิม
-5. **Phase 5 rollout** — backfill 72 จังหวัดที่เหลือครั้งเดียวผ่าน scrapeDay `<code>` วันละ 2-3 จังหวัด แล้ว cron เก็บต่อเอง
+1. **รอผล cron จริงก่อน Phase 5** — Task `FieldScrapper-Bot1-TestOnce` กำลัง scrape จังหวัด 40 (1,757 lots, ~ชม.+) — log `test/out/bot1-schedule.log`; เสร็จแล้วลบ task + ตรวจ scrape_runs finished error_count=0 + รูปไหลลง lot_images จริง แล้วค่อย backfill 72 จังหวัดที่เหลือ
+2. **ตรวจจอ ServerPane โควตา DOL + ตารางจังหวัด 77** — โค้ดขึ้นแล้ว (68d6dbf); restart API :8787 แล้วเปิด ตั้งค่า → บอท
+3. **รันแอปบน Docker** — pack พร้อมแล้ว 23 ต.ค. (`server/Dockerfile` + `docker/portainer-stack.yml`); อัปโหลดรูปจะย้ายไปเก็บ IMAGE_ROOT บน NAS ด้วย
+4. **RCA lot 9556 daybot drift** — ราคาที่ daybot เขียนไว้ (1077180) ไม่ตรง ladder คำนวณ (754026) ทุก round นับจาก 10; แยกต่างหาก ไม่ถือข้อบกพร่องของ commit อื่น
+5. **แตก chunk 4.25 MB** — ปรับ `manualChunks` เมื่องานหลักเสร็จ
 
 ---
 
 ## 4. Batch log (ใหม่อยู่บน)
+
+- **2026-11-06 batch 7 — audit ข้อ 1+2 + cron ขั้น 3 (68d6dbf) + ปุ่ม more ปิดนอกจอ**
+  - **ข้อเท็จจริง 267581 hole**: แถวซ้ำ 5 ในตารางล่าง = DB ตรวจแล้วไม่มีแถวซ้ำจริง (dup by province+deed → แยกอำเภอถูกกฎหมาย; key จริง (province,district,deed) ซ้ำ 0); 1 ห้องชุด 267581 มี 2 สำนวน (2494/2561 + 57/2562 = ขายทบ) — ข้อมูลถูกต้องตาม LED
+  - **ปุ่ม more (ซูม · รายงาน)**: dropdown เดิมเปิดค้างถ้าไม่คลิกตัวมันเอง — `useOutsideClose([moreRef])` ห่อ button + กล่อง dropdown ใน ref เดียว, Esc ปิดด้วย
+  - **SECURITY.md + CI**: `.github/workflows/ci.yml` รัน typecheck + build ทุก push `dev` (`bun test` integration ต่อ NAS DB จาก runner ไม่ได้ ยกให้ local); secrets policy เขียนกติกา env / LAN credential ห้ามย้ายขึ้น cloud โดยไม่ rotate; ยืนยัน argon2id + DUMMY_HASH timing guard ใน `server/users.js` แล้วเขียนตามจริง
+  - **cron ขั้น 3 ออนจอ**: `/api/status` เพิ่ม `dol` (โควตาวันนี้ used/limit) + `provinces` (77 จังหวัด = active lots + วันเก็บล่าสุด, subquery ต่อจังหวัดไม่ซ้อน cross join); ServerPane โชว์แถว "โควตา DOL วันนี้" (แดงเมื่อเต็ม 20/20) + ตารางจังหวัด scroll — ใช้หน้านี้ตัดสิน Phase 5
+  - **bot ทดสอบจริง**: Task `FieldScrapper-Bot1-TestOnce` ONCE 10:18 → State Running (ผลล่าสุด 267009 = running); ไล่จังหวัด 40 (1,757 lots) แล้ว 97/27/25/83; log `test/out/bot1-schedule.log`
 
 - **2026-11-06 batch 6 — cron step 1+2 ครบ + RCA ingest 42P18**
   - **RCA ingest (บั๊กเก่าตั้งแต่ commit 033)**: `test/ingest.js` นัดไม่ระบุวันที่ INSERT `VALUES ($1,$2,NULL,$4,…$8)` — สลับหมายเลขพารามิเตอร์: NULL แทน round_date แล้วหนุ่ง $3 ตกบัฟเฟอร์ ทำให้ทุกแถว LED ที่มีนัดไม่มีวันที่ ingest ล้ม `42P18 could not determine data type of parameter $3` — แก้เป็น `$1..$7` (7 พารามิเตอร์ตรงกับอาร์เรย์จริง); สาขามีวันที่ (บรรทัด 482-485) ถูกอยู่แล้ว ห้ามแตะ
