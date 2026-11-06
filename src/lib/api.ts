@@ -225,6 +225,8 @@ export interface ApiStatus {
     failedRuns: number;
   };
   backlog: { td: { enriched: number; neverTried: number; unresolved: number; skipped: number } };
+  dol: { used: number; limit: number; ok: number; failed: number };
+  provinces: Array<{ code: number; name: string; active: number; lastScrape: string | null }>;
   recent: Array<{
     id: number; stage: string; province: string | null; provinceCode: number | null;
     startedAt: string | null; finishedAt: string | null; durationS: number;

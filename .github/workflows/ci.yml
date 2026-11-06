@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # The integration tests (bun test) need the LAN NAS Postgres
+    # (192.168.1.137) which GitHub runners cannot reach — they stay a local
+    # discipline: typecheck + build are the gates we can enforce from here.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run build

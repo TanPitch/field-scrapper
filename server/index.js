@@ -231,6 +231,27 @@ app.get("/api/status", async (_req, res) => {
                count(*) FILTER (WHERE td_eva_price IS NOT NULL)                 AS enriched
           FROM parcels`);
 
+    /* Today's DOL quota row — the coord bot's hard ceiling, and its calls so
+       far. No row (bot idle today) reads as 0 used. */
+    const { rows: dol } = await pool.query(`
+        SELECT used, limit_value, calls_ok, calls_failed
+          FROM dol_quota_ledger WHERE quota_date = CURRENT_DATE`);
+
+    /* Per-province rollout state, for scaling day: what each province holds
+       (active lots) and when bot 1 last finished a full scrape of it. The
+       lateral subqueries keep the join off a cross multiplication between
+       lots and runs — one aggregate per province, not per lot × run. */
+    const { rows: prov } = await pool.query(`
+        SELECT p.code, p.name,
+               (SELECT count(*)::int
+                  FROM parcels a JOIN auction_lots l ON l.parcel_id = a.id
+                 WHERE a.province_code = p.code AND l.status = 'active') AS active,
+               (SELECT max(finished_at)
+                  FROM scrape_runs r
+                 WHERE r.province_code = p.code AND r.stage = 'scrape')   AS last_scrape
+          FROM provinces p
+         ORDER BY p.name`);
+
     res.json({
         bot: {
             running: running.length,
@@ -248,6 +269,18 @@ app.get("/api/status", async (_req, res) => {
                 skipped: pend[0].skipped,
             },
         },
+        /* Today's DOL coord-resolve quota — the hard ceiling and its usage. */
+        dol: {
+            used: dol[0]?.used ?? 0,
+            limit: dol[0]?.limit_value ?? 20,
+            ok: dol[0]?.calls_ok ?? 0,
+            failed: dol[0]?.calls_failed ?? 0,
+        },
+        provinces: prov.map((r) => ({
+            code: r.code, name: r.name,
+            active: r.active,
+            lastScrape: isoDate(r.last_scrape),
+        })),
         recent: runs
             .filter((r) => r.finished_at)
             .slice(0, 40)

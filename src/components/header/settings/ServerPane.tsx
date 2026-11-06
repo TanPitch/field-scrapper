@@ -114,6 +114,12 @@ export function ServerPane() {
       {st && (
         <>
           <div className={frow}>
+            <span className={fl}>โควตา DOL วันนี้</span>
+            <b className="text-[11.5px] font-medium font-display" style={{ color: st.dol.used >= st.dol.limit ? '#E5484D' : undefined }}>
+              {st.dol.used} / {st.dol.limit}
+            </b>
+          </div>
+          <div className={frow}>
             <span className={fl}>งานทั้งหมดที่รัน</span>
             <b className="text-[11.5px] font-medium font-display">{st.bot.totalRuns}</b>
           </div>
@@ -176,6 +182,26 @@ export function ServerPane() {
           <div className={frow}>
             <span className={fl}>ยังไม่ได้ตรวจ</span>
             <b className="text-[11.5px] font-medium font-display text-dim2">{td.neverTried}</b>
+          </div>
+        </>
+      )}
+
+      {/* province rollout state — what each province holds and when bot 1
+          last finished scraping it. This is the pre-scale sheet: before
+          turning the cron loose on all 77, this list is the one to read. */}
+      {st && st.provinces.length > 0 && (
+        <>
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-[.1em] text-dim">จังหวัดที่ระบบมีข้อมูล</div>
+          <div className="max-h-[220px] overflow-y-auto pr-1">
+            {st.provinces.map(pr => (
+              <div key={pr.code} className="flex items-center gap-2 border-b border-line/40 py-1 text-[11px]">
+                <span className="flex-1 truncate">{pr.name}</span>
+                <span className="font-display text-[10.5px] text-dim2">{pr.active ? `${pr.active} แปลง` : 'ยังไม่มี'}</span>
+                <span {...useTipProps('เวลาที่บอท 1 เก็บจังหวัดนี้ล่าสุดแล้วสำเร็จ')} className="font-display text-[10.5px] text-dim2">
+                  {pr.lastScrape ?? '—'}
+                </span>
+              </div>
+            ))}
           </div>
         </>
       )}

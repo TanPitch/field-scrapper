@@ -2,6 +2,7 @@ import { Calendar, Crosshair, ImageOff, Link2, MapPin, ScanEye, Wrench, MoreHori
 import { getMap } from '../../map/mapRef';
 import { useTipProps } from '../ui/Tip';
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
+import { useOutsideClose } from '../../hooks/useOutsideClose';
 import { STATUS } from '../../data/constants';
 import { ALL_PARCELS, PARCEL_BY_ID, refreshParcel, subscribeParcels } from '../../data/liveData';
 import { useMoney } from '../../hooks/useMoney';
@@ -356,6 +357,9 @@ export function DetailView() {
   useEffect(() => { if (id != null) void refreshParcel(id); }, [id]);
 
   const [morebuttonsOpen, setMoreButtonsOpen] = useState(false);
+  /* trigger + the popup pill it opens — both stay open, anything else closes */
+  const moreRef = useRef<HTMLDivElement>(null);
+  useOutsideClose([moreRef], () => setMoreButtonsOpen(false), morebuttonsOpen);
 
   if (!p) {
     return (
@@ -559,7 +563,7 @@ export function DetailView() {
           </span>
         )}
 
-        <div className="ml-auto relative inline-block">
+        <div ref={moreRef} className="ml-auto relative inline-block">
           <button
             className="ml-auto inline-flex items-center gap-1 rounded border border-line2 bg-panel2 p-1 text-[10px] font-medium text-dim hover:border-line3 hover:text-ink"
             {...useTipProps('ซูม · รายงาน')}
@@ -613,7 +617,7 @@ export function DetailView() {
         {units.length > 1 && (
           <span
             {...useTipProps(`มีอีก ${units.length} ที่ซ้อนกัน`)}
-            className="ml-auto rounded border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
+            className="rounded border border-line2 bg-panel2 px-[9px] py-0.5 text-[10px] font-medium text-dim"
           >
             x {units.length}
           </span>
