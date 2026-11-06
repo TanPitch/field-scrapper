@@ -498,7 +498,7 @@ async function upsertRounds(client, lotId, lot) {
             await client.query(
                 `INSERT INTO auction_rounds
                    (lot_id, idx, round_date, status_code, status_label, is_held, discount_pct, price, scraped_at, source)
-                 VALUES ($1,$2,NULL,$4,$5,$6,$7,$8, now(), 'lists')
+                 VALUES ($1,$2,NULL,$3,$4,$5,$6,$7, now(), 'lists')
                  ON CONFLICT (lot_id, idx) WHERE round_date IS NULL AND idx IS NOT NULL DO UPDATE SET
                    status_code  = EXCLUDED.status_code,
                    status_label = EXCLUDED.status_label,

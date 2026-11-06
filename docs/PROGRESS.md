@@ -9,11 +9,11 @@
 
 ## 1. ค่าทดสอบที่ต้องผ่าน (test ledger)
 
-| หลักฐาน | คำสั่ง | ผลที่ต้องได้ | ค่าล่าสุด 2026-11-05 |
+| หลักฐาน | คำสั่ง | ผลที่ต้องได้ | ค่าล่าสุด 2026-11-06 |
 |---|---|---|---|
 | โครงสร้าง | `bun run typecheck` | 0 error | ✓ 0 |
-| build | `bun run build` | 0 error | ✓ 0 (1,763 modules, bundle 4,255 kB) |
-| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 151 pass (154 ทั้งหมด; 3 fail คือ NAS DB หลุดกลางทาง ไม่ใช่โค้ด) |
+| build | `bun run build` | 0 error | ✓ 0 (1,764 modules, bundle 4,262 kB) |
+| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 169 pass / 0 fail (4.7 วิ; รันชุดเดียววนซ้ำเคย 3-9 fail = NAS DB หลุด/timeout ไม่ใช่โค้ด, รันซ้ำให้เขียวก่อน commit) |
 | ladder เทียบ BE/FE | priceLadder.agreement | mismatch ยอมได้ = lot 9556 เท่านั้น | ✓ 117 rows เฉพาะ 9556 (daybot drift — เป็น RCA แยกต่างหาก) |
 | ผ่านจอ | ผู้ใช้เปิดหน้า + ลองฟีเจอร์จริง | ตามรายการท้ายไฟล์นี้ | รอผู้ใช้ |
 
@@ -43,10 +43,20 @@
 1. **รันแอปบน Docker** — pack พร้อมแล้ว 23 ต.ค. (`server/Dockerfile` + `docker/portainer-stack.yml`); อัปโหลดรูปจะย้ายไปเก็บ IMAGE_ROOT บน NAS ด้วย
 2. **RCA lot 9556 daybot drift** — ราคาที่ daybot เขียนไว้ (1077180) ไม่ตรง ladder คำนวณ (754026) ทุก round นับจาก 10; แยกต่างหาก ไม่ถือข้อบกพร่องของ commit อื่น
 3. **แตก chunk 4.25 MB** — ปรับ `manualChunks` เมื่องานหลักเสร็จ
+4. **cron ขั้น 3 — ServerPanel แสดงงาน bot**: scrape_runs (กำลังรัน/ล้มเหลว/สำเร็จ), dol_quota_ledger, จังหวัดสุดท้ายที่เก็บต่อรหัส — ข้อมูลมีแล้วที่ `/api/status` เดิม
+5. **Phase 5 rollout** — backfill 72 จังหวัดที่เหลือครั้งเดียวผ่าน scrapeDay `<code>` วันละ 2-3 จังหวัด แล้ว cron เก็บต่อเอง
 
 ---
 
 ## 4. Batch log (ใหม่อยู่บน)
+
+- **2026-11-06 batch 6 — cron step 1+2 ครบ + RCA ingest 42P18**
+  - **RCA ingest (บั๊กเก่าตั้งแต่ commit 033)**: `test/ingest.js` นัดไม่ระบุวันที่ INSERT `VALUES ($1,$2,NULL,$4,…$8)` — สลับหมายเลขพารามิเตอร์: NULL แทน round_date แล้วหนุ่ง $3 ตกบัฟเฟอร์ ทำให้ทุกแถว LED ที่มีนัดไม่มีวันที่ ingest ล้ม `42P18 could not determine data type of parameter $3` — แก้เป็น `$1..$7` (7 พารามิเตอร์ตรงกับอาร์เรย์จริง); สาขามีวันที่ (บรรทัด 482-485) ถูกอยู่แล้ว ห้ามแตะ
+  - **bot 1 สมอง cron**: `test/scrapeDay.js` — จังหวัดค้างเก็บเมื่อ active lot ใดมี `next_round_date <= current_date` (วันเก่าหายไป ยังเข้างานเอง = self-heal); กันรันซ้ำด้วย run_key `night:<วันที่ICT>:<code>` — แถว finished + error_count=0 = ข้าม; โหมด `--dry` ลิสต์ไม่ทำ, `97` = บังคับรหัสเดียว
+  - `test/run-bot1.cmd` พร้อม Task Scheduler: รองรับ `SCRAPEDAY_ARGS=--dry` ทดสอบ wiring โดยไม่ scrape จริง (dry ผ่านจอ: 5 จังหวัดค้างเก็บ 40/97/27/25/83); บทเรียน: **อย่าลอง wiring ตัวจริงผ่าน shell agent** — ปืนไป 5 จังหวัดที่ล่า 10 นาที/จังหวัด ตัวจบคือ timeout ครึ่งทางจังหวัด 40 (run_key ยังไม่ปิด = กลางคืนจะรันซ้ำทั้งจังหวัด)
+  - Task Scheduler แล้ว 2 งาน: `FieldScrapper-Bot1-LED` 06:00 ทุกวัน→run-bot1.cmd, `FieldScrapper-Bot2-Coords` ทุก 1 ชม. เริ่ม 08:00→run-bot2.cmd — ทั้งคู่ Ready
+  - `ParcelReport.tsx` กำจัด prop `i` ที่ TS6133 จับ (ตัดจาก RoundPriceRow + map); probe `tmp_schema.js`/`tmp_ing.js` + ล็อก RCA ลบแล้ว
+  - สถานะถัดไป: ขั้น 3 = ServerPane แสดง scrape_runs/dol_quota_ledger/last-scrape-per-province (ข้อมูลแค่ /api/status เดิม)
 
 - **2026-11-05 batch 5 — แผงแก้ไขแอดมินแยกต่างหาก + popup จุดค้นหา + RCA prefs (`k in SYNCED_PREFS`)**
   - editor ตัดออกจากท้าย DetailView → `<EditPanel>` (grid area `ep`, กว้าง 300) วางข้างแผงรายละเอียด; เปิด/ปิดด้วยปุ่มประแจในแถบ chip; ตาม selection อัตโนมัติ (อ่าน selectedId เดียวกัน); จอเล็ก = overlay ทับแผงขวา (z-48)

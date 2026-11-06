@@ -372,8 +372,8 @@ export function AdminEditor({ p }: { p: Parcel }) {
       {p.rounds.some(r => r.roundId != null) && (
         <div className="mt-1.5 text-[11px]">
           <span className="text-dim2">ราคาตามตารางนัด (เว้นว่าง = ล้างค่า)</span>
-          {p.rounds.filter(r => r.roundId != null).map((r, i) => (
-            <RoundPriceRow key={r.roundId} i={i} r={r} onSave={saveRoundPrice} />
+          {p.rounds.filter(r => r.roundId != null).map(r => (
+            <RoundPriceRow key={r.roundId} r={r} onSave={saveRoundPrice} />
           ))}
         </div>
       )}
@@ -511,8 +511,7 @@ export function AdminEditor({ p }: { p: Parcel }) {
   );
 }
 
-function RoundPriceRow({ i, r, onSave }: {
-  i: number;
+function RoundPriceRow({ r, onSave }: {
   r: SellRound;
   onSave: (roundId: number, value: number | null) => Promise<boolean>;
 }) {
