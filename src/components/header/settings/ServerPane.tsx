@@ -111,14 +111,19 @@ export function ServerPane() {
         </span>
       </div>
 
+      {/* st from an older server build may miss the newer fields (dol,
+          provinces) — render what exists, don't crash. ServerPane has no
+          error boundary above it except App's. */}
+      {st?.dol && (
+        <div className={frow}>
+          <span className={fl}>โควตา DOL วันนี้</span>
+          <b className="text-[11.5px] font-medium font-display" style={{ color: st.dol.used >= st.dol.limit ? '#E5484D' : undefined }}>
+            {st.dol.used} / {st.dol.limit}
+          </b>
+        </div>
+      )}
       {st && (
         <>
-          <div className={frow}>
-            <span className={fl}>โควตา DOL วันนี้</span>
-            <b className="text-[11.5px] font-medium font-display" style={{ color: st.dol.used >= st.dol.limit ? '#E5484D' : undefined }}>
-              {st.dol.used} / {st.dol.limit}
-            </b>
-          </div>
           <div className={frow}>
             <span className={fl}>งานทั้งหมดที่รัน</span>
             <b className="text-[11.5px] font-medium font-display">{st.bot.totalRuns}</b>
@@ -189,7 +194,7 @@ export function ServerPane() {
       {/* province rollout state — what each province holds and when bot 1
           last finished scraping it. This is the pre-scale sheet: before
           turning the cron loose on all 77, this list is the one to read. */}
-      {st && st.provinces.length > 0 && (
+      {st?.provinces?.length ? (
         <>
           <div className="mt-3 text-[10px] font-semibold uppercase tracking-[.1em] text-dim">จังหวัดที่ระบบมีข้อมูล</div>
           <div className="max-h-[220px] overflow-y-auto pr-1">
@@ -204,7 +209,7 @@ export function ServerPane() {
             ))}
           </div>
         </>
-      )}
+      ) : null}
 
       {/* recent history — one entry per pass: a date-stamped, single-line header
           (the headline a person scans for) over the wrapped detail. Capped at

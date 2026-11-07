@@ -97,6 +97,25 @@ describe("nextRoundPrice group share", () => {
     expect(next.discountPct).toBe(10);
   });
 
+  test("both siblings carrying the verdict still deepen once — -20% is a double count", () => {
+    /* 2026-11 data shift: LED now prints the same no-bid round on BOTH
+       siblings' tables (real DB: lots 10503/10504 of ผบ.754/2562 each hold
+       their own code-3 round 1/6). The merge may only lift rounds whose DATE
+       our own table is missing. */
+    const D = mkParcel(9105, "24653");
+    const E = mkParcel(9106, "161371");
+    D.remark = "ขายรวมกับที่ดินโฉนดเลขที่ 161371 ราคาประเมินรวม";
+    E.remark = "ขายรวมกับที่ดินโฉนดเลขที่ 24653";
+    D.rounds = [ar(ANN + 30 * DAY, "งดขายไม่มีผู้สู้ราคา", 0), ar(ANN + 75 * DAY, "รอประกาศ", null)];
+    E.rounds = [ar(ANN + 30 * DAY, "งดขายไม่มีผู้สู้ราคา", 0), ar(ANN + 75 * DAY, "รอประกาศ", null)];
+    ALL_PARCELS.push(D, E);
+    PARCEL_BY_ID.set(D.id, D);
+    PARCEL_BY_ID.set(E.id, E);
+    expect(nextRoundPrice(D, NOW)).not.toBeNull();
+    expect(nextRoundPrice(D, NOW)?.discountPct).toBe(10);
+    expect(nextRoundPrice(E, NOW)?.discountPct).toBe(10);
+  });
+
   test("pre-announce no-bid rows deepen nothing at all", () => {
     const h = mkParcel(9104, "222333", {
       rounds: [

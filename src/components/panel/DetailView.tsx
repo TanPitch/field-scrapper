@@ -788,6 +788,18 @@ export function DetailView() {
               }
               if (parts.length) sibTip = `ขายรวมกัน: ${parts.join(' · ')}`;
             }
+            /* The report sheet repeats the lists' verdict for the same date more
+               often than not — งดขายในนัดที่เหลือ on the lists and
+               งดขายในนัดที่เหลือ เปลี่ยนวิธีขาย on the report is ONE outcome.
+               Same canonical phrase → the report's qualifier merges into the
+               first line's hover tip and the ผลรายงาน line does not render
+               (the lists' word stays the displayed status). A DIFFERENT
+               phrase is news — ขายได้ against a งดขาย — and keeps its own
+               second line. */
+            const rl = r.ledLabel && r.ledLabel.trim() ? splitStatus(r.ledLabel) : null;
+            const sameVerdict = rl != null && rl.head === st.head;
+            const tipRest = sibTip ??
+              ([st.rest, sameVerdict ? rl!.rest : null].filter(Boolean).join(' · ') || null);
             return (
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t ${lab.sep && roundsGroupBorder ? 'border-dashed border-line2' : 'border-line'} text-[11.5px] ${cls}`}>
                 {/* Group on = A2/B1 per sale order; group off = the plain
@@ -813,18 +825,17 @@ export function DetailView() {
                       so it clips with its ellipsis instead. */}
                   <span
                     className="block whitespace-nowrap overflow-hidden text-ellipsis"
-                    {...((st.rest || sibTip) ? useTipProps(sibTip ?? st.rest!) : {})}
+                    {...(tipRest ? useTipProps(tipRest) : {})}
                   >
                     {st.head || shown}
                   </span>
-                  {/* The report sheet's own word for this round, below the
-                      lists label. Only shown when it adds something: same word
-                      = noise. `ledLabel` arrives only on rows the report
-                      dated (029 source='report'), so old data shows nothing. */}
+                  {/* The report sheet's OWN verdict, shown only when it says
+                      something different from the lists (= a different canonical
+                      phrase). Same phrase = the qualifier already rode the tip. */}
                   {(() => {
                     if (!r.ledLabel || !r.ledLabel.trim()) return null;
                     const rl = splitStatus(r.ledLabel);
-                    if (rl.head === st.head && rl.rest === st.rest) return null;
+                    if (rl.head === st.head) return null;
                     return (
                       <span
                         {...useTipProps(rl.rest || 'ผลการขายจากรายงานของ LED — อ่านแยกจากป้ายนัดขาย')}

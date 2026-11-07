@@ -105,22 +105,34 @@ export function priceLadder(rounds: SellRound[], startPrice: number | null, anno
  * No-bid rounds a GROUP-SALE sibling contributes to this parcel's ladder.
  *
  * Lands sold together are one auction event: ผบ.754/2562 sold 24653 and
- * 161371 as one lot, and 24653's round 1/6 returned งดขายไม่มีผู้สู้ราคา — a
- * fact LED prints only on 24653's own table. The shared sale deepens both
- * siblings' next-round price, so the sibling's งดขายไม่มีผู้สู้ราคา rows inside
- * the same listing window are merged in here, where LED's own UI stops
- * showing them. Returns 0 for the 99% of lots that are not group sales — the
- * mention gate keeps the sibling scan off every ordinary marker.
+ * 161371 as one lot. LED used to print the round's verdict on only one
+ * sibling's table; it now prints it on every sibling's (verified 2026-11-07:
+ * lots 10503/10504 each carry their own code-3 round 1/6). The merge is for
+ * dates THIS lot's table is silent about, never a double count of a date
+ * both tables already show. Returns 0 for the 99% of lots that are not
+ * group sales — the mention gate keeps the sibling scan off every ordinary
+ * marker.
  */
 function siblingNoBidCount(p: Parcel, announced: number, beforeTs: number): number {
   if (!((p.groupCount ?? 1) > 1) && !mentionsGroup(p.remark)) return 0;
+  /* Dates this lot's own table already covers. LED used to print a no-bid
+   * verdict on only ONE sibling's table, which is why this merge reads
+   * siblings at all — but it now prints the same round's verdict on every
+   * sibling. A sibling row whose date is already among our own rows is the
+   * SAME auction event counted a second time (ผบ.754/2562's 24653+161371
+   * both held their code-3 round 1/6 — own 1 + sibling 1 showed -20% where
+   * LED held exactly one no-bid round). Only dates our own table lacks can
+   * add information. */
+  const ownDates = new Set(p.rounds.filter((r) => r.date != null).map((r) => r.date));
   let n = 0;
   for (const id of groupOf(p.id)) {
     if (id === p.id) continue;
     const q = PARCEL_BY_ID.get(id);
     if (!q) continue;
     for (const r of q.rounds) {
-      if (r.date != null && r.date >= announced && r.date < beforeTs && isNoBidRound(r)) n++;
+      if (r.date == null || r.date < announced || r.date >= beforeTs) continue;
+      if (ownDates.has(r.date)) continue;
+      if (isNoBidRound(r)) n++;
     }
   }
   return n;
