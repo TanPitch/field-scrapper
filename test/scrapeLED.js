@@ -25,10 +25,6 @@ import { pipeline } from "stream/promises";
 
 const CONFIG = {
     province: process.env.LED_PROVINCE || "*",
-    /* `?? ""` not `||`: an empty LED_AMPUR is a deliberate province-wide search,
-       but "" is falsy so `||` fell back to a district in another province and
-       the server matched nothing. */
-    ampur: process.env.LED_AMPUR ?? "",
     /**
      * Page cap. 0 means "every page the site reports" - the default, because a
      * fixed cap silently truncated provinces: Phuket's พ.376/2568 alone runs to
@@ -215,6 +211,15 @@ export function parseDeedNumbers(raw) {
 }
 
 export async function scrapeLED() {
+    /* Re-read per call, not per module load: backfillProvinces.js swaps
+     * LED_PROVINCE between passes inside one process, and CONFIG was frozen at
+     * import once — every pass after the first scraped the same province. */
+    CONFIG.province = process.env.LED_PROVINCE || "*";
+    /* `?? ""` not `||`: an empty LED_AMPUR is a deliberate province-wide search,
+       but "" is falsy so `||` fell back to a district in another province and
+       the server matched nothing. */
+    CONFIG.ampur = process.env.LED_AMPUR ?? "";
+
     const pageLEDdata = [];
 
     const url = "https://asset.led.go.th/newbidreg/";

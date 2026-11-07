@@ -142,7 +142,8 @@ const main = async () => {
         console.error("Give province ids, --all, or --list. See the header comment.");
         process.exit(1);
     }
-    const jobs = wantAll ? all : all.filter(p => ids.includes(p.value));
+    /* jobs resolved below, after the manifest is loaded (nightly --all
+     * resumes from the manifest). */
 
     const unknown = ids.filter(id => !all.some(p => p.value === id));
     if (unknown.length) {
@@ -152,6 +153,22 @@ const main = async () => {
 
     fs.mkdirSync(OUT, { recursive: true });
     const manifest = readManifest();
+
+    /* Nightly --all is the cron form: skip every province the manifest already
+     * recorded as ingested, so the next evening continues WHERE the previous
+     * pass left off and a finished backfill costs one cheap no-op run. Explicit
+     * ids always re-scrape (that is what asking for ids means). */
+    let jobs;
+    if (wantAll) {
+        const done = new Set(manifest.filter(m => m.ingested).map(m => String(m.provinceId)));
+        jobs = all.filter(p => !done.has(String(p.value)));
+        const skipped = all.length - jobs.length;
+        if (skipped) console.log(`  (skipping ${skipped} already ingested)`);
+        if (!jobs.length) { console.log("== all provinces already ingested =="); return; }
+    } else {
+        jobs = all.filter(p => ids.includes(p.value));
+    }
+
     console.log(`== ${jobs.length} province pass(es) ==`);
 
     for (const [i, prov] of jobs.entries()) {
