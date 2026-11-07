@@ -50,6 +50,12 @@
 
 ## 4. Batch log (ใหม่อยู่บน)
 
+- **2026-11-07 batch 11 — UI fix 3 จุด: ServerPane crash, ตารางนัด 2 บรรทัด, ladder -20%**
+  - **ServerPane TypeError** `Cannot read properties of undefined (reading 'used')` — API :8787 ยังเป็น process เก่า (แรน batch 7 ก่อน restart) จึงไม่มี `st.dol` แล้ว pane ชี้ผ่าน; แก้ pane ให้ robust ต่อ API เก่า: `st?.dol &&` , `st?.provinces?.length ? : null` (ทำงานได้ทั้ง API เก่า/ใหม่); API server ยังต้อง restart เพื่อเห็น DOL + ตารางจังหวัด
+  - **ตารางนัด 2 บรรทัด (ผบE.91/2568 3701)**: lists page บอก `งดขายในนัดที่เหลือ` (บรรทัด 1), report page บอก `งดขายในนัดที่เหลือ เปลี่ยนวิธีขาย` (บรรทัด 2 ผลรายงาน) — ตอนนี้: ถ้า report พูดคำ verdict เดียวกัน = คุณภาพ (qualifier) รวมเข้า hover tip ของบรรทัดเดียว, หายบรรทัดที่ 2, สถานะยังยึดคำของ lists; คำคนละคำ = บรรทัดที่ 2 ยังโชว์ (เป็นข่าวจริง)
+  - **-20% บาดลงถูกทบ (ผบ.754/2562, 24653 + 161371)**: RCA DB = ทั้ง 2 sibling ต่างถือ code-3 round 1/6 เองแล้ว (LED เปลี่ยนพฤติกรรมจาก "พิมพ์บนโต๊ะเดียว" → "พิมพ์ทุกโต๊ะ") — own 1 + sibling merge 1 = เหตุการณ์จริงครั้งเดียวนับ 2 ครั้ง; แก้ `siblingNoBidCount` ใน `lib/price.ts`: นับ gift จาก sibling เฉพาะ DATE ที่โต๊ะของตัวไม่มีแถว (จอง dedupe ตามวันที่, ไม่ hardcode); pin `ladderBoundary.test.js` เดิม 2 กรณี (silent sibling = -10%, ทั้งคู่มีเอง = -10% ไม่ใช่ -20%)
+  - **ยืนยัน**: typecheck 0, build 0, bun test 170/0 (ขึ้นจาก 169 — เพิ่ม test pin)
+
 - **2026-11-07 batch 10 — Phase 5 เปิด: แก้ backfill ข้ามจังหวัด (scrapeLED CONFIG freeze) + cron 20:00**
   - **ทดสอบจริง 2 จังหวัด (มุกดาหาร 49 + สิงห์บุรี 17)**: ingest เขียวทั้งคู่ แต่ข้อมูล "สิงห์บุรี" = 402 แถว เหมือน มุกดาหาร เป๊ะ (lotsNew 0, lotsUpdated 379 = เขียนซ้ำของเดิม)
   - **RCA**: `scrapeLED.js CONFIG = { province: process.env.LED_PROVINCE ... }` จับ env ตอน module load — `backfillProvinces.js` เปลี่ยน `LED_PROVINCE` รายจังหวัดใน process เดียว สายไป = ทุก pass หลังแรก scrape จังหวัดแรกซ้ำ (cron เดิม scrapeDay ไม่ได้รับเจ็บ เพราะวิ่ง process ใหม่ต่อเจอ)
