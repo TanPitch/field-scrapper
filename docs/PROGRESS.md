@@ -288,3 +288,34 @@ case+year+order before pricing) — say the word and it becomes its own sprint.
 6. งานถัดไป section: bot 1 = due provinces with `next_round_date`; bot 2 =
    `coord_queue` pending top items (deed + ตำบล/อำเภอ/จังหวัด); bot 3 = cases
    awaiting `led_report_seen` sync.
+
+## Batch 13 (2026-11-07)
+- ServerPane: ลิสต์ "จังหวัดที่ระบบมีข้อมูล" กับ "ประวัติงานล่าสุด" โดน flex-shrink เป็น 0px
+  (ลูกที่ overflow-y-auto เสีย min-height:auto ในคอลัมน์ drawer — header เห็น ตัวลิสต์หาย)
+  แก้ shrink-0 ทั้งสองกล่อง พิสูจน์ด้วย getBoundingClientRect (h:0 → แถวจริง)
+- led_report_seen เคย stamp ทั้งเคส แม้ sync เรียนรู้อะไรมา (ผบ.754/2562 ตอน 10-30 ingest
+  ค้าง — 83 stamp มีผลแค่ 29): 035 รีเซ็ตเฉพาะ lot ไม่มี source='report' และไม่มี led_label;
+  ledReport.js stamp ราย lot, ตัดสิน "เรียนรู้ไม่ได้อะไร" ด้วย counter ก่อนรอบของ lot นั้น,
+  defer เฉพาะ minDate NULL (ingest ยังไม่ land — รอ heal แล้ว pull หน้า stamp เอง)
+  กรณี by-design skip stamp ตามปกติ ไม่งั้น bulk วนดึงชีตเดิมไม่จบ + เคส defer ต้องออกจาก
+  memo ไม่งั้นไม่มีการ retry จนกว่าจะ restart API
+
+## Batch 13 (2026-11-07)
+- ServerPane [f6c9970]: ลิสต์ "จังหวัดที่ระบบมีข้อมูล" กับ "ประวัติงานล่าสุด" โดน flex-shrink
+  เป็น 0px (ลูกที่ overflow-y-auto เสีย min-height:auto ในคอลัมน์ drawer — เห็น header
+  แต่ตัวลิสต์หาย) แก้ shrink-0 ทั้งสองกล่อง พิสูจน์ด้วย getBoundingClientRect (h:0 → แถวจริง)
+  นี่คือเหตุที่ตรวจเวลา 07:00 ใน pane ไม่ได้ตลอดมา
+- 035_report_resync: รีเซ็ต led_report_seen เฉพาะ lot ที่ sync ไม่เคยเขียนอะไรเลย
+  (ไม่มี source='report' และไม่มี led_label) — ผลจริง เก็บ 323 / เปิดรี-ซิงก์ 8133 lot
+  (เลข 83/29 ในเฮดเดอร์เป็น audit ก่อน bulk sync รอบหลัง stamp เพิ่ม — predicate ถูกแล้ว)
+  8133 drain ครั้งเดียวต่อ lot ผ่าน detail click หรือ bulk scope=sold แล้ว settle เอง
+- ledReport.js: stamp ราย lot ไม่รายเคส; ตัดสิน "เรียนรู้ไม่ได้อะไร" ด้วย counter ก่อนรอบ
+  ของ lot นั้น (เคสผสมตัดสินแยก); defer เฉพาะ minDate NULL (ingest ยังไม่ land — รูป
+  754/2562 ตอน 10-30) ส่วน by-design skip stamp ตามปกติ ไม่งั้น bulk วนดึงชีตเดิมไม่จบ;
+  เคสที่ defer ต้องออกจาก memo ไม่งั้นไม่มี retry จนกว่าจะ restart API
+- RCA 754/2562 หลัง daybot เก็บซ้ำ: ตารางของ 161371 เองพิมพ์คำตัดสินแล้ว — รอบ 1 ราคาเต็ม
+  9,073,800 code 3 งดขายไม่มีผู้สู้ราคา รอบ 2+ ที่ 8,166,420 = -10% — DB self-heal ตาม
+  ที่ทำนายไว้ใน batch 12; led_label รอบ 28-10 ของ 161371 ยังว่างแต่ไม่กระทบ (status_label
+  พิมพ์คำตัดสินอยู่แล้ว และเคสยัง stamped เพราะมี history report rows)
+
+  

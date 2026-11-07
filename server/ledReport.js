@@ -152,10 +152,15 @@ export function syncCaseReport(pool, caseNo, year) {
   const key = `${caseNo}/${year}`;
   const running = inflight.get(key);
   if (running) return running;
-  const job = applyCase(pool, caseNo, year).catch((e) => {
-    inflight.delete(key);
-    throw e;
-  });
+  const job = applyCase(pool, caseNo, year)
+    /* A deferred case must leave the memo on success, or the "retry on the
+       next click" the deferral exists for never happens until the API
+       restarts — the memo would keep answering with the old no-write result. */
+    .then((r) => { if (r.deferred?.length) inflight.delete(key); return r; })
+    .catch((e) => {
+      inflight.delete(key);
+      throw e;
+    });
   inflight.set(key, job);
   return job;
 }
@@ -180,6 +185,9 @@ async function applyCase(pool, caseNo, year) {
       WHERE case_no = $1 AND case_year = $2`, [caseNo, yearForDb]);
 
   let roundsUpdated = 0, roundsInserted = 0, lotsSold = 0;
+  /* Lots whose deed the sheet HAS, but where nothing could be applied
+     (roundsUpdated + roundsInserted stay 0 for the whole case). */
+  const nothingForDeed = [];
   for (const lot of lots) {
     const mine = rows.filter((r) => deedAb(r.deed).has(String(lot.deed_number ?? "")));
     if (!mine.length) continue;
@@ -195,6 +203,11 @@ async function applyCase(pool, caseNo, year) {
       `SELECT min(round_date)::text AS min_date FROM auction_rounds
         WHERE lot_id = $1 AND round_date IS NOT NULL`, [lot.id]);
     const minDate = md.rows[0]?.min_date ?? null;
+    /* "Learned nothing" is judged per LOT against these before-counters,
+       never the case-cumulative counters — a mixed case (one deed's rows
+       matched, a sibling's did not) must judge each lot alone. */
+    const up0 = roundsUpdated, in0 = roundsInserted;
+
 
     for (const r of mine) {
       if (!r.date) continue;
@@ -244,13 +257,26 @@ async function applyCase(pool, caseNo, year) {
       await pool.query(`UPDATE auction_lots SET sold_price = $2 WHERE id = $1`, [lot.id, bid.rows[0].sold_price]);
       lotsSold += 1;
     }
+    /* A deed that HAS rows on the sheet but had nothing to write (every
+       report date already matched or sat after minDate at a moment the lot's
+       dated rows were not there yet — ผบ.754/2562 learned nothing at 10-30
+       because ingest writes were still blocked) must stay unstamped: the
+       stamp is what the next click, the bulk pull and migration 035 read as
+       "this case is known". Stamping a learned-nothing deed turns that into
+       a permanent lock, and no heal can tell it apart from "LED knows
+       nothing about this deed". */
+    if (mine.length && minDate === null && roundsUpdated === up0 && roundsInserted === in0) nothingForDeed.push(lot.id);
   }
 
-  /* The sheet was fetched and learned even when it holds nothing for our
-     deed, so one unsynced case cannot poll the bulk loop forever. */
+    /* Stamp per LOT, not per case: every lot that learned — or truly has
+     nothing to learn (deed absent from the sheet, or by-design date skips) —
+     is done; only the deferred lots stay NULL so the next click / bulk pass
+     retries exactly them. Re-pulls are idempotent (matched dates UPDATE;
+     history rows date-match on the second pass). */
   await pool.query(
     `UPDATE auction_lots SET led_report_seen = now()
-      WHERE case_no = $1 AND case_year = $2`, [caseNo, yearForDb]);
+      WHERE case_no = $1 AND case_year = $2 AND NOT (id = ANY($3::int[]))`,
+    [caseNo, yearForDb, nothingForDeed]);
 
-  return { case: `${caseNo}/${yearForDb}`, rows: rows.length, lots: lots.length, roundsUpdated, roundsInserted, lotsSold };
+  return { case: `${caseNo}/${yearForDb}`, rows: rows.length, lots: lots.length, roundsUpdated, roundsInserted, lotsSold, deferred: nothingForDeed };
 }
