@@ -101,13 +101,24 @@ const PROVINCE_DOL_CODE = { 97: 38 };
 async function ensureProvince(client, code, name) {
     if (!int(code)) return null;
     const dol = PROVINCE_DOL_CODE[int(code)] ?? int(code);
-    const r = await client.query(
-        `INSERT INTO provinces (code, name, dol_code) VALUES ($1, $2, $3)
-         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, dol_code = EXCLUDED.dol_code
-         RETURNING code`,
-        [int(code), txt(name) ?? String(code), dol],
-    );
-    return r.rows[0].code;
+    /* SELECT-then-write instead of INSERT ... ON CONFLICT: every conflicted
+     * upsert was burned one provinces_id_seq nextval, and per-lot calls
+     * exhausted the smallint sequence (32767) on 2026-11-06. Provinces are
+     * only ever 77 rows - reads are free, writes are rare. */
+    const exist = await client.query(`SELECT code FROM provinces WHERE code = $1`, [int(code)]);
+    if (exist.rows.length > 0) {
+        await client.query(
+            `UPDATE provinces SET name = $2, dol_code = $3 WHERE code = $1`,
+            [int(code), txt(name) ?? String(code), dol],
+        );
+    } else {
+        await client.query(
+            `INSERT INTO provinces (code, name, dol_code) VALUES ($1, $2, $3)
+             ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, dol_code = EXCLUDED.dol_code`,
+            [int(code), txt(name) ?? String(code), dol],
+        );
+    }
+    return int(code);
 }
 
 /**
