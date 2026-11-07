@@ -17,8 +17,10 @@
  *   rooms are assets on sale (auction_lots.order_label), not places, and the map
  *   wants one marker for the building.
  *
- * td_object_id carries UNIQUE, so re-running is safe: a parcel already holding
- * the same OBJECTID is skipped.
+ * td_object_id is UNIQUE within (td_object_id, province_code) - see
+ * db/migrations/034_td_objectid_scope.sql: OBJECTID is TD's per-province map
+ * layer id, so two provinces handing out the same number is not the same land.
+ * A parcel already holding the same pair is skipped, so re-running is safe.
  *
  *   DATABASE_URL=... bun resolveTdParcels.js                    # dry run
  *   DATABASE_URL=... bun resolveTdParcels.js --write            # commit
