@@ -97,6 +97,32 @@ describe("nextRoundPrice group share", () => {
     expect(next.discountPct).toBe(10);
   });
 
+  test("a silent SAME-DATE row still inherits — 161371's own table prints '-' for the shared นัด", () => {
+    /* The real ผบ.754/2562 shape: BOTH tables carry round 1/6 on the same
+     * date, but only 24653's row holds the verdict — 161371's own row for
+     * that date is still the placeholder ("ยังไม่มีการเปิดประมูล", printed
+     * "-"). A placeholder own-row must NOT block the gift: the sibling's
+     * verdict IS this round's result, so 161371 reads -10% (one event), not
+     * 0% (blocked by its own silence) and never -20% (own + gift). */
+    const S2 = mkParcel(9107, "24653");
+    const T2 = mkParcel(9108, "161371");
+    S2.remark = "ขายรวมกับที่ดินโฉนดเลขที่ 161371 ราคาประเมินรวม";
+    T2.remark = "ขายรวมกับที่ดินโฉนดเลขที่ 24653";
+    S2.rounds = [
+      ar(ANN + 30 * DAY, "งดขายไม่มีผู้สู้ราคา", 3), // round 1/6 — the verdict
+      ar(ANN + 75 * DAY, "รอประกาศ", null),
+    ];
+    T2.rounds = [
+      ar(ANN + 30 * DAY, "ยังไม่มีการเปิดประมูล", 0), // round 1/6 — silent "-"
+      ar(ANN + 75 * DAY, "รอประกาศ", null),
+    ];
+    ALL_PARCELS.push(S2, T2);
+    PARCEL_BY_ID.set(S2.id, S2);
+    PARCEL_BY_ID.set(T2.id, T2);
+    expect(nextRoundPrice(T2, NOW)?.discountPct).toBe(10); // the inherited share
+    expect(nextRoundPrice(S2, NOW)?.discountPct).toBe(10); // still ONE event, not two
+  });
+
   test("both siblings carrying the verdict still deepen once — -20% is a double count", () => {
     /* 2026-11 data shift: LED now prints the same no-bid round on BOTH
        siblings' tables (real DB: lots 10503/10504 of ผบ.754/2562 each hold

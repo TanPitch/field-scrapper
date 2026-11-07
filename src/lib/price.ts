@@ -105,37 +105,51 @@ export function priceLadder(rounds: SellRound[], startPrice: number | null, anno
  * No-bid rounds a GROUP-SALE sibling contributes to this parcel's ladder.
  *
  * Lands sold together are one auction event: ผบ.754/2562 sold 24653 and
- * 161371 as one lot. LED used to print the round's verdict on only one
- * sibling's table; it now prints it on every sibling's (verified 2026-11-07:
- * lots 10503/10504 each carry their own code-3 round 1/6). The merge is for
- * dates THIS lot's table is silent about, never a double count of a date
- * both tables already show. Returns 0 for the 99% of lots that are not
- * group sales — the mention gate keeps the sibling scan off every ordinary
- * marker.
+ * 161371 as one lot. LED prints the round's verdict on only SOME of the
+ * siblings' tables — 24653 carries the code-3 งดขายไม่มีผู้สู้ราคา while
+ * 161371's own row for the same date still shows the "-" placeholder (and
+ * on other pairs, verified 2026-11-07 with lots 10503/10504, it prints the
+ * verdict on every sibling). The merge counts a shared no-bid exactly once
+ * per land, whichever sibling's table speaks it. Returns 0 for the 99% of
+ * lots that are not group sales — the mention gate keeps the sibling scan
+ * off every ordinary marker.
  */
+
+/* A round our own table has no verdict for: LED's placeholder family — the
+ * "-" behind ยังไม่มีการเปิดประมูล / รอประกาศ — with no held code and no
+ * no-bid label. Report rows speak through the label, so a label naming
+ * ไม่มีผู้สู้ราคา is a verdict whatever code it rides. */
+const PLACEHOLDER_ROUND_STATUS = new Set(['', 'รอประกาศ', 'ยังไม่มีการเปิดประมูล']);
+const isSilentRound = (round: SellRound): boolean =>
+  !isNoBidRound(round)
+  && (round.statusCode == null || Number(round.statusCode) === 0)
+  && PLACEHOLDER_ROUND_STATUS.has(round.status.trim());
+
 function siblingNoBidCount(p: Parcel, announced: number, beforeTs: number): number {
   if (!((p.groupCount ?? 1) > 1) && !mentionsGroup(p.remark)) return 0;
-  /* Dates this lot's own table already covers. LED used to print a no-bid
-   * verdict on only ONE sibling's table, which is why this merge reads
-   * siblings at all — but it now prints the same round's verdict on every
-   * sibling. A sibling row whose date is already among our own rows is the
-   * SAME auction event counted a second time (ผบ.754/2562's 24653+161371
-   * both held their code-3 round 1/6 — own 1 + sibling 1 showed -20% where
-   * LED held exactly one no-bid round). Only dates our own table lacks can
-   * add information. */
-  const ownDates = new Set(p.rounds.filter((r) => r.date != null).map((r) => r.date));
-  let n = 0;
+  /* Dates our own table has already answered with a VERDICT — any verdict.
+   * A date both tables print the no-bid on is the SAME auction event
+   * (ผบ.754/2562's 24653+161371 both held their code-3 round 1/6 — own 1 +
+   * sibling 1 showed -20% where LED held exactly one no-bid round), and a
+   * date our own row answers differently is our row's to answer. But a date
+   * our own table covers with a SILENT row — 161371 printing "-" where
+   * 24653 prints งดขายไม่มีผู้สู้ราคา — is exactly the share this merge
+   * exists for: one event, spoken by the sibling, inherited here. Gifts are
+   * keyed by DATE, so a group of three with two verbose siblings still
+   * counts the round once. */
+  const ownVerdictDates = new Set(p.rounds.filter((r) => r.date != null && !isSilentRound(r)).map((r) => r.date));
+  const giftedDates = new Set<number>();
   for (const id of groupOf(p.id)) {
     if (id === p.id) continue;
     const q = PARCEL_BY_ID.get(id);
     if (!q) continue;
     for (const r of q.rounds) {
       if (r.date == null || r.date < announced || r.date >= beforeTs) continue;
-      if (ownDates.has(r.date)) continue;
-      if (isNoBidRound(r)) n++;
+      if (ownVerdictDates.has(r.date)) continue;
+      if (isNoBidRound(r)) giftedDates.add(r.date);
     }
   }
-  return n;
+  return giftedDates.size;
 }
 
 /** The opening price a lot started from. */

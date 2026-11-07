@@ -761,33 +761,42 @@ export function DetailView() {
                uniform, so "no dimming" means genuinely none. Earlier sale
                orders dim only when the sold tint is not already speaking. */
             const cls = `${after ? 'bg-[#E5484D]/22 text-[#FFB4B4]' : lab.prev ? 'text-dim2' : ''} ${future && highlightSold ? 'text-dim2' : ''}`;
-            /* What the cell actually says after the placeholder rule — ''
-               or '-'. splitStatus then peels LED's canonical outcome phrase:
-               งดขาย (ป.วิ.อ.แพ่ง มาตรา 309) shows its phrase in the cell and
-               the มาตรา qualifier rides the hover tip instead of pushing the
-               line to overflow. */
-
-            const shown_pre = isPlaceholderStatus(r.status) ? (future ? '' : '-') : r.status;
-            const shown = shown_pre;
-            const st = splitStatus(shown);
+            const ownSilent = isPlaceholderStatus(r.status);
             /* LED prints a group sale's verdict on the tables of only SOME of
                the siblings (ผบ.754/2562's งดขายไม่มีผู้สู้ราคา sits on 24653's
-               rows alone; 161371's own table shows nothing for that date — the
-               same reason its next-round price takes the sibling's verdict).
-               When this lot's own cell is silent and the parcels share a
-               ขายรวม group, the siblings' rows for the same date speak
-               through the tip. */
+               row alone; 161371's own row for the same date is still the "-"
+               placeholder — the same reason its next-round price takes the
+               sibling's verdict). The shared นัด is ONE auction event, so a
+               silent own cell speaks with the sibling's verdict — the same
+               promotion pattern as led_label below — while the tip keeps the
+               provenance (which deed printed it). Without this, 161371 shows
+               "-" next to a -10% headline its own table cannot explain. */
             let sibTip: string | null = null;
-            if (groupIds.length > 1 && (shown === '' || isPlaceholderStatus(r.status))) {
+            let sibVerdict: string | null = null;
+            if (groupIds.length > 1 && ownSilent) {
               const parts: string[] = [];
               for (const gid of groupIds) {
                 if (gid === p.id) continue;
                 const q = PARCEL_BY_ID.get(gid);
                 const sr = q?.rounds.find((x) => x.date != null && x.date === r.date);
-                if (q?.deedNo && sr) parts.push(`${q.deedNo} — ${isPlaceholderStatus(sr.status) ? '-' : sr.status}`);
+                if (q?.deedNo && sr) {
+                  const sibSilent = isPlaceholderStatus(sr.status);
+                  parts.push(`${q.deedNo} — ${sibSilent ? '-' : sr.status}`);
+                  if (!sibSilent && sibVerdict == null) sibVerdict = sr.status;
+                }
               }
               if (parts.length) sibTip = `ขายรวมกัน: ${parts.join(' · ')}`;
             }
+            /* What the cell actually says after the placeholder rule — ''
+               for a future นัด, the sibling's verdict when our own table is
+               silent but the group's shared round already has one, else '-'.
+               splitStatus then peels LED's canonical outcome phrase:
+               งดขาย (ป.วิ.อ.แพ่ง มาตรา 309) shows its phrase in the cell and
+               the มาตรา qualifier rides the hover tip instead of pushing the
+               line to overflow. */
+            const shown_pre = ownSilent ? (future ? (sibVerdict ?? '') : (sibVerdict ?? '-')) : r.status;
+            const shown = shown_pre;
+            const st = splitStatus(shown);
             /* The report sheet repeats the lists' verdict for the same date more
                often than not — งดขายในนัดที่เหลือ on the lists and
                งดขายในนัดที่เหลือ เปลี่ยนวิธีขาย on the report is ONE outcome.
@@ -798,8 +807,9 @@ export function DetailView() {
                second line. */
             const rl = r.ledLabel && r.ledLabel.trim() ? splitStatus(r.ledLabel) : null;
             const sameVerdict = rl != null && rl.head === st.head;
-            const tipRest = sibTip ??
-              ([st.rest, sameVerdict ? rl!.rest : null].filter(Boolean).join(' · ') || null);
+            const tipRest = sibTip
+              ? ([sibTip, sibVerdict != null ? st.rest : null].filter(Boolean).join(' · ') || null)
+              : ([st.rest, sameVerdict ? rl!.rest : null].filter(Boolean).join(' · ') || null);
             return (
               <div key={r.date ?? i} className={`grid grid-cols-[48px_1fr_1fr] border-t ${lab.sep && roundsGroupBorder ? 'border-dashed border-line2' : 'border-line'} text-[11.5px] ${cls}`}>
                 {/* Group on = A2/B1 per sale order; group off = the plain

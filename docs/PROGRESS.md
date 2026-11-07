@@ -130,3 +130,161 @@
 6. ตั้งค่าทั่วไป (ธีม/สี/คอลัมน์/ตัวกรอง) — เปลี่ยน รีโหลด ต้องกลับมาเหมือนเดิม (แก้ loadPrefs แล้ว)
 7. editor ปุ่มประแจบน panel รายละเอียด = แผง "แก้ไขข้อมูล (แอดมิน)" แผงเล็กข้างขวา; รูป thumbnail คลิกขยาย; ราคาพิมพ์แล้วมีคอมม่า; ปุ่ม วาง พิกัดแล้วคลิกแผนที่ — selection ต้องยังอยู่ panel ไม่ถูกปิด
 8. ค้นหาออนไลน์ คลิกจุดบนแผนที่ = popup ชื่อ/แหล่งที่มา; ล้างช่องค้น = จุด + ผลการค้นหาหายทั้งคู่
+
+### below this line is the code that update using web chat instead of local harness
+
+# Sprint 01 — 07:00 timestamp bug + sibling price share (ผบ.754/2562)
+
+Remote-advisor sprint for `TanPitch/field-scrapper@dev`. Two fixes, pre-verified
+in a sandbox clone of the repo (patches apply clean; RED→GREEN proven;
+`bun run typecheck` = 0 errors; `bun run build` = exit 0; no new suite failures).
+
+## Erratum (2026-11-07, after the first apply attempt)
+
+1. **`01-server-07-00-timestamp.patch` rejects on current dev**
+   (`patch failed: server/index.js:116`). dev's `server/index.js` drifted from
+   the base the patch was cut against, and `git apply` matches the *context*
+   lines around a hunk, not just the changed lines — `--ignore-whitespace`
+   cannot fix that, and one failed hunk rejects the whole file. Use
+   **`apply-patch01.mjs`** instead: same 4 edits (the `isoStamp` helper + the
+   three call sites), anchored only on the lines it actually changes.
+   All-or-nothing with per-anchor reporting, idempotent, CRLF-safe. From the
+   repo root: `bun patches\apply-patch01.mjs`. If even an anchor misses, it
+   prints exactly what to send back for an exact patch.
+2. **The RED gate (15 pass / 1 fail) is the state with 03 NOT applied.** The
+   test file is fully synthetic and nothing in `src/` reads `DATABASE_URL`, so
+   that env var cannot change its outcome — verified both ways in the sandbox:
+   pre-fix code = 15/1 with the same "Expected: 10, Received: 0" regardless of
+   DATABASE_URL; fixed code = 16/0 with or without it. If you reverted 03 to
+   re-run the RED gate, re-apply it before the GREEN gates.
+
+## Files
+
+| File | What |
+|---|---|
+| `apply-patch01.mjs` | **Use this instead of patch 01** (see erratum) |
+| `01-server-07-00-timestamp.patch` | Fix: ประวัติงานล่าสุด shows "07:00" on every row |
+| `02-sibling-price-RED-test.patch` | The failing test first (TDD RED) |
+| `03-sibling-price-fix.patch` | The fix: silent sibling inherits the shared -10% |
+| `_rcaSibling.js` | SELECT-only recon: prints 24653 ↔ 161371 rounds from DB |
+
+## Root causes (short)
+
+1. **07:00 everywhere** — `server/index.js` formats run timestamps with
+   `isoDate()` (a **date-only** formatter, Bangkok). The pane feeds that
+   "2026-11-07" to `new Date(...)` + hh:mm → UTC midnight → **07:00 ICT**, so
+   every run of a day renders the same time. Fix: new `isoStamp()` (full ISO
+   instant) for `startedAt` / `finishedAt` / `lastRun` only; day-granular
+   columns keep `isoDate`.
+
+2. **Sibling price** — `src/lib/price.ts` `siblingNoBidCount()` blocked the
+   sibling gift for **any** date our own table has a row on. But 161371's own
+   row for the shared นัด is the **silent placeholder** ("-", code 0), while
+   24653's row carries งดขายไม่มีผู้สู้ราคา → 161371 got **0%** instead of
+   the shared **-10%**. The pinned test's fixture omitted the same-date
+   placeholder row, so the suite never saw it. Fix: dedup only against dates
+   our own table answers with a **verdict**; silent rows accept the gift;
+   gifts are keyed by date (a 3-sibling group still counts once). Plus
+   `DetailView.tsx`: the silent sibling's cell now shows the inherited verdict
+   inline (tip keeps provenance "ขายรวมกัน: 24653 — …"), so -10% is
+   self-explanatory.
+
+## Apply order (PowerShell, repo root)
+
+```powershell
+cd D:\Projects\field-scrapper
+git checkout dev; git pull; git status        # clean tree before applying
+
+# TDD: RED first — apply the test, watch it fail
+git apply --ignore-whitespace --verbose <patch-dir>\02-sibling-price-RED-test.patch
+cd test
+$env:DATABASE_URL="postgres://postgres:landmap@192.168.1.137:33200/landmap"
+bun test ladderBoundary.test.js              # expect: 15 pass, 1 fail (T2 = 0%, want 10)
+cd ..
+
+# GREEN: the fixes
+copy <patch-dir>\apply-patch01.mjs patches\          # replaces patch 01 (see erratum)
+bun patches\apply-patch01.mjs
+git apply --ignore-whitespace --verbose <patch-dir>\03-sibling-price-fix.patch
+copy <patch-dir>\_rcaSibling.js test\_rcaSibling.js
+```
+
+`--ignore-whitespace` tolerates CRLF checkouts. If a patch still rejects,
+`git apply --reject` and paste the `.rej` files back to the advisor.
+
+## Gates (repo convention — AGENTS.md)
+
+```powershell
+bun run typecheck                             # 0 errors
+bun run build                                 # exit 0
+cd test
+$env:DATABASE_URL="postgres://postgres:landmap@192.168.1.137:33200/landmap"
+bun test ladderBoundary.test.js               # 16 pass / 0 fail
+bun test                                      # all green (NAS flake → rerun)
+cmd /c "bun _rcaSibling.js > out\sibling-rca.txt 2>&1"
+Get-Content -Encoding utf8 out\sibling-rca.txt
+```
+
+Browser check (run the API + Vite in your own terminals):
+
+1. Settings › เซิร์ฟเวอร์ › ประวัติงานล่าสุด — each row now shows its own
+   time (not a wall of 07:00); รอบล่าสุด shows a real time.
+2. Open deed **161371** detail: headline next-round price shows **-10%**,
+   and its round-1 row now prints งดขายไม่มีผู้สู้ราคา (hover: which deed it
+   came from). Deed **24653**: still -10%, nothing double-counted (-20%
+   would be wrong).
+3. Marker popup + price chart forecast for 161371 also read -10%
+   (same `nextRoundPrice` path).
+
+## Commit (dev only — never main)
+
+```powershell
+git add server/index.js src/lib/price.ts src/components/panel/DetailView.tsx test/ladderBoundary.test.js test/_rcaSibling.js
+git commit -m "fix(status): real run timestamps; fix(price): silent sibling inherits shared no-bid once"
+git push origin dev
+```
+
+## PROGRESS.md batch entry (paste-ready)
+
+```
+## Batch 12 (2026-11-07)
+- ประวัติงานล่าสุด เวลา 07:00 ทุกแถว: /api/status ส่ง startedAt/finishedAt/lastRun
+  ผ่าน isoDate (date-only) → new Date("YYYY-MM-DD") = เที่ยงคืน UTC = 07:00 กรุงเทพ;
+  เพิ่ม isoStamp (instant เต็ม) เฉพาะคอลัมน์เวลา-งาน คอลัมน์ระดับวันยังใช้ isoDate เดิม
+- ผบ.754/2562 (24653↔161371): siblingNoBidCount เดิมตัดของขวัญทุกวันที่ตารางตัวเองมีแถว
+  แม้แถวนั้นเป็น placeholder "-" → 161371 ได้ 0% แทน -10%; แก้เป็นตัดเฉพาะวันที่ตารางตัวเอง
+  ตอบด้วยผล (verdict) จริง และนับของขวัญแบบ key ด้วยวันที่ (กลุ่ม 3 แปลงก็นับรอบร่วมครั้งเดียว)
+  + DetailView: แถวเงียบของน้องแสดงคำตัดสินที่รับมาเลย (tip บอกที่มา) ไม่ใช่ "-"
+  - เทสใหม่ ladderBoundary: silent SAME-DATE row (ผบ.754/2562 รูปจริง) RED→GREEN
+  - ทุกแผ่นที่ใช้ nextRoundPrice (หัวราคา, popup, ป้ายแผนที่, forecast) ได้ -10% พร้อมกัน
+  - หมายเหตุ: ราคา stored ต่อรอบของ 161371 ยังเป็น per-lot (0%) — จะ self-heal เมื่อ daybot
+    เก็บซ้ำแล้ว LED พิมพ์คำตัดสินบนตารางของ 161371 เอง; ถ้าจะให้ DB ตรงทันที คืองาน
+    ingest กลุ่ม-aware (แยก sprint)
+```
+
+## Known limitation (deliberate, YAGNI)
+
+`test/pricing.js` (the ingest authority) stays **per-lot**. The stored
+`auction_rounds.price` for 161371 keeps its per-lot values until LED re-scrapes
+its table; the frontend now derives the shared view. If you want the DB itself
+group-aware, that is a separate, larger change (ingest batches by
+case+year+order before pricing) — say the word and it becomes its own sprint.
+
+## Next up (Sprint B — ServerPane overhaul, design agreed pending your OK)
+
+1. Order: oldest→newest (new at bottom) + auto-scroll once on tab open +
+   stick-to-bottom while polling (chat pattern).
+2. Limits: 20/50/100/250/**ทั้งหมด** (server `?limit=`, capped 5000; poll 4s
+   ≤100, else 15s).
+3. Fullscreen log view (expand icon on the section header): fixed overlay,
+   header = server status summary (เชื่อมต่อ / บอทกำลังทำงาน / โควตา DOL /
+   ค้าง-ล้มเหลว / รอบล่าสุด), body = the log. Esc / × closes.
+4. Bot grouping: sticky group headers — บอท 1 LED list (`scrape`, `images`),
+   บอท 2 TD/DOL (`enrich_td`, `enrich_coord`), บอท 3 ประวัติราคา LED
+   (`report` — **needs migration 035** to add the stage to the CHECK and
+   run-row writes in `server/ledReport.js`, otherwise bot 3 is invisible).
+5. Location in rows: province as a chip + `lastStep` always visible (bot 2's
+   steps already carry ตำบล names); richer `detail` rendering later.
+6. งานถัดไป section: bot 1 = due provinces with `next_round_date`; bot 2 =
+   `coord_queue` pending top items (deed + ตำบล/อำเภอ/จังหวัด); bot 3 = cases
+   awaiting `led_report_seen` sync.

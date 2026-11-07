@@ -116,6 +116,13 @@ const bkkDate = new Intl.DateTimeFormat("en-CA", {
 });
 const isoDate = (v) => (v ? bkkDate.format(new Date(v)) : null);
 
+/* Run timestamps need the full instant, not the date: isoDate feeds
+ * /api/status's startedAt/finishedAt/lastRun, and the pane renders those with
+ * hh:mm — new Date("2026-11-07") is UTC midnight, which is 07:00 in Bangkok,
+ * so every run of a day printed the same "07:00". Date-only stays correct for
+ * the day-granular columns (round dates, publish dates, lastScrape). */
+const isoStamp = (v) => (v ? new Date(v).toISOString() : null);
+
 /* ------------------------------------------------------------------ meta */
 
 app.get("/api/health", async (_req, res) => {
@@ -212,7 +219,7 @@ app.get("/api/status", async (_req, res) => {
         .filter((r) => !r.finished_at && r.stage !== "reference")
         .map((r) => ({
             id: r.id, stage: r.stage, province: r.province_name, provinceCode: r.province_code,
-            startedAt: isoDate(r.started_at), step: r.last_step,
+            startedAt: isoStamp(r.started_at), step: r.last_step,
             elapsedS: r.duration_s,
             status: r.duration_s > STUCK_AFTER_S ? "stuck" : "running",
         }));
@@ -256,7 +263,7 @@ app.get("/api/status", async (_req, res) => {
         bot: {
             running: running.length,
             runningPasses: running,
-            lastRun: isoDate(counts[0].last_run),
+            lastRun: isoStamp(counts[0].last_run),
             totalRuns: counts[0].runs,
             unfinishedRuns: counts[0].unfinished,
             failedRuns: counts[0].failed,
@@ -286,7 +293,7 @@ app.get("/api/status", async (_req, res) => {
             .slice(0, 40)
             .map((r) => ({
                 id: r.id, stage: r.stage, province: r.province_name, provinceCode: r.province_code,
-                startedAt: isoDate(r.started_at), finishedAt: isoDate(r.finished_at),
+                startedAt: isoStamp(r.started_at), finishedAt: isoStamp(r.finished_at),
                 durationS: r.duration_s,
                 pages: r.pages, lotsSeen: r.lots_seen, lotsNew: r.lots_new,
                 errors: r.error_count,
