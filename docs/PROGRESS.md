@@ -40,15 +40,23 @@
 
 ## 3. งานถัดไป (เรียงตามที่ควรทำ)
 
-1. **รอผล cron จริงก่อน Phase 5** — Task `FieldScrapper-Bot1-TestOnce` กำลัง scrape จังหวัด 40 (1,757 lots, ~ชม.+) — log `test/out/bot1-schedule.log`; เสร็จแล้วลบ task + ตรวจ scrape_runs finished error_count=0 + รูปไหลลง lot_images จริง แล้วค่อย backfill 72 จังหวัดที่เหลือ
+1. **Phase 5 — backfill ทั่วไทย 72 จังหวัด** — ingest fix เขียวแล้ว (batch 8); crisp cron จะเก็บจังหวัดที่มีข้อมูลเองทุก 06:00; จังหวัดใหม่ใช้ `bun backfillProvinces.js` ก่อน (ครั้งแรก 2-3 จังหวัด ตรวจ scrape_runs error_count=0 ก่อนขยาย)
 2. **ตรวจจอ ServerPane โควตา DOL + ตารางจังหวัด 77** — โค้ดขึ้นแล้ว (68d6dbf); restart API :8787 แล้วเปิด ตั้งค่า → บอท
-3. **รันแอปบน Docker** — pack พร้อมแล้ว 23 ต.ค. (`server/Dockerfile` + `docker/portainer-stack.yml`); อัปโหลดรูปจะย้ายไปเก็บ IMAGE_ROOT บน NAS ด้วย
-4. **RCA lot 9556 daybot drift** — ราคาที่ daybot เขียนไว้ (1077180) ไม่ตรง ladder คำนวณ (754026) ทุก round นับจาก 10; แยกต่างหาก ไม่ถือข้อบกพร่องของ commit อื่น
-5. **แตก chunk 4.25 MB** — ปรับ `manualChunks` เมื่องานหลักเสร็จ
+3. **ลบ Task ทดสอบ** `FieldScrapper-Bot1-TestOnce` — พาธ cron พิสูจน์แล้ว (batch 8: scrape เขียว 5 จังหวัด, ingest ตายแค่ seq แก้แล้ว)
+4. **รันแอปบน Docker** — pack พร้อมแล้ว 23 ต.ค. (`server/Dockerfile` + `docker/portainer-stack.yml`); อัปโหลดรูปจะย้ายไปเก็บ IMAGE_ROOT บน NAS ด้วย
+5. **RCA lot 9556 daybot drift** — ราคาที่ daybot เขียนไว้ (1077180) ไม่ตรง ladder คำนวณ (754026) ทุก round นับจาก 10; แยกต่างหาก ไม่ถือข้อบกพร่องของ commit อื่น
+6. **แตก chunk 4.25 MB** — ปรับ `manualChunks` เมื่องานหลักเสร็จ
 
 ---
 
 ## 4. Batch log (ใหม่อยู่บน)
+
+- **2026-11-06 batch 8 — RCA seq provinces_id_seq เต็ม (32767) + แก้ 2 ชั้น**
+  - **อาการ จริงจาก cron**: บอท 1 (TestOnce 10:18) scrape 5 จังหวัดเขียวทั้งหมด (40/97/27/25/83, รวม 6,049 lots เห็นใน run rows 80-84) แต่ ingest ล้มทุกจังหวัด `error: nextval: reached maximum value of sequence "provinces_id_seq" (32767)` (code 2200H)
+  - **RCA**: `provinces.id` = smallint (max 32767) + `ensureProvince` ถูกเรียกต่อรายการ (per deed) แบบ `INSERT .. ON CONFLICT DO UPDATE` — แม้ conflict (เจอของเดิม) Postgres ก็จ่าย nextval หนึ่งโดนทิ้ง = ลำดับ long tail กินจนหมด; 791 รายการ × หลายปี backfill
+  - **แก้ 2 ชั้น**: (1) `test/ingest.js ensureProvince` เปลี่ยนเป็น SELECT-ก่อน แล้ว UPDATE/INSERT จริงเมื่อไม่มี (จังหวัดมีแค่ 77 แถว — read ถูก, write หา) = ไม่กิน nextval ให้ของว่าง; (2) `test/sql/fix_provinces_id.sql` — `ALTER TABLE provinces ALTER COLUMN id TYPE integer` + `ALTER SEQUENCE ... AS integer` + `setval(max(id))`, ยิงใส่ fs-db แล้ว (id_type = integer, seq = 4537 = เลข id จริงสูงสุด)
+  - **ยืนยัน**: ลอง slice 20 แถวจาก rows.json ของคืนจริง ผ่าน `SKIP_IMAGES=1` → `lotsUpdated 20, rounds 160, elapsed 0.9s` `=== ingest result ===` เขียว; ยืนยัน tiers id ไม่พอง (districts id>32767 = 0)
+  - **ขัดแย้งที่พบระหว่างนี้**: ingest เต็ม 7 MB วิ่งช้า 3s/แถว เพราะชนกับงาน resolveCoordsCLI/resolveTdParcels ที่รันทับ (cmd window ว่างที่ผู้ใช้ปิด) — ข้อมูลจังหวัด 83 เข้าครบแล้วตั้งแต่รอบแรก (927 lots / 7,416 rounds); cleanup orphan scrape_runs 85/87/88 ลบแล้ว; bun test 1 fail ชั่วคราว (TIMEOUT tdSrid) = DB ติดงานอื่น, รันซ้ำเขียว 169/0
 
 - **2026-11-06 batch 7 — audit ข้อ 1+2 + cron ขั้น 3 (68d6dbf) + ปุ่ม more ปิดนอกจอ**
   - **ข้อเท็จจริง 267581 hole**: แถวซ้ำ 5 ในตารางล่าง = DB ตรวจแล้วไม่มีแถวซ้ำจริง (dup by province+deed → แยกอำเภอถูกกฎหมาย; key จริง (province,district,deed) ซ้ำ 0); 1 ห้องชุด 267581 มี 2 สำนวน (2494/2561 + 57/2562 = ขายทบ) — ข้อมูลถูกต้องตาม LED
