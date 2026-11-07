@@ -197,7 +197,7 @@ export function ServerPane() {
       {st?.provinces?.length ? (
         <>
           <div className="mt-3 text-[10px] font-semibold uppercase tracking-[.1em] text-dim">จังหวัดที่ระบบมีข้อมูล</div>
-          <div className="max-h-[220px] overflow-y-auto pr-1">
+          <div className="shrink-0 max-h-[220px] overflow-y-auto pr-1">
             {st.provinces.map(pr => (
               <div key={pr.code} className="flex items-center gap-2 border-b border-line/40 py-1 text-[11px]">
                 <span className="flex-1 truncate">{pr.name}</span>
@@ -225,7 +225,7 @@ export function ServerPane() {
           {loading ? 'กำลังโหลด…' : 'ยังไม่มีประวัติการทำงาน — ลองรัน cd test; bun scrapeLED.js'}
         </div>
       ) : (
-        <div className="max-h-[640px] overflow-y-auto pr-1">
+        <div className="shrink-0 max-h-[640px] overflow-y-auto pr-1">
           {recent.map(r => (
             <div key={r.id} className="border-b border-line/40 py-1.5">
               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
