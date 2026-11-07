@@ -13,8 +13,7 @@
 |---|---|---|---|
 | โครงสร้าง | `bun run typecheck` | 0 error | ✓ 0 |
 | build | `bun run build` | 0 error | ✓ 0 (1,764 modules, bundle 4,263 kB) |
-| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 169 pass / 0 fail (รันชุดเดียววนซ้ำเคย 3-9 fail = NAS DB หลุด/timeout ไม่ใช่โค้ด, รันซ้ำให้เขียวก่อน commit) |
-| ladder เทียบ BE/FE | priceLadder.agreement | mismatch ยอมได้ = lot 9556 เท่านั้น | ✓ 117 rows เฉพาะ 9556 (daybot drift — เป็น RCA แยกต่างหาก) |
+| ชุด test | `cd test` + `set DATABASE_URL=postgres://postgres:landmap@192.168.1.137:33200/landmap` + `bun test` | fail จากโค้ด = 0 | ✓ 169 pass / 0 fail (รันชุดเดียววนซ้ำเคย 3-9 fail = NAS DB หลุด/timeout ไม่ใช่โค้ด, รันซ้ำให้เขียวก่อน commit) || ladder เทียบ BE/FE | priceLadder.agreement | mismatch ยอมได้ = lot 9556 เท่านั้น | ✓ 117 rows เฉพาะ 9556 (daybot drift — เป็น RCA แยกต่างหาก) |
 | ผ่านจอ | ผู้ใช้เปิดหน้า + ลองฟีเจอร์จริง | ตามรายการท้ายไฟล์นี้ | รอผู้ใช้ |
 
 ข้อที่ละเว้นได้: `DATABASE_URL` ไม่ตั้ง = แต่ละ test ข้ามตัวเอง (print skip) — นับเป็นปกติ.
@@ -50,6 +49,14 @@
 ---
 
 ## 4. Batch log (ใหม่อยู่บน)
+
+- **2026-11-07 batch 10 — Phase 5 เปิด: แก้ backfill ข้ามจังหวัด (scrapeLED CONFIG freeze) + cron 20:00**
+  - **ทดสอบจริง 2 จังหวัด (มุกดาหาร 49 + สิงห์บุรี 17)**: ingest เขียวทั้งคู่ แต่ข้อมูล "สิงห์บุรี" = 402 แถว เหมือน มุกดาหาร เป๊ะ (lotsNew 0, lotsUpdated 379 = เขียนซ้ำของเดิม)
+  - **RCA**: `scrapeLED.js CONFIG = { province: process.env.LED_PROVINCE ... }` จับ env ตอน module load — `backfillProvinces.js` เปลี่ยน `LED_PROVINCE` รายจังหวัดใน process เดียว สายไป = ทุก pass หลังแรก scrape จังหวัดแรกซ้ำ (cron เดิม scrapeDay ไม่ได้รับเจ็บ เพราะวิ่ง process ใหม่ต่อเจอ)
+  - **แก้**: `scrapeLED()` อ่าน env ใหม่ทุกครั้ง (`CONFIG.province`/`CONFIG.ampur` ตั้งต้นเองในฟังก์ชัน) — 1 จุด, คยั้งทุก caller
+  - **ยืนยันหลัง fix**: สิงห์บุรีจริง = 205 แถว, parcelsNew 200, lotsNew 202, รูป 377 ไฟล์ 60 MB, รวม 543.8s ≈ 9 นาที/จังหวัด
+  - **cron Phase 5**: Task **`FieldScrapper-Backfill-TH`** รันทุกวัน 20:00 → `run-backfill.cmd` (`backfillProvinces.js --all`) + `test/out/backfill.log`; `-all` เพิ่ม resume: ดู manifest ข้ามจังหวัดที่ ingested แล้ว = คืนต่อที่ค้าง (ingested ครบแล้วจะจบทันที = no-op) — id โปร่งมือ force re-scrape เสมอ
+  - **งานเสริม**: ingest มี image budget cap 300 (over_budget แจ้งใน log เท่านั้น — ยัดหมดเหมือนเดิม)
 
 - **2026-11-07 batch 9 — RCA bot2 TD stage ตายซ้ำ `parcels_td_object_id_key` ซ้ำ (2ef357f)**
   - **อาการ**: log `bot2-schedule.log` ทุกรอบ: TD ไล่ 329/90714 ใกล้แล้วถอนแถวที่ 10510 ตาย `duplicate key value violates unique constraint "parcels_td_object_id_key" / Key (td_object_id)=(5841515) already exists` ก่อน DOL แล้ว quota จบ (ลำดับ: ตายที่แถว 5841515 การรีสตาร์ทจะตายแถวแรกซ้ำถึง 5000 แถวต่อรอบ ไม่ progress)
