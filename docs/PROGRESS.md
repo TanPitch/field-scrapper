@@ -51,6 +51,13 @@
 
 ## 4. Batch log (ใหม่อยู่บน)
 
+- **2026-11-07 batch 9 — RCA bot2 TD stage ตายซ้ำ `parcels_td_object_id_key` ซ้ำ (2ef357f)**
+  - **อาการ**: log `bot2-schedule.log` ทุกรอบ: TD ไล่ 329/90714 ใกล้แล้วถอนแถวที่ 10510 ตาย `duplicate key value violates unique constraint "parcels_td_object_id_key" / Key (td_object_id)=(5841515) already exists` ก่อน DOL แล้ว quota จบ (ลำดับ: ตายที่แถว 5841515 การรีสตาร์ทจะตายแถวแรกซ้ำถึง 5000 แถวต่อรอบ ไม่ progress)
+  - **RCA**: TD's OBJECTID = id ของ map layer ต่อจังหวัด — ไม่ unique ข้ามจังหวัด! แถว: ขอนแก่น deed 25246 (parcel 12301 ถือ 5841515 แล้ว) กับ ภูเก็ต deed 10510 (parcel 23264, คิวบอต 2) ได้เลข 5841515 ชนกันข้ามจังหวัด = ที่ดินคนละแปลง เลขบังเอิญซ้ำ; migration 022 เดิมอ้าง unique ตลอด = ผิดสมมติฐานเดิมตั้งแต่ Phuket-only
+  - **แก้**: `db/migrations/034_td_objectid_scope.sql` — drop unique (td_object_id) ใหม่ (td_object_id, province_code) (ยังกันห้องชุดยืม object ซ้ำในจังหวัดเดียวได้); ยิงใส่ fs-db แล้ว; ปรับหัว comment `resolveTdParcels.js` ให้ตรง
+  - **ยืนยัน**: probe `bun resolveTdParcels.js --limit=3 --write` → 3 แถว 0 error 2s; กลุ่ม dup td_object_id ปัจจุบัน 0; บอท 2 รอบถัดไป (09:00) จะไล่ต่อจาก ภูเก็ตทับ 5841515 ได้แล้ว
+  - **หมายเหตุ**: cmd window "ว่าง" ที่ปิดเมื่อวานยังจะเปิดซ้ำทุก 09:00 — มัน = งาน bot ที่พื้นหลัง (`run-bot2.cmd`), ปิดระหว่างรัน = งานหยุดกลางคัน (log ตรวจได้ ไม่หาย); อยากเลิกจอ understand ใช้ Task Scheduler ปิด task แทน
+
 - **2026-11-06 batch 8 — RCA seq provinces_id_seq เต็ม (32767) + แก้ 2 ชั้น**
   - **อาการ จริงจาก cron**: บอท 1 (TestOnce 10:18) scrape 5 จังหวัดเขียวทั้งหมด (40/97/27/25/83, รวม 6,049 lots เห็นใน run rows 80-84) แต่ ingest ล้มทุกจังหวัด `error: nextval: reached maximum value of sequence "provinces_id_seq" (32767)` (code 2200H)
   - **RCA**: `provinces.id` = smallint (max 32767) + `ensureProvince` ถูกเรียกต่อรายการ (per deed) แบบ `INSERT .. ON CONFLICT DO UPDATE` — แม้ conflict (เจอของเดิม) Postgres ก็จ่าย nextval หนึ่งโดนทิ้ง = ลำดับ long tail กินจนหมด; 791 รายการ × หลายปี backfill
